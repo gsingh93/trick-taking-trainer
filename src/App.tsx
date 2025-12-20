@@ -751,40 +751,50 @@ export default function App() {
             <Grid3X3 className="h-5 w-5" />
             <h1 className="text-xl font-semibold">Trick Taking Trainer</h1>
           </div>
-          <div className="flex gap-2">
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Seed</span>
-                <input
-                  type="number"
-                  min={0}
-                  step={1}
-                  value={seedInput}
-                  onChange={(e) => {
-                    setSeedInput(e.target.value);
-                    setSeedError(null);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") applySeedFromInput();
-                  }}
-                  className="h-8 w-32 rounded-md border bg-background px-2 text-xs"
-                />
-                <Button type="button" variant="outline" size="sm" onClick={applySeedFromInput}>
-                  Apply
+          <div className="flex flex-wrap items-start gap-4">
+            <div className="space-y-2 rounded-lg border bg-card/50 p-3">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Deal</div>
+              <div className="flex flex-wrap items-start gap-2">
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Seed</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={seedInput}
+                      onChange={(e) => {
+                        setSeedInput(e.target.value);
+                        setSeedError(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") applySeedFromInput();
+                      }}
+                      className="h-8 w-32 rounded-md border bg-background px-2 text-xs"
+                    />
+                    <Button type="button" variant="outline" size="sm" onClick={applySeedFromInput}>
+                      Apply
+                    </Button>
+                  </div>
+                  {seedError ? <div className="mt-1 text-xs text-destructive">{seedError}</div> : null}
+                </div>
+                <Button variant="outline" className="gap-2" onClick={newSeed}>
+                  <RefreshCw className="h-4 w-4" />
+                  New seed
+                </Button>
+                <Button variant="outline" onClick={resetHand}>
+                  Reset hand
                 </Button>
               </div>
-              {seedError ? <div className="mt-1 text-xs text-destructive">{seedError}</div> : null}
             </div>
-            <Button variant="outline" className="gap-2" onClick={newSeed}>
-              <RefreshCw className="h-4 w-4" />
-              New seed
-            </Button>
-            <Button variant="outline" onClick={resetHand}>
-              Reset hand
-            </Button>
-            <Button variant="outline" className="gap-2" onClick={resetTrickOnly}>
-              Reset trick
-            </Button>
+            <div className="space-y-2 rounded-lg border bg-card/50 p-3">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Trick</div>
+              <div>
+                <Button variant="outline" className="gap-2" onClick={resetTrickOnly}>
+                  Reset trick
+                </Button>
+              </div>
+            </div>
           </div>
         </header>
 
