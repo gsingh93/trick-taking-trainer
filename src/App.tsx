@@ -379,9 +379,9 @@ export default function App() {
   const [suitOrderMode, setSuitOrderMode] = useState<"bridge" | "poker">("bridge");
   const [sortAscending, setSortAscending] = useState(true);
 
-  const [aiEnabled, setAiEnabled] = useState(false);
-  const [aiDelayMs, setAiDelayMs] = useState(2000);
-  const [pauseBeforeNextTrick, setPauseBeforeNextTrick] = useState(false);
+  const [aiEnabled, setAiEnabled] = useState(true);
+  const [aiDelayMs, setAiDelayMs] = useState(1000);
+  const [pauseBeforeNextTrick, setPauseBeforeNextTrick] = useState(true);
   const [awaitContinue, setAwaitContinue] = useState(false);
 
   const [selectedSuit, setSelectedSuit] = useState<Suit>("H");
@@ -695,8 +695,7 @@ export default function App() {
         <header className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Grid3X3 className="h-5 w-5" />
-            <h1 className="text-xl font-semibold">Void Tracking Trainer</h1>
-            <Badge variant="secondary">Trick engine</Badge>
+            <h1 className="text-xl font-semibold">Trick Taking Trainer</h1>
           </div>
           <div className="flex gap-2">
             <div className="flex flex-col">
