@@ -100,11 +100,16 @@ function dealNewHands(): Hands {
   return hands;
 }
 
-function sortHand(hand: CardT[]): CardT[] {
-  const suitOrder: Record<Suit, number> = { S: 0, H: 1, D: 2, C: 3 };
+function sortHand(hand: CardT[], suitOrder: Suit[], sortAscending: boolean): CardT[] {
+  const suitIndex = new Map<Suit, number>(suitOrder.map((s, i) => [s, i]));
+  const rankFactor = sortAscending ? 1 : -1;
   return hand
     .slice()
-    .sort((a, b) => suitOrder[a.suit] - suitOrder[b.suit] || b.rank - a.rank);
+    .sort(
+      (a, b) =>
+        (suitIndex.get(a.suit) ?? 0) - (suitIndex.get(b.suit) ?? 0) ||
+        (a.rank - b.rank) * rankFactor
+    );
 }
 
 function nextSeat(seat: Seat): Seat {
@@ -248,6 +253,8 @@ function HandRow({
   legal,
   onPlay,
   currentTurn,
+  suitOrder,
+  sortAscending,
 }: {
   seat: Seat;
   hand: CardT[];
@@ -255,12 +262,14 @@ function HandRow({
   legal: Set<string>;
   onPlay: (seat: Seat, card: CardT) => void;
   currentTurn: Seat;
+  suitOrder: Suit[];
+  sortAscending: boolean;
 }) {
   const isTurn = seat === currentTurn;
   return (
     <div className={"mt-3 " + (rotateClass ?? "")}>
       <div className="flex flex-wrap gap-px">
-        {sortHand(hand).map((c) => (
+        {sortHand(hand, suitOrder, sortAscending).map((c) => (
           <PlayingCard
             key={c.id}
             c={c}
@@ -288,6 +297,8 @@ function HandCol({
   legal,
   onPlay,
   currentTurn,
+  suitOrder,
+  sortAscending,
 }: {
   seat: Seat;
   hand: CardT[];
@@ -296,12 +307,14 @@ function HandCol({
   legal: Set<string>;
   onPlay: (seat: Seat, card: CardT) => void;
   currentTurn: Seat;
+  suitOrder: Suit[];
+  sortAscending: boolean;
 }) {
   const isTurn = seat === currentTurn;
   return (
     <div className={"mt-3 flex " + (align === "end" ? "justify-end" : "justify-start")}>
       <div className={"flex flex-col gap-0 " + (align === "end" ? "items-end" : "items-start")}>
-        {sortHand(hand).map((c) => (
+        {sortHand(hand, suitOrder, sortAscending).map((c) => (
           <div key={c.id} className="relative h-10 w-14 overflow-visible">
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
               <PlayingCard
@@ -353,6 +366,8 @@ export default function App() {
   const [modeViolationOnly, setModeViolationOnly] = useState(false);
   const [modeDelayedRecall, setModeDelayedRecall] = useState(false);
   const [modeOpenHandVerify, setModeOpenHandVerify] = useState(false);
+  const [suitOrderMode, setSuitOrderMode] = useState<"bridge" | "poker">("bridge");
+  const [sortAscending, setSortAscending] = useState(true);
 
   const [aiEnabled, setAiEnabled] = useState(false);
   const [aiDelayMs, setAiDelayMs] = useState(2000);
@@ -413,6 +428,10 @@ export default function App() {
     visible.Me = true;
     return visible;
   }, [reveal, modeOpenHandVerify]);
+
+  const suitOrder = useMemo<Suit[]>(() => {
+    return suitOrderMode === "bridge" ? ["S", "H", "D", "C"] : ["C", "D", "H", "S"];
+  }, [suitOrderMode]);
 
   const legalBySeat = useMemo(() => {
     const out: Record<Seat, Set<string>> = {
@@ -700,6 +719,8 @@ export default function App() {
                       legal={legalBySeat.Across}
                       onPlay={(s, c) => tryPlay(s, c, "human")}
                       currentTurn={turn}
+                      suitOrder={suitOrder}
+                      sortAscending={sortAscending}
                     />
                   ) : null}
                 </div>
@@ -740,6 +761,8 @@ export default function App() {
                       legal={legalBySeat.Left}
                       onPlay={(s, c) => tryPlay(s, c, "human")}
                       currentTurn={turn}
+                      suitOrder={suitOrder}
+                      sortAscending={sortAscending}
                     />
                   ) : null}
                 </div>
@@ -829,6 +852,8 @@ export default function App() {
                       legal={legalBySeat.Right}
                       onPlay={(s, c) => tryPlay(s, c, "human")}
                       currentTurn={turn}
+                      suitOrder={suitOrder}
+                      sortAscending={sortAscending}
                     />
                   ) : null}
                 </div>
@@ -850,6 +875,8 @@ export default function App() {
                     legal={legalBySeat.Me}
                     onPlay={(s, c) => tryPlay(s, c, "human")}
                     currentTurn={turn}
+                    suitOrder={suitOrder}
+                    sortAscending={sortAscending}
                   />
                 </div>
               </div>
@@ -917,6 +944,29 @@ export default function App() {
                 <div className="flex justify-between">
                   <span className="text-sm">Open-hand verify</span>
                   <Switch checked={modeOpenHandVerify} onCheckedChange={setModeOpenHandVerify} />
+                </div>
+
+                <Separator />
+
+                <div className="grid grid-cols-2 gap-2">
+                  <span className="text-xs">Suit order</span>
+                  <Select value={suitOrderMode} onValueChange={(v) => setSuitOrderMode(v as "bridge" | "poker")}>
+                    <SelectTrigger className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bridge">Bridge (S H D C)</SelectItem>
+                      <SelectItem value="poker">Poker (C D H S)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className="text-sm">Sort ascending</span>
+                  <Switch
+                    checked={sortAscending}
+                    onCheckedChange={setSortAscending}
+                  />
                 </div>
               </CardContent>
             </Card>
