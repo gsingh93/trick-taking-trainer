@@ -79,17 +79,27 @@ function buildDeck(): CardT[] {
   return deck;
 }
 
-function shuffle<T>(arr: T[]): T[] {
+function createRng(seed: number) {
+  let t = seed >>> 0;
+  return () => {
+    t += 0x6d2b79f5;
+    let r = Math.imul(t ^ (t >>> 15), t | 1);
+    r ^= r + Math.imul(r ^ (r >>> 7), r | 61);
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffle<T>(arr: T[], rng: () => number): T[] {
   const a = arr.slice();
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rng() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
 }
 
-function dealNewHands(): Hands {
-  const deck = shuffle(buildDeck());
+function dealNewHands(rng: () => number): Hands {
+  const deck = shuffle(buildDeck(), rng);
   const hands: Hands = { Left: [], Across: [], Right: [], Me: [] };
   let idx = 0;
   for (let round = 0; round < 13; round++) {
@@ -384,7 +394,10 @@ export default function App() {
   });
   const [trumpBroken, setTrumpBroken] = useState(false);
 
-  const [hands, setHands] = useState<Hands>(() => dealNewHands());
+  const [dealSeed, setDealSeed] = useState(() => Math.floor(Math.random() * 1_000_000_000));
+  const [seedInput, setSeedInput] = useState(() => String(dealSeed));
+  const [seedError, setSeedError] = useState<string | null>(null);
+  const [hands, setHands] = useState<Hands>(() => dealNewHands(createRng(dealSeed)));
 
   const [reveal, setReveal] = useState<Record<Seat, boolean>>({
     Left: false,
@@ -474,10 +487,12 @@ export default function App() {
     }
   }
 
-  function newDeal() {
+  function resetForDeal(seed: number) {
     cancelResolveTimer();
+    setDealSeed(seed);
+    setSeedInput(String(seed));
     setTricksWon({ Left: 0, Across: 0, Right: 0, Me: 0 });
-    setHands(dealNewHands());
+    setHands(dealNewHands(createRng(seed)));
     setReveal({ Left: false, Across: false, Right: false, Me: true });
     setGrid({
       Left: { S: "POSSIBLE", H: "POSSIBLE", D: "POSSIBLE", C: "POSSIBLE" },
@@ -493,6 +508,29 @@ export default function App() {
     setTrumpBroken(false);
     setIsResolving(false);
     setAwaitContinue(false);
+  }
+
+  function parseSeed(value: string): number | null {
+    if (!value.trim()) return null;
+    const n = Number(value);
+    if (!Number.isFinite(n)) return null;
+    const seed = Math.floor(n);
+    if (seed < 0) return null;
+    return seed >>> 0;
+  }
+
+  function applySeedFromInput() {
+    const parsed = parseSeed(seedInput);
+    if (parsed == null) {
+      setSeedError("Enter a non-negative whole number");
+      return;
+    }
+    setSeedError(null);
+    resetForDeal(parsed);
+  }
+
+  function newSeed() {
+    resetForDeal(Math.floor(Math.random() * 1_000_000_000));
   }
 
   function toggleRevealSeat(seat: Seat) {
@@ -657,9 +695,32 @@ export default function App() {
             <Badge variant="secondary">Trick engine</Badge>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" className="gap-2" onClick={newDeal}>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Seed</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={seedInput}
+                  onChange={(e) => {
+                    setSeedInput(e.target.value);
+                    setSeedError(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") applySeedFromInput();
+                  }}
+                  className="h-8 w-32 rounded-md border bg-background px-2 text-xs"
+                />
+                <Button type="button" variant="outline" size="sm" onClick={applySeedFromInput}>
+                  Apply
+                </Button>
+              </div>
+              {seedError ? <div className="mt-1 text-xs text-destructive">{seedError}</div> : null}
+            </div>
+            <Button variant="outline" className="gap-2" onClick={newSeed}>
               <RefreshCw className="h-4 w-4" />
-              New deal
+              New seed
             </Button>
             <Button variant="outline" className="gap-2" onClick={resetTrickOnly}>
               Reset trick
@@ -1081,7 +1142,7 @@ console.assert(
   "Each suit should have 13 cards"
 );
 
-const _hands = dealNewHands();
+const _hands = dealNewHands(createRng(1));
 console.assert(SEATS.every((s) => _hands[s].length === 13), "Each seat should be dealt 13 cards");
 
 const _dealtIds = SEATS.reduce<string[]>((acc, s) => acc.concat(_hands[s].map((c) => c.id)), []);
