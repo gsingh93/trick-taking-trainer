@@ -47,6 +47,59 @@ type TrumpConfig = {
   mustBreak: boolean;
 };
 
+const SETTINGS_KEY = "trick-taking-trainer:settings";
+
+type Settings = {
+  dealSeed: number;
+  seedInput: string;
+  modeOpenHandVerify: boolean;
+  suitOrderMode: "bridge" | "poker";
+  sortAscending: boolean;
+  aiEnabled: boolean;
+  aiDelayMs: number;
+  pauseBeforeNextTrick: boolean;
+  trump: TrumpConfig;
+};
+
+function loadSettings(): Partial<Settings> {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return {};
+    const data = JSON.parse(raw) as Record<string, unknown>;
+    const next: Partial<Settings> = {};
+    if (typeof data.dealSeed === "number" && Number.isFinite(data.dealSeed) && data.dealSeed >= 0) {
+      next.dealSeed = Math.floor(data.dealSeed) >>> 0;
+    }
+    if (typeof data.seedInput === "string") next.seedInput = data.seedInput;
+    if (typeof data.modeOpenHandVerify === "boolean") next.modeOpenHandVerify = data.modeOpenHandVerify;
+    if (data.suitOrderMode === "bridge" || data.suitOrderMode === "poker") {
+      next.suitOrderMode = data.suitOrderMode;
+    }
+    if (typeof data.sortAscending === "boolean") next.sortAscending = data.sortAscending;
+    if (typeof data.aiEnabled === "boolean") next.aiEnabled = data.aiEnabled;
+    if (typeof data.aiDelayMs === "number" && Number.isFinite(data.aiDelayMs) && data.aiDelayMs >= 0) {
+      next.aiDelayMs = Math.floor(data.aiDelayMs);
+    }
+    if (typeof data.pauseBeforeNextTrick === "boolean") {
+      next.pauseBeforeNextTrick = data.pauseBeforeNextTrick;
+    }
+    if (typeof data.trump === "object" && data.trump) {
+      const t = data.trump as Record<string, unknown>;
+      if (
+        typeof t.enabled === "boolean" &&
+        typeof t.mustBreak === "boolean" &&
+        typeof t.suit === "string" &&
+        SUITS.includes(t.suit as Suit)
+      ) {
+        next.trump = { enabled: t.enabled, mustBreak: t.mustBreak, suit: t.suit as Suit };
+      }
+    }
+    return next;
+  } catch {
+    return {};
+  }
+}
+
 function suitGlyph(s: Suit) {
   return s === "S" ? "♠" : s === "H" ? "♥" : s === "D" ? "♦" : "♣";
 }
@@ -344,26 +397,39 @@ function HandCol({
 }
 
 export default function App() {
-  const [modeOpenHandVerify, setModeOpenHandVerify] = useState(false);
-  const [suitOrderMode, setSuitOrderMode] = useState<"bridge" | "poker">("bridge");
-  const [sortAscending, setSortAscending] = useState(true);
+  const initialSettings = useMemo(() => loadSettings(), []);
+  const initialSeed = initialSettings.dealSeed ?? Math.floor(Math.random() * 1_000_000_000);
 
-  const [aiEnabled, setAiEnabled] = useState(true);
-  const [aiDelayMs, setAiDelayMs] = useState(1000);
-  const [pauseBeforeNextTrick, setPauseBeforeNextTrick] = useState(true);
+  const [modeOpenHandVerify, setModeOpenHandVerify] = useState(
+    () => initialSettings.modeOpenHandVerify ?? false
+  );
+  const [suitOrderMode, setSuitOrderMode] = useState<"bridge" | "poker">(
+    () => initialSettings.suitOrderMode ?? "bridge"
+  );
+  const [sortAscending, setSortAscending] = useState(() => initialSettings.sortAscending ?? true);
+
+  const [aiEnabled, setAiEnabled] = useState(() => initialSettings.aiEnabled ?? true);
+  const [aiDelayMs, setAiDelayMs] = useState(() => initialSettings.aiDelayMs ?? 1000);
+  const [pauseBeforeNextTrick, setPauseBeforeNextTrick] = useState(
+    () => initialSettings.pauseBeforeNextTrick ?? true
+  );
   const [awaitContinue, setAwaitContinue] = useState(false);
 
-  const [trump, setTrump] = useState<TrumpConfig>({
-    enabled: false,
-    suit: "S",
-    mustBreak: true,
+  const [trump, setTrump] = useState<TrumpConfig>(() => {
+    return (
+      initialSettings.trump ?? {
+        enabled: false,
+        suit: "S",
+        mustBreak: true,
+      }
+    );
   });
   const [trumpBroken, setTrumpBroken] = useState(false);
 
-  const [dealSeed, setDealSeed] = useState(() => Math.floor(Math.random() * 1_000_000_000));
-  const [seedInput, setSeedInput] = useState(() => String(dealSeed));
+  const [dealSeed, setDealSeed] = useState(() => initialSeed);
+  const [seedInput, setSeedInput] = useState(() => initialSettings.seedInput ?? String(initialSeed));
   const [seedError, setSeedError] = useState<string | null>(null);
-  const [hands, setHands] = useState<Hands>(() => dealNewHands(createRng(dealSeed)));
+  const [hands, setHands] = useState<Hands>(() => dealNewHands(createRng(initialSeed)));
 
   const [reveal, setReveal] = useState<Record<Seat, boolean>>({
     Left: false,
@@ -403,6 +469,35 @@ export default function App() {
   const suitOrder = useMemo<Suit[]>(() => {
     return suitOrderMode === "bridge" ? ["S", "H", "D", "C"] : ["C", "D", "H", "S"];
   }, [suitOrderMode]);
+
+  useEffect(() => {
+    const settings: Settings = {
+      dealSeed,
+      seedInput,
+      modeOpenHandVerify,
+      suitOrderMode,
+      sortAscending,
+      aiEnabled,
+      aiDelayMs,
+      pauseBeforeNextTrick,
+      trump,
+    };
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    } catch {
+      // Ignore storage errors (quota, private mode).
+    }
+  }, [
+    dealSeed,
+    seedInput,
+    modeOpenHandVerify,
+    suitOrderMode,
+    sortAscending,
+    aiEnabled,
+    aiDelayMs,
+    pauseBeforeNextTrick,
+    trump,
+  ]);
 
   const legalBySeat = useMemo(() => {
     const out: Record<Seat, Set<string>> = {
