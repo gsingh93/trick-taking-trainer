@@ -533,6 +533,10 @@ export default function App() {
     resetForDeal(Math.floor(Math.random() * 1_000_000_000));
   }
 
+  function resetHand() {
+    resetForDeal(dealSeed);
+  }
+
   function toggleRevealSeat(seat: Seat) {
     setReveal((r) => ({ ...r, [seat]: !r[seat] }));
   }
@@ -721,6 +725,9 @@ export default function App() {
             <Button variant="outline" className="gap-2" onClick={newSeed}>
               <RefreshCw className="h-4 w-4" />
               New seed
+            </Button>
+            <Button variant="outline" onClick={resetHand}>
+              Reset hand
             </Button>
             <Button variant="outline" className="gap-2" onClick={resetTrickOnly}>
               Reset trick
