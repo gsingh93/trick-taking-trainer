@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Grid3X3, Play, RefreshCw, Eye, EyeOff } from "lucide-react";
+import { Grid3X3, RefreshCw, Eye, EyeOff } from "lucide-react";
 
 /**
  * Generic trick engine (v1)
@@ -30,7 +30,10 @@ import { Grid3X3, Play, RefreshCw, Eye, EyeOff } from "lucide-react";
 type Suit = "S" | "H" | "D" | "C";
 const SUITS: Suit[] = ["S", "H", "D", "C"];
 
-type Seat = "Left" | "Across" | "Right" | "Me";
+type Opp = "Left" | "Across" | "Right";
+const OPPONENTS: Opp[] = ["Left", "Across", "Right"];
+
+type Seat = Opp | "Me";
 const SEATS: Seat[] = ["Left", "Across", "Right", "Me"];
 
 type Rank = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14; // 11=J,12=Q,13=K,14=A
@@ -38,6 +41,8 @@ type Rank = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14; // 11=J,12=Q
 type CardT = { suit: Suit; rank: Rank; id: string };
 
 type Hands = Record<Seat, CardT[]>;
+
+type VoidGrid = Record<Opp, Record<Suit, boolean>>;
 
 type PlayT = { seat: Seat; card: CardT };
 
@@ -156,6 +161,14 @@ function dealNewHands(rng: () => number): Hands {
     }
   }
   return hands;
+}
+
+function createVoidGrid(): VoidGrid {
+  return {
+    Left: { S: false, H: false, D: false, C: false },
+    Across: { S: false, H: false, D: false, C: false },
+    Right: { S: false, H: false, D: false, C: false },
+  };
 }
 
 function sortHand(hand: CardT[], suitOrder: Suit[], sortAscending: boolean): CardT[] {
@@ -313,6 +326,7 @@ function HandRow({
   currentTurn,
   suitOrder,
   sortAscending,
+  canPlay,
 }: {
   seat: Seat;
   hand: CardT[];
@@ -322,6 +336,7 @@ function HandRow({
   currentTurn: Seat;
   suitOrder: Suit[];
   sortAscending: boolean;
+  canPlay: boolean;
 }) {
   const isTurn = seat === currentTurn;
   return (
@@ -331,10 +346,12 @@ function HandRow({
           <PlayingCard
             key={c.id}
             c={c}
-            disabled={!isTurn || !legal.has(c.id)}
+            disabled={!canPlay || !isTurn || !legal.has(c.id)}
             onClick={() => onPlay(seat, c)}
             title={
-              !isTurn
+              !canPlay
+                ? "Start trick first"
+                : !isTurn
                 ? "Not your turn"
                 : !legal.has(c.id)
                   ? "Illegal (must-follow / must-break)"
@@ -357,6 +374,7 @@ function HandCol({
   currentTurn,
   suitOrder,
   sortAscending,
+  canPlay,
 }: {
   seat: Seat;
   hand: CardT[];
@@ -367,6 +385,7 @@ function HandCol({
   currentTurn: Seat;
   suitOrder: Suit[];
   sortAscending: boolean;
+  canPlay: boolean;
 }) {
   const isTurn = seat === currentTurn;
   return (
@@ -378,10 +397,12 @@ function HandCol({
               <PlayingCard
                 c={c}
                 rotateClass={cardRotateClass}
-                disabled={!isTurn || !legal.has(c.id)}
+                disabled={!canPlay || !isTurn || !legal.has(c.id)}
                 onClick={() => onPlay(seat, c)}
                 title={
-                  !isTurn
+                  !canPlay
+                    ? "Start trick first"
+                    : !isTurn
                     ? "Not your turn"
                     : !legal.has(c.id)
                       ? "Illegal (must-follow / must-break)"
@@ -430,6 +451,12 @@ export default function App() {
   const [seedInput, setSeedInput] = useState(() => initialSettings.seedInput ?? String(initialSeed));
   const [seedError, setSeedError] = useState<string | null>(null);
   const [hands, setHands] = useState<Hands>(() => dealNewHands(createRng(initialSeed)));
+  const [trickHistory, setTrickHistory] = useState<PlayT[][]>([]);
+  const [voidGrid, setVoidGrid] = useState<VoidGrid>(() => createVoidGrid());
+  const [voidMismatch, setVoidMismatch] = useState<VoidGrid | null>(null);
+  const [voidWarning, setVoidWarning] = useState<string | null>(null);
+  const [voidNeedsValidation, setVoidNeedsValidation] = useState(false);
+  const [trickReady, setTrickReady] = useState(true);
 
   const [reveal, setReveal] = useState<Record<Seat, boolean>>({
     Left: false,
@@ -469,6 +496,21 @@ export default function App() {
   const suitOrder = useMemo<Suit[]>(() => {
     return suitOrderMode === "bridge" ? ["S", "H", "D", "C"] : ["C", "D", "H", "S"];
   }, [suitOrderMode]);
+
+  const actualVoid = useMemo<VoidGrid>(() => {
+    const out = createVoidGrid();
+    for (const t of trickHistory) {
+      const lead = trickLeadSuit(t);
+      if (!lead) continue;
+      for (let i = 1; i < t.length; i++) {
+        const play = t[i];
+        if (play.card.suit !== lead && play.seat !== "Me") {
+          out[play.seat][lead] = true;
+        }
+      }
+    }
+    return out;
+  }, [trickHistory]);
 
   useEffect(() => {
     const settings: Settings = {
@@ -539,6 +581,12 @@ export default function App() {
     setSeedInput(String(seed));
     setTricksWon({ Left: 0, Across: 0, Right: 0, Me: 0 });
     setHands(dealNewHands(createRng(seed)));
+    setTrickHistory([]);
+    setVoidGrid(createVoidGrid());
+    setVoidMismatch(null);
+    setVoidWarning(null);
+    setVoidNeedsValidation(false);
+    setTrickReady(true);
     setReveal({ Left: false, Across: false, Right: false, Me: true });
     setLeader("Me");
     setTurn("Me");
@@ -578,6 +626,40 @@ export default function App() {
     resetForDeal(dealSeed);
   }
 
+  function toggleVoidCell(o: Opp, s: Suit) {
+    setVoidGrid((g) => ({
+      ...g,
+      [o]: { ...g[o], [s]: !g[o][s] },
+    }));
+    setVoidMismatch(null);
+    setVoidWarning(null);
+    setVoidNeedsValidation(true);
+    setTrickReady(false);
+  }
+
+  function validateVoidGrid() {
+    const mismatch = createVoidGrid();
+    let hasMismatch = false;
+    for (const o of OPPONENTS) {
+      for (const s of SUITS) {
+        if (voidGrid[o][s] !== actualVoid[o][s]) {
+          mismatch[o][s] = true;
+          hasMismatch = true;
+        }
+      }
+    }
+    if (hasMismatch) {
+      setVoidMismatch(mismatch);
+      setVoidWarning("Void grid does not match played suits");
+      setVoidNeedsValidation(true);
+      return;
+    }
+    setVoidMismatch(null);
+    setVoidWarning(null);
+    setVoidNeedsValidation(false);
+    setTrickReady(true);
+  }
+
   function toggleRevealSeat(seat: Seat) {
     setReveal((r) => ({ ...r, [seat]: !r[seat] }));
   }
@@ -588,9 +670,12 @@ export default function App() {
 
     resolveTimerRef.current = window.setTimeout(() => {
       const winner = determineTrickWinner(finalTrick, trump);
+      setTrickHistory((h) => [...h, finalTrick]);
       setTricksWon((tw) => ({ ...tw, [winner]: tw[winner] + 1 }));
       setLeader(winner);
       setTurn(winner);
+      setTrickReady(false);
+      setVoidNeedsValidation(true);
 
       if (aiEnabled && pauseBeforeNextTrick) {
         // Keep the completed trick visible; wait for user input.
@@ -614,6 +699,9 @@ export default function App() {
 
     // Only the leader may lead a new trick.
     if (trick.length === 0 && seat !== leader) return;
+
+    // Require void grid validation before any play.
+    if (!trickReady) return;
 
     // Capture start-of-trick state on the first play.
     if (trick.length === 0) {
@@ -668,6 +756,7 @@ export default function App() {
     cancelResolveTimer();
     setIsResolving(false);
     setAwaitContinue(false);
+    setTrickReady(false);
 
     setHands((h) => {
       const next: Hands = {
@@ -685,6 +774,7 @@ export default function App() {
     setTrick([]);
     setLeader(trickStartLeader);
     setTurn(trickStartTurn);
+    setVoidNeedsValidation(true);
   }
 
   // Basic AI: opponents play a random valid card when it's their turn.
@@ -693,6 +783,7 @@ export default function App() {
     if (isResolving) return;
     if (awaitContinue) return;
     if (turn === "Me") return;
+    if (!trickReady) return;
 
     // If trick is empty, only the leader may lead.
     if (trick.length === 0 && turn !== leader) return;
@@ -710,7 +801,18 @@ export default function App() {
     }, aiDelayMs);
 
     return () => clearTimeout(timer);
-  }, [aiEnabled, aiDelayMs, turn, legalBySeat, hands, isResolving, trick, leader, awaitContinue]);
+  }, [
+    aiEnabled,
+    aiDelayMs,
+    turn,
+    legalBySeat,
+    hands,
+    isResolving,
+    trick,
+    leader,
+    awaitContinue,
+    trickReady,
+  ]);
 
   // If paused after a completed trick, advance on any key.
   useEffect(() => {
@@ -719,6 +821,7 @@ export default function App() {
       setTrick([]);
       setTrickNo((n) => n + 1);
       setAwaitContinue(false);
+      setVoidNeedsValidation(true);
     };
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Enter" || e.key === " " || e.code === "Space") {
@@ -848,6 +951,7 @@ export default function App() {
                       currentTurn={turn}
                       suitOrder={suitOrder}
                       sortAscending={sortAscending}
+                      canPlay={trickReady}
                     />
                   ) : null}
                 </div>
@@ -890,6 +994,7 @@ export default function App() {
                       currentTurn={turn}
                       suitOrder={suitOrder}
                       sortAscending={sortAscending}
+                      canPlay={trickReady}
                     />
                   ) : null}
                 </div>
@@ -981,6 +1086,7 @@ export default function App() {
                       currentTurn={turn}
                       suitOrder={suitOrder}
                       sortAscending={sortAscending}
+                      canPlay={trickReady}
                     />
                   ) : null}
                 </div>
@@ -1004,6 +1110,7 @@ export default function App() {
                     currentTurn={turn}
                     suitOrder={suitOrder}
                     sortAscending={sortAscending}
+                    canPlay={trickReady}
                   />
                 </div>
               </div>
@@ -1012,6 +1119,64 @@ export default function App() {
 
           {/* TRAINING COLUMN */}
           <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Void tracking</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="text-xs text-muted-foreground">
+                  Mark a suit as void when an opponent fails to follow. Assume not void until proven otherwise.
+                </div>
+                <div className="grid grid-cols-5 gap-2 text-xs">
+                  <div />
+                  {SUITS.map((s) => (
+                    <div key={s} className={"text-center " + suitColorClass(s)}>
+                      {suitGlyph(s)}
+                    </div>
+                  ))}
+                  {OPPONENTS.map((o) => (
+                    <React.Fragment key={o}>
+                      <div className="font-medium">{o}</div>
+                      {SUITS.map((s) => {
+                        const mismatch = voidMismatch ? voidMismatch[o][s] : false;
+                        return (
+                          <label
+                            key={o + s}
+                            className={
+                              "flex h-8 items-center justify-center rounded-md border " +
+                              (mismatch ? "border-destructive" : "border-border")
+                            }
+                          >
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4"
+                              checked={voidGrid[o][s]}
+                              onChange={() => toggleVoidCell(o, s)}
+                            />
+                          </label>
+                        );
+                      })}
+                    </React.Fragment>
+                  ))}
+                </div>
+                <div className="text-xs">
+                  {voidWarning ? (
+                    <span className="text-destructive">{voidWarning}</span>
+                  ) : voidNeedsValidation ? (
+                    <span className="text-amber-600">Click "Start Trick" to validate</span>
+                  ) : (
+                    <span className="text-emerald-600">Void grid matches played suits</span>
+                  )}
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={validateVoidGrid}
+                  disabled={trick.length > 0 || isResolving || awaitContinue}
+                >
+                  Start trick
+                </Button>
+              </CardContent>
+            </Card>
             <Card>
               <CardHeader>
                 <CardTitle>Settings</CardTitle>
