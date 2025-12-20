@@ -30,10 +30,7 @@ import { Grid3X3, Play, RefreshCw, Eye, EyeOff } from "lucide-react";
 type Suit = "S" | "H" | "D" | "C";
 const SUITS: Suit[] = ["S", "H", "D", "C"];
 
-type Opp = "Left" | "Across" | "Right";
-const OPPONENTS: Opp[] = ["Left", "Across", "Right"];
-
-type Seat = Opp | "Me";
+type Seat = "Left" | "Across" | "Right" | "Me";
 const SEATS: Seat[] = ["Left", "Across", "Right", "Me"];
 
 type Rank = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14; // 11=J,12=Q,13=K,14=A
@@ -41,8 +38,6 @@ type Rank = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14; // 11=J,12=Q
 type CardT = { suit: Suit; rank: Rank; id: string };
 
 type Hands = Record<Seat, CardT[]>;
-
-type GridState = Record<Opp, Record<Suit, "POSSIBLE" | "VOID">>;
 
 type PlayT = { seat: Seat; card: CardT };
 
@@ -348,33 +343,7 @@ function HandCol({
   );
 }
 
-type ToggleChipProps = {
-  value: "POSSIBLE" | "VOID";
-  onToggle: () => void;
-  disabled?: boolean;
-};
-
-function ToggleChip({ value, onToggle, disabled }: ToggleChipProps) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onToggle}
-      className={
-        "w-full rounded-xl border px-2 py-2 text-xs font-medium " +
-        (value === "VOID" ? "bg-foreground text-background" : "bg-background") +
-        (disabled ? " opacity-50" : "")
-      }
-    >
-      {value}
-    </button>
-  );
-}
-
 export default function App() {
-  const [modeSingleSuit, setModeSingleSuit] = useState(false);
-  const [modeViolationOnly, setModeViolationOnly] = useState(false);
-  const [modeDelayedRecall, setModeDelayedRecall] = useState(false);
   const [modeOpenHandVerify, setModeOpenHandVerify] = useState(false);
   const [suitOrderMode, setSuitOrderMode] = useState<"bridge" | "poker">("bridge");
   const [sortAscending, setSortAscending] = useState(true);
@@ -383,9 +352,6 @@ export default function App() {
   const [aiDelayMs, setAiDelayMs] = useState(1000);
   const [pauseBeforeNextTrick, setPauseBeforeNextTrick] = useState(true);
   const [awaitContinue, setAwaitContinue] = useState(false);
-
-  const [selectedSuit, setSelectedSuit] = useState<Suit>("H");
-  const [delayN, setDelayN] = useState("2");
 
   const [trump, setTrump] = useState<TrumpConfig>({
     enabled: false,
@@ -405,14 +371,6 @@ export default function App() {
     Right: false,
     Me: true,
   });
-
-  const uiSuitLock: Suit | null = modeSingleSuit ? selectedSuit : null;
-
-  const [grid, setGrid] = useState<GridState>(() => ({
-    Left: { S: "POSSIBLE", H: "POSSIBLE", D: "POSSIBLE", C: "POSSIBLE" },
-    Across: { S: "POSSIBLE", H: "POSSIBLE", D: "POSSIBLE", C: "POSSIBLE" },
-    Right: { S: "POSSIBLE", H: "POSSIBLE", D: "POSSIBLE", C: "POSSIBLE" },
-  }));
 
   const [leader, setLeader] = useState<Seat>("Me");
   const [trickStartLeader, setTrickStartLeader] = useState<Seat>("Me");
@@ -473,13 +431,6 @@ export default function App() {
     return out;
   }, [hands, trick, leader, trump, trumpBroken]);
 
-  function toggleCell(o: Opp, s: Suit) {
-    setGrid((g) => ({
-      ...g,
-      [o]: { ...g[o], [s]: g[o][s] === "VOID" ? "POSSIBLE" : "VOID" },
-    }));
-  }
-
   function cancelResolveTimer() {
     if (resolveTimerRef.current != null) {
       clearTimeout(resolveTimerRef.current);
@@ -494,11 +445,6 @@ export default function App() {
     setTricksWon({ Left: 0, Across: 0, Right: 0, Me: 0 });
     setHands(dealNewHands(createRng(seed)));
     setReveal({ Left: false, Across: false, Right: false, Me: true });
-    setGrid({
-      Left: { S: "POSSIBLE", H: "POSSIBLE", D: "POSSIBLE", C: "POSSIBLE" },
-      Across: { S: "POSSIBLE", H: "POSSIBLE", D: "POSSIBLE", C: "POSSIBLE" },
-      Right: { S: "POSSIBLE", H: "POSSIBLE", D: "POSSIBLE", C: "POSSIBLE" },
-    });
     setLeader("Me");
     setTurn("Me");
     setTrickStartLeader("Me");
@@ -731,10 +677,6 @@ export default function App() {
             <Button variant="outline" className="gap-2" onClick={resetTrickOnly}>
               Reset trick
             </Button>
-            <Button className="gap-2" disabled>
-              <Play className="h-4 w-4" />
-              Auto-play
-            </Button>
           </div>
         </header>
 
@@ -954,60 +896,9 @@ export default function App() {
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Training modes</CardTitle>
+                <CardTitle>Settings</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex justify-between">
-                  <span className="text-sm">Single-suit</span>
-                  <Switch checked={modeSingleSuit} onCheckedChange={setModeSingleSuit} />
-                </div>
-
-                <div className={"grid grid-cols-2 gap-2 " + (!modeSingleSuit ? "opacity-50" : "")}>
-                  <span className="text-xs">Suit</span>
-                  <Select value={selectedSuit} onValueChange={(v) => setSelectedSuit(v as Suit)} disabled={!modeSingleSuit}>
-                    <SelectTrigger className="h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SUITS.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {suitGlyph(s)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Separator />
-
-                <div className="flex justify-between">
-                  <span className="text-sm">Violation-only</span>
-                  <Switch checked={modeViolationOnly} onCheckedChange={setModeViolationOnly} />
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-sm">Delayed recall</span>
-                  <Switch checked={modeDelayedRecall} onCheckedChange={setModeDelayedRecall} />
-                </div>
-
-                <div className={"grid grid-cols-2 gap-2 " + (!modeDelayedRecall ? "opacity-50" : "")}>
-                  <span className="text-xs">Delay</span>
-                  <Select value={delayN} onValueChange={setDelayN} disabled={!modeDelayedRecall}>
-                    <SelectTrigger className="h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {["1", "2", "3", "4"].map((n) => (
-                        <SelectItem key={n} value={n}>
-                          {n}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Separator />
-
                 <div className="flex justify-between">
                   <span className="text-sm">Open-hand verify</span>
                   <Switch checked={modeOpenHandVerify} onCheckedChange={setModeOpenHandVerify} />
@@ -1035,14 +926,8 @@ export default function App() {
                     onCheckedChange={setSortAscending}
                   />
                 </div>
-              </CardContent>
-            </Card>
+                <Separator />
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Generic trick rules</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
                 <div className="flex justify-between">
                   <span className="text-sm">Basic AI (opponents)</span>
                   <Switch checked={aiEnabled} onCheckedChange={setAiEnabled} />
@@ -1101,35 +986,6 @@ export default function App() {
                 <Separator />
 
                 <div className="text-xs text-muted-foreground">Winner of the last trick leads.</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Opponent suit grid</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-5 gap-2 text-xs">
-                  <div />
-                  {SUITS.map((s) => (
-                    <div key={s} className="text-center">
-                      {suitGlyph(s)}
-                    </div>
-                  ))}
-                  {OPPONENTS.map((o) => (
-                    <React.Fragment key={o}>
-                      <div className="font-medium">{o}</div>
-                      {SUITS.map((s) => (
-                        <ToggleChip
-                          key={o + s}
-                          value={grid[o][s]}
-                          disabled={uiSuitLock ? s !== uiSuitLock : false}
-                          onToggle={() => toggleCell(o, s)}
-                        />
-                      ))}
-                    </React.Fragment>
-                  ))}
-                </div>
               </CardContent>
             </Card>
           </div>
