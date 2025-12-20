@@ -620,13 +620,26 @@ export default function App() {
   // If paused after a completed trick, advance on any key.
   useEffect(() => {
     if (!awaitContinue) return;
-    const handler = () => {
+    const advance = () => {
       setTrick([]);
       setTrickNo((n) => n + 1);
       setAwaitContinue(false);
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " " || e.code === "Space") {
+        e.preventDefault();
+        advance();
+      }
+    };
+    const onClick = () => {
+      advance();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("click", onClick);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("click", onClick);
+    };
   }, [awaitContinue]);
 
   // Cleanup any pending timers on unmount.
@@ -820,7 +833,7 @@ export default function App() {
 
                   {awaitContinue ? (
                     <div className="mt-3 text-center text-xs text-muted-foreground">
-                      Press any key to continue
+                      Press Enter/Space or click to continue
                     </div>
                   ) : null}
                 </div>
