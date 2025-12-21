@@ -58,6 +58,7 @@ type Settings = {
   dealSeed: number;
   seedInput: string;
   modeOpenHandVerify: boolean;
+  voidTrackingEnabled: boolean;
   suitOrderMode: "bridge" | "poker";
   sortAscending: boolean;
   aiEnabled: boolean;
@@ -78,6 +79,7 @@ function loadSettings(): Partial<Settings> {
     }
     if (typeof data.seedInput === "string") next.seedInput = data.seedInput;
     if (typeof data.modeOpenHandVerify === "boolean") next.modeOpenHandVerify = data.modeOpenHandVerify;
+    if (typeof data.voidTrackingEnabled === "boolean") next.voidTrackingEnabled = data.voidTrackingEnabled;
     if (data.suitOrderMode === "bridge" || data.suitOrderMode === "poker") {
       next.suitOrderMode = data.suitOrderMode;
     }
@@ -429,6 +431,9 @@ export default function App() {
   const [modeOpenHandVerify, setModeOpenHandVerify] = useState(
     () => initialSettings.modeOpenHandVerify ?? false
   );
+  const [voidTrackingEnabled, setVoidTrackingEnabled] = useState(
+    () => initialSettings.voidTrackingEnabled ?? true
+  );
   const [suitOrderMode, setSuitOrderMode] = useState<"bridge" | "poker">(
     () => initialSettings.suitOrderMode ?? "bridge"
   );
@@ -523,6 +528,7 @@ export default function App() {
       dealSeed,
       seedInput,
       modeOpenHandVerify,
+      voidTrackingEnabled,
       suitOrderMode,
       sortAscending,
       aiEnabled,
@@ -540,6 +546,7 @@ export default function App() {
     dealSeed,
     seedInput,
     modeOpenHandVerify,
+    voidTrackingEnabled,
     suitOrderMode,
     sortAscending,
     aiEnabled,
@@ -580,6 +587,22 @@ export default function App() {
     if (trick.length !== 4) return null;
     return determineTrickWinner(trick, trump);
   }, [trick, trump]);
+
+  const canPlay = voidTrackingEnabled ? trickReady : true;
+
+  useEffect(() => {
+    if (!voidTrackingEnabled) {
+      setTrickReady(true);
+      setVoidNeedsValidation(false);
+      setVoidWarning(null);
+      setVoidMismatch(null);
+      return;
+    }
+    if (trick.length === 0 && trickNo > 1) {
+      setTrickReady(false);
+      setVoidNeedsValidation(true);
+    }
+  }, [voidTrackingEnabled, trick.length, trickNo]);
 
   function cancelResolveTimer() {
     if (resolveTimerRef.current != null) {
@@ -714,7 +737,7 @@ export default function App() {
     if (trick.length === 0 && seat !== leader) return;
 
     // Require void grid validation before any play.
-    if (!trickReady) return;
+    if (voidTrackingEnabled && !trickReady) return;
 
     // Capture start-of-trick state on the first play.
     if (trick.length === 0) {
@@ -796,7 +819,7 @@ export default function App() {
     if (isResolving) return;
     if (awaitContinue) return;
     if (turn === "Me" && !aiPlayMe) return;
-    if (!trickReady) return;
+    if (voidTrackingEnabled && !trickReady) return;
 
     // If trick is empty, only the leader may lead.
     if (trick.length === 0 && turn !== leader) return;
@@ -956,7 +979,7 @@ export default function App() {
                       currentTurn={turn}
                       suitOrder={suitOrder}
                       sortAscending={sortAscending}
-                      canPlay={trickReady}
+                      canPlay={canPlay}
                     />
                   ) : null}
                 </div>
@@ -994,7 +1017,7 @@ export default function App() {
                       currentTurn={turn}
                       suitOrder={suitOrder}
                       sortAscending={sortAscending}
-                      canPlay={trickReady}
+                      canPlay={canPlay}
                     />
                   ) : null}
                 </div>
@@ -1098,7 +1121,7 @@ export default function App() {
                       currentTurn={turn}
                       suitOrder={suitOrder}
                       sortAscending={sortAscending}
-                      canPlay={trickReady}
+                      canPlay={canPlay}
                     />
                   ) : null}
                 </div>
@@ -1122,7 +1145,7 @@ export default function App() {
                     currentTurn={turn}
                     suitOrder={suitOrder}
                     sortAscending={sortAscending}
-                    canPlay={trickReady}
+                    canPlay={canPlay}
                   />
                 </div>
               </div>
@@ -1151,7 +1174,7 @@ export default function App() {
                       <div className="font-medium">{o}</div>
                       {SUITS.map((s) => {
                         const mismatch = voidMismatch ? voidMismatch[o][s] : false;
-                        const disableVoidEdit = trickReady || trick.length > 0;
+                        const disableVoidEdit = !voidTrackingEnabled || trickReady || trick.length > 0;
                         return (
                           <label
                             key={o + s}
@@ -1175,7 +1198,9 @@ export default function App() {
                   ))}
                 </div>
                 <div className="text-xs">
-                  {voidWarning ? (
+                  {!voidTrackingEnabled ? (
+                    <span className="text-muted-foreground">Void tracking disabled</span>
+                  ) : voidWarning ? (
                     <span className="text-destructive">{voidWarning}</span>
                   ) : voidNeedsValidation ? (
                     <span className="text-amber-600">Click "Start Trick" to validate</span>
@@ -1186,7 +1211,12 @@ export default function App() {
                 <Button
                   onClick={validateVoidGrid}
                   disabled={
-                    trickReady || trick.length > 0 || isResolving || awaitContinue || (trickNo === 1 && trick.length === 0)
+                    !voidTrackingEnabled ||
+                    trickReady ||
+                    trick.length > 0 ||
+                    isResolving ||
+                    awaitContinue ||
+                    (trickNo === 1 && trick.length === 0)
                   }
                   className="bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-600/50"
                 >
@@ -1202,6 +1232,13 @@ export default function App() {
                 <div className="flex justify-between">
                   <span className="text-sm">Open-hand verify</span>
                   <Switch checked={modeOpenHandVerify} onCheckedChange={setModeOpenHandVerify} />
+                </div>
+
+                <Separator />
+
+                <div className="flex justify-between">
+                  <span className="text-sm">Void tracking</span>
+                  <Switch checked={voidTrackingEnabled} onCheckedChange={setVoidTrackingEnabled} />
                 </div>
 
                 <Separator />
