@@ -63,6 +63,7 @@ type Settings = {
   aiEnabled: boolean;
   aiDelayMs: number;
   pauseBeforeNextTrick: boolean;
+  aiPlayMe: boolean;
   trump: TrumpConfig;
 };
 
@@ -88,6 +89,7 @@ function loadSettings(): Partial<Settings> {
     if (typeof data.pauseBeforeNextTrick === "boolean") {
       next.pauseBeforeNextTrick = data.pauseBeforeNextTrick;
     }
+    if (typeof data.aiPlayMe === "boolean") next.aiPlayMe = data.aiPlayMe;
     if (typeof data.trump === "object" && data.trump) {
       const t = data.trump as Record<string, unknown>;
       if (
@@ -437,6 +439,7 @@ export default function App() {
   const [pauseBeforeNextTrick, setPauseBeforeNextTrick] = useState(
     () => initialSettings.pauseBeforeNextTrick ?? true
   );
+  const [aiPlayMe, setAiPlayMe] = useState(() => initialSettings.aiPlayMe ?? false);
   const [awaitContinue, setAwaitContinue] = useState(false);
 
   const [trump, setTrump] = useState<TrumpConfig>(() => {
@@ -525,6 +528,7 @@ export default function App() {
       aiEnabled,
       aiDelayMs,
       pauseBeforeNextTrick,
+      aiPlayMe,
       trump,
     };
     try {
@@ -541,6 +545,7 @@ export default function App() {
     aiEnabled,
     aiDelayMs,
     pauseBeforeNextTrick,
+    aiPlayMe,
     trump,
   ]);
 
@@ -785,12 +790,12 @@ export default function App() {
     setVoidNeedsValidation(true);
   }
 
-  // Basic AI: opponents play a random valid card when it's their turn.
+  // Basic AI: players play a random valid card when it's their turn.
   useEffect(() => {
     if (!aiEnabled) return;
     if (isResolving) return;
     if (awaitContinue) return;
-    if (turn === "Me") return;
+    if (turn === "Me" && !aiPlayMe) return;
     if (!trickReady) return;
 
     // If trick is empty, only the leader may lead.
@@ -811,6 +816,7 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [
     aiEnabled,
+    aiPlayMe,
     aiDelayMs,
     turn,
     legalBySeat,
@@ -1224,6 +1230,11 @@ export default function App() {
                 <div className="flex justify-between">
                   <span className="text-sm">Basic AI (opponents)</span>
                   <Switch checked={aiEnabled} onCheckedChange={setAiEnabled} />
+                </div>
+
+                <div className={"flex justify-between " + (!aiEnabled ? "opacity-50" : "")}>
+                  <span className="text-sm">AI for me</span>
+                  <Switch checked={aiPlayMe} onCheckedChange={setAiPlayMe} disabled={!aiEnabled} />
                 </div>
 
                 <div className={"grid grid-cols-2 gap-2 " + (!aiEnabled ? "opacity-50" : "")}>
