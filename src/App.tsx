@@ -589,7 +589,7 @@ export default function App() {
     return determineTrickWinner(trick, trump);
   }, [trick, trump]);
 
-  const canPlay = voidTrackingEnabled ? trickReady : true;
+  const canPlay = (voidTrackingEnabled ? trickReady : true) && !awaitContinue;
 
   useEffect(() => {
     if (!voidTrackingEnabled) {
@@ -733,6 +733,7 @@ export default function App() {
 
   function tryPlay(seat: Seat, card: CardT, source: "human" | "ai" = "human") {
     if (isResolving) return;
+    if (awaitContinue) return;
 
     // Only the leader may lead a new trick.
     if (trick.length === 0 && seat !== leader) return;
