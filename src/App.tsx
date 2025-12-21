@@ -951,8 +951,11 @@ export default function App() {
                 {/* Across spans full width */}
                 <div className="col-span-3 rounded-xl border p-3">
                   <div className="flex items-center justify-between">
-                    <div className="text-sm font-medium">
-                      Across <span className="text-xs text-muted-foreground">({tricksWon.Across})</span>
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <span>
+                        Across <span className="text-xs text-muted-foreground">({tricksWon.Across})</span>
+                      </span>
+                      {turn === "Across" ? <Badge>To play</Badge> : null}
                     </div>
                     <Badge variant="outline">{hands.Across.length}</Badge>
                   </div>
@@ -968,7 +971,6 @@ export default function App() {
                       {shownHands.Across ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       {shownHands.Across ? "Hide" : "Reveal"}
                     </Button>
-                    {turn === "Across" ? <Badge>To play</Badge> : null}
                   </div>
                   {shownHands.Across ? (
                     <HandRow
@@ -987,8 +989,11 @@ export default function App() {
                 {/* Left spans rows */}
                 <div className="row-span-2 rounded-xl border p-3">
                   <div className="flex items-center justify-between">
-                    <div className="text-sm font-medium">
-                      Left <span className="text-xs text-muted-foreground">({tricksWon.Left})</span>
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <span>
+                        Left <span className="text-xs text-muted-foreground">({tricksWon.Left})</span>
+                      </span>
+                      {turn === "Left" ? <Badge>To play</Badge> : null}
                     </div>
                     <Badge variant="outline">{hands.Left.length}</Badge>
                   </div>
@@ -1004,7 +1009,6 @@ export default function App() {
                       {shownHands.Left ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       {shownHands.Left ? "Hide" : "Reveal"}
                     </Button>
-                    {turn === "Left" ? <Badge>To play</Badge> : null}
                   </div>
                   {shownHands.Left ? (
                     <HandCol
@@ -1091,8 +1095,11 @@ export default function App() {
                 {/* Right spans rows */}
                 <div className="row-span-2 rounded-xl border p-3">
                   <div className="flex items-center justify-between">
-                    <div className="text-sm font-medium">
-                      Right <span className="text-xs text-muted-foreground">({tricksWon.Right})</span>
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <span>
+                        Right <span className="text-xs text-muted-foreground">({tricksWon.Right})</span>
+                      </span>
+                      {turn === "Right" ? <Badge>To play</Badge> : null}
                     </div>
                     <Badge variant="outline">{hands.Right.length}</Badge>
                   </div>
@@ -1108,7 +1115,6 @@ export default function App() {
                       {shownHands.Right ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       {shownHands.Right ? "Hide" : "Reveal"}
                     </Button>
-                    {turn === "Right" ? <Badge>To play</Badge> : null}
                   </div>
                   {shownHands.Right ? (
                     <HandCol
@@ -1129,13 +1135,13 @@ export default function App() {
                 {/* Me spans full width */}
                 <div className="col-span-3 rounded-xl border p-3">
                   <div className="flex items-center justify-between">
-                    <div className="text-sm font-medium">
-                      Me <span className="text-xs text-muted-foreground">({tricksWon.Me})</span>
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <span>
+                        Me <span className="text-xs text-muted-foreground">({tricksWon.Me})</span>
+                      </span>
+                      {turn === "Me" ? <Badge>To play</Badge> : null}
                     </div>
                     <Badge variant="outline">{hands.Me.length}</Badge>
-                  </div>
-                  <div className="mt-2 flex items-center gap-2">
-                    {turn === "Me" ? <Badge>To play</Badge> : null}
                   </div>
                   <HandRow
                     seat="Me"
