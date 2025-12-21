@@ -308,7 +308,7 @@ function PlayingCard({
       : " cursor-pointer hover:ring-2 hover:ring-foreground/30"
     : "";
   const sel = selected ? " ring-2 ring-foreground/60" : "";
-  const win = highlight ? " ring-2 ring-emerald-500" : "";
+  const win = highlight ? " ring-2 ring-amber-400" : "";
 
   return (
     <div
