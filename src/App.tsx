@@ -889,11 +889,11 @@ export default function App() {
                   </div>
                   {seedError ? <div className="mt-1 text-xs text-destructive">{seedError}</div> : null}
                 </div>
-                <Button variant="outline" className="gap-2" onClick={newSeed}>
+                <Button className="gap-2 bg-emerald-600 text-white hover:bg-emerald-700" onClick={newSeed}>
                   <RefreshCw className="h-4 w-4" />
                   New seed
                 </Button>
-                <Button variant="outline" onClick={resetHand}>
+                <Button className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={resetHand}>
                   Reset hand
                 </Button>
               </div>
@@ -908,7 +908,7 @@ export default function App() {
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span>Table</span>
-                  <Button size="sm" variant="outline" onClick={resetTrickOnly}>
+                  <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={resetTrickOnly}>
                     Reset trick
                   </Button>
                 </div>
@@ -1175,9 +1175,9 @@ export default function App() {
                   )}
                 </div>
                 <Button
-                  variant="outline"
                   onClick={validateVoidGrid}
                   disabled={trick.length > 0 || isResolving || awaitContinue || (trickNo === 1 && trick.length === 0)}
+                  className="bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-600/50"
                 >
                   Start trick
                 </Button>
