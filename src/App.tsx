@@ -1145,12 +1145,14 @@ export default function App() {
                       <div className="font-medium">{o}</div>
                       {SUITS.map((s) => {
                         const mismatch = voidMismatch ? voidMismatch[o][s] : false;
+                        const disableVoidEdit = trickReady || trick.length > 0;
                         return (
                           <label
                             key={o + s}
                             className={
                               "flex h-8 items-center justify-center rounded-md border " +
-                              (mismatch ? "border-destructive" : "border-border")
+                              (mismatch ? "border-destructive" : "border-border") +
+                              (disableVoidEdit ? " opacity-60" : "")
                             }
                           >
                             <input
@@ -1158,6 +1160,7 @@ export default function App() {
                               className="h-4 w-4"
                               checked={voidGrid[o][s]}
                               onChange={() => toggleVoidCell(o, s)}
+                              disabled={disableVoidEdit}
                             />
                           </label>
                         );
@@ -1176,7 +1179,9 @@ export default function App() {
                 </div>
                 <Button
                   onClick={validateVoidGrid}
-                  disabled={trick.length > 0 || isResolving || awaitContinue || (trickNo === 1 && trick.length === 0)}
+                  disabled={
+                    trickReady || trick.length > 0 || isResolving || awaitContinue || (trickNo === 1 && trick.length === 0)
+                  }
                   className="bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-600/50"
                 >
                   Start trick
