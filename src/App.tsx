@@ -890,14 +890,6 @@ export default function App() {
                 </Button>
               </div>
             </div>
-            <div className="space-y-2 rounded-lg border bg-card/50 p-3">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Trick</div>
-              <div>
-                <Button variant="outline" className="gap-2" onClick={resetTrickOnly}>
-                  Reset trick
-                </Button>
-              </div>
-            </div>
           </div>
         </header>
 
@@ -906,7 +898,12 @@ export default function App() {
           <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                <span>Table</span>
+                <div className="flex items-center gap-3">
+                  <span>Table</span>
+                  <Button size="sm" variant="outline" onClick={resetTrickOnly}>
+                    Reset trick
+                  </Button>
+                </div>
                 <span className="text-sm text-muted-foreground">
                   Trick {trickNo} • Lead: {leader} • Turn: {turn}
                   {isResolving ? " • Resolving…" : ""}
