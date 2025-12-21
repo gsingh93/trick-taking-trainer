@@ -285,6 +285,7 @@ function PlayingCard({
   onClick,
   disabled,
   selected,
+  highlight,
   title,
 }: {
   c: CardT;
@@ -292,6 +293,7 @@ function PlayingCard({
   onClick?: () => void;
   disabled?: boolean;
   selected?: boolean;
+  highlight?: boolean;
   title?: string;
 }) {
   const base =
@@ -302,12 +304,13 @@ function PlayingCard({
       : " cursor-pointer hover:ring-2 hover:ring-foreground/30"
     : "";
   const sel = selected ? " ring-2 ring-foreground/60" : "";
+  const win = highlight ? " ring-2 ring-emerald-500" : "";
 
   return (
     <div
       title={title}
       onClick={disabled ? undefined : onClick}
-      className={base + inter + sel + (rotateClass ? " " + rotateClass : "")}
+      className={base + inter + sel + win + (rotateClass ? " " + rotateClass : "")}
     >
       <span className={`font-semibold ${suitColorClass(c.suit)}`}>
         {rankGlyph(c.rank)}
@@ -567,6 +570,11 @@ export default function App() {
     }
     return out;
   }, [hands, trick, leader, trump, trumpBroken]);
+
+  const trickWinner = useMemo<Seat | null>(() => {
+    if (trick.length !== 4) return null;
+    return determineTrickWinner(trick, trump);
+  }, [trick, trump]);
 
   function cancelResolveTimer() {
     if (resolveTimerRef.current != null) {
@@ -999,7 +1007,11 @@ export default function App() {
                     <div className="absolute left-1/2 top-0 -translate-x-1/2">
                       {(() => {
                         const p = trick.find((t) => t.seat === "Across");
-                        return p ? <PlayingCard c={p.card} /> : <div className="h-14 w-10 opacity-20" />;
+                        return p ? (
+                          <PlayingCard c={p.card} highlight={trickWinner === "Across"} />
+                        ) : (
+                          <div className="h-14 w-10 opacity-20" />
+                        );
                       })()}
                     </div>
 
@@ -1007,7 +1019,11 @@ export default function App() {
                     <div className="absolute left-0 top-1/2 -translate-y-1/2">
                       {(() => {
                         const p = trick.find((t) => t.seat === "Left");
-                        return p ? <PlayingCard c={p.card} rotateClass="rotate-90" /> : <div className="h-10 w-14 opacity-20" />;
+                        return p ? (
+                          <PlayingCard c={p.card} rotateClass="rotate-90" highlight={trickWinner === "Left"} />
+                        ) : (
+                          <div className="h-10 w-14 opacity-20" />
+                        );
                       })()}
                     </div>
 
@@ -1015,7 +1031,11 @@ export default function App() {
                     <div className="absolute right-0 top-1/2 -translate-y-1/2">
                       {(() => {
                         const p = trick.find((t) => t.seat === "Right");
-                        return p ? <PlayingCard c={p.card} rotateClass="-rotate-90" /> : <div className="h-10 w-14 opacity-20" />;
+                        return p ? (
+                          <PlayingCard c={p.card} rotateClass="-rotate-90" highlight={trickWinner === "Right"} />
+                        ) : (
+                          <div className="h-10 w-14 opacity-20" />
+                        );
                       })()}
                     </div>
 
@@ -1023,7 +1043,11 @@ export default function App() {
                     <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
                       {(() => {
                         const p = trick.find((t) => t.seat === "Me");
-                        return p ? <PlayingCard c={p.card} /> : <div className="h-14 w-10 opacity-20" />;
+                        return p ? (
+                          <PlayingCard c={p.card} highlight={trickWinner === "Me"} />
+                        ) : (
+                          <div className="h-14 w-10 opacity-20" />
+                        );
                       })()}
                     </div>
                   </div>
