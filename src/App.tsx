@@ -868,14 +868,9 @@ export default function App() {
         advance();
       }
     };
-    const onClick = () => {
-      advance();
-    };
     window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("click", onClick);
     return () => {
       window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("click", onClick);
     };
   }, [awaitContinue]);
 
@@ -1033,7 +1028,15 @@ export default function App() {
                 </div>
 
                 {/* Current trick stays fixed size */}
-                <div className="h-[240px] w-[240px] rounded-xl border bg-emerald-600/80 p-3 shadow-inner self-center justify-self-center flex flex-col">
+                <div
+                  className="h-[240px] w-[240px] rounded-xl border bg-emerald-600/80 p-3 shadow-inner self-center justify-self-center flex flex-col"
+                  onClick={awaitContinue ? () => {
+                    setTrick([]);
+                    setTrickNo((n) => n + 1);
+                    setAwaitContinue(false);
+                    setVoidNeedsValidation(true);
+                  } : undefined}
+                >
                   <div className="flex items-center justify-end text-white">
                     <Badge className="bg-white/20 text-white hover:bg-white/20" variant="secondary">
                       {trick.length}/4
