@@ -1000,10 +1000,11 @@ export default function App() {
                 </div>
 
                 {/* Current trick stays fixed size */}
-                <div className="rounded-xl border bg-muted/20 p-3 self-start">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm font-medium">Current trick</div>
-                    <Badge variant="secondary">{trick.length}/4</Badge>
+                <div className="rounded-xl border bg-emerald-600/80 p-3 shadow-inner self-start">
+                  <div className="flex items-center justify-end text-white">
+                    <Badge className="bg-white/20 text-white hover:bg-white/20" variant="secondary">
+                      {trick.length}/4
+                    </Badge>
                   </div>
 
                   {/* Diamond layout */}
@@ -1058,7 +1059,7 @@ export default function App() {
                   </div>
 
                   {awaitContinue ? (
-                    <div className="mt-3 text-center text-xs text-muted-foreground">
+                    <div className="mt-3 text-center text-xs text-white/80">
                       Press Enter/Space or click to continue
                     </div>
                   ) : null}
