@@ -1177,7 +1177,7 @@ export default function App() {
                 <Button
                   variant="outline"
                   onClick={validateVoidGrid}
-                  disabled={trick.length > 0 || isResolving || awaitContinue}
+                  disabled={trick.length > 0 || isResolving || awaitContinue || (trickNo === 1 && trick.length === 0)}
                 >
                   Start trick
                 </Button>
