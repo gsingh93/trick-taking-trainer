@@ -1023,69 +1023,69 @@ export default function App() {
                 </div>
 
                 {/* Current trick stays fixed size */}
-                <div className="rounded-xl border bg-emerald-600/80 p-3 shadow-inner self-start">
+                <div className="w-full max-w-[240px] aspect-square rounded-xl border bg-emerald-600/80 p-3 shadow-inner self-center justify-self-center flex flex-col">
                   <div className="flex items-center justify-end text-white">
                     <Badge className="bg-white/20 text-white hover:bg-white/20" variant="secondary">
                       {trick.length}/4
                     </Badge>
                   </div>
 
-                  {/* Diamond layout */}
-                  <div className="relative mx-auto mt-4 h-40 w-40">
-                    {/* Across (top) */}
-                    <div className="absolute left-1/2 top-0 -translate-x-1/2">
-                      {(() => {
-                        const p = trick.find((t) => t.seat === "Across");
-                        return p ? (
-                          <PlayingCard c={p.card} highlight={trickWinner === "Across"} />
-                        ) : (
-                          <div className="h-14 w-10 opacity-20" />
-                        );
-                      })()}
-                    </div>
+                  <div className="flex-1 flex items-center justify-center">
+                    {/* Diamond layout */}
+                    <div className="relative h-40 w-40">
+                      {/* Across (top) */}
+                      <div className="absolute left-1/2 top-0 -translate-x-1/2">
+                        {(() => {
+                          const p = trick.find((t) => t.seat === "Across");
+                          return p ? (
+                            <PlayingCard c={p.card} highlight={trickWinner === "Across"} />
+                          ) : (
+                            <div className="h-14 w-10 opacity-20" />
+                          );
+                        })()}
+                      </div>
 
-                    {/* Left */}
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2">
-                      {(() => {
-                        const p = trick.find((t) => t.seat === "Left");
-                        return p ? (
-                          <PlayingCard c={p.card} rotateClass="rotate-90" highlight={trickWinner === "Left"} />
-                        ) : (
-                          <div className="h-10 w-14 opacity-20" />
-                        );
-                      })()}
-                    </div>
+                      {/* Left */}
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2">
+                        {(() => {
+                          const p = trick.find((t) => t.seat === "Left");
+                          return p ? (
+                            <PlayingCard c={p.card} rotateClass="rotate-90" highlight={trickWinner === "Left"} />
+                          ) : (
+                            <div className="h-10 w-14 opacity-20" />
+                          );
+                        })()}
+                      </div>
 
-                    {/* Right */}
-                    <div className="absolute right-0 top-1/2 -translate-y-1/2">
-                      {(() => {
-                        const p = trick.find((t) => t.seat === "Right");
-                        return p ? (
-                          <PlayingCard c={p.card} rotateClass="-rotate-90" highlight={trickWinner === "Right"} />
-                        ) : (
-                          <div className="h-10 w-14 opacity-20" />
-                        );
-                      })()}
-                    </div>
+                      {/* Right */}
+                      <div className="absolute right-0 top-1/2 -translate-y-1/2">
+                        {(() => {
+                          const p = trick.find((t) => t.seat === "Right");
+                          return p ? (
+                            <PlayingCard c={p.card} rotateClass="-rotate-90" highlight={trickWinner === "Right"} />
+                          ) : (
+                            <div className="h-10 w-14 opacity-20" />
+                          );
+                        })()}
+                      </div>
 
-                    {/* Me (bottom) */}
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
-                      {(() => {
-                        const p = trick.find((t) => t.seat === "Me");
-                        return p ? (
-                          <PlayingCard c={p.card} highlight={trickWinner === "Me"} />
-                        ) : (
-                          <div className="h-14 w-10 opacity-20" />
-                        );
-                      })()}
+                      {/* Me (bottom) */}
+                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
+                        {(() => {
+                          const p = trick.find((t) => t.seat === "Me");
+                          return p ? (
+                            <PlayingCard c={p.card} highlight={trickWinner === "Me"} />
+                          ) : (
+                            <div className="h-14 w-10 opacity-20" />
+                          );
+                        })()}
+                      </div>
                     </div>
                   </div>
 
-                  {awaitContinue ? (
-                    <div className="mt-3 text-center text-xs text-white/80">
-                      Press Enter/Space or click to continue
-                    </div>
-                  ) : null}
+                  <div className="min-h-[2rem] text-center text-xs text-white/80">
+                    {awaitContinue ? "Press Enter/Space or click to continue" : ""}
+                  </div>
                 </div>
 
                 {/* Right spans rows */}
