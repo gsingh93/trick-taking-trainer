@@ -1027,7 +1027,7 @@ export default function App() {
                 </div>
 
                 {/* Current trick stays fixed size */}
-                <div className="w-full max-w-[240px] aspect-square rounded-xl border bg-emerald-600/80 p-3 shadow-inner self-center justify-self-center flex flex-col">
+                <div className="h-[240px] w-[240px] rounded-xl border bg-emerald-600/80 p-3 shadow-inner self-center justify-self-center flex flex-col">
                   <div className="flex items-center justify-end text-white">
                     <Badge className="bg-white/20 text-white hover:bg-white/20" variant="secondary">
                       {trick.length}/4
@@ -1087,7 +1087,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="min-h-[2rem] text-center text-xs text-white/80">
+                  <div className="mt-1.5 min-h-[2rem] text-center text-xs text-white/80">
                     {awaitContinue ? "Press Enter/Space or click to continue" : ""}
                   </div>
                 </div>
