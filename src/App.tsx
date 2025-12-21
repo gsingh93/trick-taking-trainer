@@ -713,7 +713,7 @@ export default function App() {
       setTrickReady(false);
       setVoidNeedsValidation(true);
 
-      if (aiEnabled && pauseBeforeNextTrick) {
+      if (pauseBeforeNextTrick) {
         // Keep the completed trick visible; wait for user input.
         setIsResolving(false);
         setAwaitContinue(true);
@@ -1288,12 +1288,11 @@ export default function App() {
                   />
                 </div>
 
-                <div className={"flex justify-between " + (!aiEnabled ? "opacity-50" : "")}>
+                <div className="flex justify-between">
                   <span className="text-sm">Pause before next trick</span>
                   <Switch
                     checked={pauseBeforeNextTrick}
                     onCheckedChange={setPauseBeforeNextTrick}
-                    disabled={!aiEnabled}
                   />
                 </div>
 
