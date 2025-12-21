@@ -906,16 +906,15 @@ export default function App() {
           <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span>Table</span>
-                  <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={resetTrickOnly}>
-                    Reset trick
-                  </Button>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-3">
+                    <span>Table</span>
+                    <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={resetTrickOnly}>
+                      Reset trick
+                    </Button>
+                  </div>
+                  <div className="pl-0.5 text-xs text-muted-foreground">Trick {trickNo}</div>
                 </div>
-                <span className="text-sm text-muted-foreground">
-                  Trick {trickNo} • Lead: {leader} • Turn: {turn}
-                  {isResolving ? " • Resolving…" : ""}
-                </span>
               </CardTitle>
             </CardHeader>
             <CardContent>
