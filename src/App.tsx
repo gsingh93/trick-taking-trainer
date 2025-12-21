@@ -935,11 +935,6 @@ export default function App() {
                       {shownHands.Across ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       {shownHands.Across ? "Hide" : "Reveal"}
                     </Button>
-                    {modeOpenHandVerify ? (
-                      <Badge variant="secondary" className="self-center">
-                        Open-hand
-                      </Badge>
-                    ) : null}
                     {turn === "Across" ? <Badge>To play</Badge> : null}
                   </div>
                   {shownHands.Across ? (
@@ -976,11 +971,6 @@ export default function App() {
                       {shownHands.Left ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       {shownHands.Left ? "Hide" : "Reveal"}
                     </Button>
-                    {modeOpenHandVerify ? (
-                      <Badge variant="secondary" className="self-center">
-                        Open-hand
-                      </Badge>
-                    ) : null}
                     {turn === "Left" ? <Badge>To play</Badge> : null}
                   </div>
                   {shownHands.Left ? (
@@ -1068,11 +1058,6 @@ export default function App() {
                       {shownHands.Right ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       {shownHands.Right ? "Hide" : "Reveal"}
                     </Button>
-                    {modeOpenHandVerify ? (
-                      <Badge variant="secondary" className="self-center">
-                        Open-hand
-                      </Badge>
-                    ) : null}
                     {turn === "Right" ? <Badge>To play</Badge> : null}
                   </div>
                   {shownHands.Right ? (
@@ -1266,9 +1251,6 @@ export default function App() {
                   <Switch checked={trump.mustBreak} onCheckedChange={(v) => setTrump((t) => ({ ...t, mustBreak: v }))} disabled={!trump.enabled} />
                 </div>
 
-                <Separator />
-
-                <div className="text-xs text-muted-foreground">Winner of the last trick leads.</div>
               </CardContent>
             </Card>
           </div>
