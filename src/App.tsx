@@ -502,6 +502,7 @@ export default function App() {
   const [trick, setTrick] = useState<PlayT[]>([]);
   const [isResolving, setIsResolving] = useState(false);
   const [trickNo, setTrickNo] = useState(1);
+  const [handComplete, setHandComplete] = useState(false);
 
   const shownHands = useMemo(() => {
     const visible: Record<Seat, boolean> = { ...reveal };
@@ -600,7 +601,7 @@ export default function App() {
     return determineTrickWinner(trick, trump);
   }, [trick, trump]);
 
-  const canPlay = !leadPromptActive && !awaitContinue;
+  const canPlay = !leadPromptActive && !awaitContinue && !handComplete;
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
@@ -664,6 +665,7 @@ export default function App() {
     setTrickStartTurn("Me");
     setTrick([]);
     setTrickNo(1);
+    setHandComplete(false);
     setTrumpBroken(false);
     setIsResolving(false);
     setAwaitContinue(false);
@@ -740,6 +742,14 @@ export default function App() {
       setLeader(winner);
       setTurn(winner);
 
+      if (trickNo >= 13) {
+        setHandComplete(true);
+        setIsResolving(false);
+        setAwaitContinue(false);
+        resolveTimerRef.current = null;
+        return;
+      }
+
       if (pauseBeforeNextTrick) {
         // Keep the completed trick visible; wait for user input.
         setIsResolving(false);
@@ -760,6 +770,7 @@ export default function App() {
   function tryPlay(seat: Seat, card: CardT, source: "human" | "ai" = "human") {
     if (isResolving) return;
     if (awaitContinue) return;
+    if (handComplete) return;
 
     // Only the leader may lead a new trick.
     if (trick.length === 0 && seat !== leader) return;
@@ -820,7 +831,13 @@ export default function App() {
     cancelResolveTimer();
     setIsResolving(false);
     setAwaitContinue(false);
-    setTrickReady(false);
+    setHandComplete(false);
+    setLeadPromptActive(false);
+    setLeadPromptSuit(null);
+    setLeadPromptLeader(null);
+    setLeadSelections(createVoidSelections());
+    setLeadMismatch(createVoidSelections());
+    setLeadWarning(null);
 
     setHands((h) => {
       const next: Hands = {
@@ -844,6 +861,7 @@ export default function App() {
   useEffect(() => {
     if (!aiEnabled) return;
     if (isResolving) return;
+    if (handComplete) return;
     if (awaitContinue) return;
     if (turn === "Me" && !aiPlayMe) return;
     if (voidTrackingEnabled && leadPromptActive) return;
@@ -881,7 +899,7 @@ export default function App() {
 
   // If paused after a completed trick, advance on any key.
   useEffect(() => {
-    if (!awaitContinue) return;
+    if (!awaitContinue || handComplete) return;
     const advance = () => {
       setTrick([]);
       setTrickNo((n) => n + 1);
@@ -897,7 +915,7 @@ export default function App() {
     return () => {
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [awaitContinue]);
+  }, [awaitContinue, handComplete]);
 
   // Cleanup any pending timers on unmount.
   useEffect(() => {
@@ -1131,7 +1149,7 @@ export default function App() {
                   </div>
 
                   <div className="mt-1.5 min-h-[2rem] text-center text-xs text-white/80">
-                    {awaitContinue ? "Press Enter/Space or click to continue" : ""}
+                    {awaitContinue && !handComplete ? "Press Enter/Space or click to continue" : ""}
                   </div>
                 </div>
 
