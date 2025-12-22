@@ -415,7 +415,7 @@ function HandCol({
   const gridAlign = align === "end" ? "justify-items-end" : "justify-items-start";
   return (
     <div className={"mt-3 flex " + (align === "end" ? "justify-end" : "justify-start")}>
-      <div className={"grid grid-cols-2 gap-0 " + gridAlign}>
+      <div className={"grid grid-cols-1 gap-0 sm:grid-cols-2 " + gridAlign}>
         {sortHand(hand, suitOrder, sortAscending).map((c) => (
           <div key={c.id} className="relative h-10 w-14 overflow-visible">
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
@@ -1045,10 +1045,10 @@ export default function App() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-3 sm:p-6">
-              <div className="grid grid-cols-3 grid-rows-[auto_1fr_auto] gap-x-0.5 gap-y-2 sm:gap-3">
+              <div className="grid grid-cols-[minmax(0,0.7fr)_auto_minmax(0,0.7fr)] grid-rows-[auto_1fr_auto] gap-x-0.5 gap-y-2 sm:grid-cols-3 sm:gap-3">
                 {/* Across spans full width */}
                 <div className="col-span-3 rounded-xl border p-2 sm:p-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-2 text-sm font-medium">
                       <span>
                         Across <span className="text-xs text-muted-foreground">({tricksWon.Across})</span>
@@ -1090,7 +1090,7 @@ export default function App() {
                     "row-span-2 rounded-xl border p-2 sm:p-3 " + (shownHands.Left ? "min-h-[400px]" : "")
                   }
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-2 text-sm font-medium">
                       <span>
                         Left <span className="text-xs text-muted-foreground">({tricksWon.Left})</span>
@@ -1207,7 +1207,7 @@ export default function App() {
                     "row-span-2 rounded-xl border p-2 sm:p-3 " + (shownHands.Right ? "min-h-[400px]" : "")
                   }
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-2 text-sm font-medium">
                       <span>
                         Right <span className="text-xs text-muted-foreground">({tricksWon.Right})</span>
@@ -1247,7 +1247,7 @@ export default function App() {
 
                 {/* Me spans full width */}
                 <div className="col-span-3 rounded-xl border p-2 sm:p-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-2 text-sm font-medium">
                       <span>
                         Me <span className="text-xs text-muted-foreground">({tricksWon.Me})</span>
