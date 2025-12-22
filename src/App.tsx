@@ -1056,11 +1056,17 @@ export default function App() {
                 {/* Across spans full width */}
                 <div className="col-span-3 rounded-xl border p-2 sm:p-3">
                   <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-center gap-2 text-sm font-medium">
+                    <div
+                      className={
+                        "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
+                        (turn === "Across"
+                          ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
+                          : "")
+                      }
+                    >
                       <span>
                         Across <span className="text-xs text-muted-foreground">({tricksWon.Across})</span>
                       </span>
-                      {turn === "Across" ? <Badge>To play</Badge> : null}
                     </div>
                     <Badge variant="outline">{hands.Across.length}</Badge>
                   </div>
@@ -1098,11 +1104,17 @@ export default function App() {
                   }
                 >
                   <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-center gap-2 text-sm font-medium">
+                    <div
+                      className={
+                        "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
+                        (turn === "Left"
+                          ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
+                          : "")
+                      }
+                    >
                       <span>
                         Left <span className="text-xs text-muted-foreground">({tricksWon.Left})</span>
                       </span>
-                      {turn === "Left" ? <Badge>To play</Badge> : null}
                     </div>
                     <Badge variant="outline">{hands.Left.length}</Badge>
                   </div>
@@ -1218,11 +1230,17 @@ export default function App() {
                   }
                 >
                   <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-center gap-2 text-sm font-medium">
+                    <div
+                      className={
+                        "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
+                        (turn === "Right"
+                          ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
+                          : "")
+                      }
+                    >
                       <span>
                         Right <span className="text-xs text-muted-foreground">({tricksWon.Right})</span>
                       </span>
-                      {turn === "Right" ? <Badge>To play</Badge> : null}
                     </div>
                     <Badge variant="outline">{hands.Right.length}</Badge>
                   </div>
@@ -1258,11 +1276,17 @@ export default function App() {
                 {/* Me spans full width */}
                 <div className="col-span-3 rounded-xl border p-2 sm:p-3">
                   <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-center gap-2 text-sm font-medium">
+                    <div
+                      className={
+                        "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
+                        (turn === "Me"
+                          ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
+                          : "")
+                      }
+                    >
                       <span>
                         Me <span className="text-xs text-muted-foreground">({tricksWon.Me})</span>
                       </span>
-                      {turn === "Me" ? <Badge>To play</Badge> : null}
                     </div>
                     <Badge variant="outline">{hands.Me.length}</Badge>
                   </div>
