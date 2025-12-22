@@ -43,6 +43,7 @@ type CardT = { suit: Suit; rank: Rank; id: string };
 type Hands = Record<Seat, CardT[]>;
 
 type VoidGrid = Record<Opp, Record<Suit, boolean>>;
+type VoidSelections = Record<Opp, boolean>;
 
 type PlayT = { seat: Seat; card: CardT };
 
@@ -175,6 +176,10 @@ function createVoidGrid(): VoidGrid {
     Across: { S: false, H: false, D: false, C: false },
     Right: { S: false, H: false, D: false, C: false },
   };
+}
+
+function createVoidSelections(): VoidSelections {
+  return { Left: false, Across: false, Right: false };
 }
 
 function sortHand(hand: CardT[], suitOrder: Suit[], sortAscending: boolean): CardT[] {
@@ -467,11 +472,12 @@ export default function App() {
   const [seedError, setSeedError] = useState<string | null>(null);
   const [hands, setHands] = useState<Hands>(() => dealNewHands(createRng(initialSeed)));
   const [trickHistory, setTrickHistory] = useState<PlayT[][]>([]);
-  const [voidGrid, setVoidGrid] = useState<VoidGrid>(() => createVoidGrid());
-  const [voidMismatch, setVoidMismatch] = useState<VoidGrid | null>(null);
-  const [voidWarning, setVoidWarning] = useState<string | null>(null);
-  const [voidNeedsValidation, setVoidNeedsValidation] = useState(false);
-  const [trickReady, setTrickReady] = useState(true);
+  const [leadPromptActive, setLeadPromptActive] = useState(false);
+  const [leadPromptSuit, setLeadPromptSuit] = useState<Suit | null>(null);
+  const [leadPromptLeader, setLeadPromptLeader] = useState<Opp | null>(null);
+  const [leadSelections, setLeadSelections] = useState<VoidSelections>(() => createVoidSelections());
+  const [leadMismatch, setLeadMismatch] = useState<VoidSelections>(() => createVoidSelections());
+  const [leadWarning, setLeadWarning] = useState<string | null>(null);
 
   const [reveal, setReveal] = useState<Record<Seat, boolean>>({
     Left: false,
@@ -594,7 +600,7 @@ export default function App() {
     return determineTrickWinner(trick, trump);
   }, [trick, trump]);
 
-  const canPlay = (voidTrackingEnabled ? trickReady : true) && !awaitContinue;
+  const canPlay = !leadPromptActive && !awaitContinue;
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
@@ -602,17 +608,34 @@ export default function App() {
 
   useEffect(() => {
     if (!voidTrackingEnabled) {
-      setTrickReady(true);
-      setVoidNeedsValidation(false);
-      setVoidWarning(null);
-      setVoidMismatch(null);
+      setLeadPromptActive(false);
+      setLeadPromptSuit(null);
+      setLeadPromptLeader(null);
+      setLeadWarning(null);
+      setLeadMismatch(createVoidSelections());
       return;
     }
-    if (trick.length === 0 && trickNo > 1) {
-      setTrickReady(false);
-      setVoidNeedsValidation(true);
+    if (trick.length === 0) {
+      setLeadPromptActive(false);
+      setLeadPromptSuit(null);
+      setLeadPromptLeader(null);
+      setLeadWarning(null);
+      setLeadMismatch(createVoidSelections());
     }
-  }, [voidTrackingEnabled, trick.length, trickNo]);
+  }, [voidTrackingEnabled, trick.length]);
+
+  useEffect(() => {
+    if (!voidTrackingEnabled) return;
+    if (trick.length !== 1) return;
+    if (trickNo === 1) return;
+    const leadSeat = trick[0].seat;
+    setLeadPromptActive(true);
+    setLeadPromptSuit(trick[0].card.suit);
+    setLeadPromptLeader(leadSeat === "Me" ? null : leadSeat);
+    setLeadSelections(createVoidSelections());
+    setLeadMismatch(createVoidSelections());
+    setLeadWarning(null);
+  }, [voidTrackingEnabled, trick]);
 
   function cancelResolveTimer() {
     if (resolveTimerRef.current != null) {
@@ -628,11 +651,12 @@ export default function App() {
     setTricksWon({ Left: 0, Across: 0, Right: 0, Me: 0 });
     setHands(dealNewHands(createRng(seed)));
     setTrickHistory([]);
-    setVoidGrid(createVoidGrid());
-    setVoidMismatch(null);
-    setVoidWarning(null);
-    setVoidNeedsValidation(false);
-    setTrickReady(true);
+    setLeadPromptActive(false);
+    setLeadPromptSuit(null);
+    setLeadPromptLeader(null);
+    setLeadSelections(createVoidSelections());
+    setLeadMismatch(createVoidSelections());
+    setLeadWarning(null);
     setReveal({ Left: false, Across: false, Right: false, Me: true });
     setLeader("Me");
     setTurn("Me");
@@ -672,38 +696,33 @@ export default function App() {
     resetForDeal(dealSeed);
   }
 
-  function toggleVoidCell(o: Opp, s: Suit) {
-    setVoidGrid((g) => ({
-      ...g,
-      [o]: { ...g[o], [s]: !g[o][s] },
-    }));
-    setVoidMismatch(null);
-    setVoidWarning(null);
-    setVoidNeedsValidation(true);
-    setTrickReady(false);
+  function toggleLeadSelection(o: Opp) {
+    setLeadSelections((s) => ({ ...s, [o]: !s[o] }));
+    setLeadMismatch(createVoidSelections());
+    setLeadWarning(null);
   }
 
-  function validateVoidGrid() {
-    const mismatch = createVoidGrid();
+  function resumeAfterLeadPrompt() {
+    if (!leadPromptActive || !leadPromptSuit) return;
+    const mismatch = createVoidSelections();
     let hasMismatch = false;
     for (const o of OPPONENTS) {
-      for (const s of SUITS) {
-        if (voidGrid[o][s] !== actualVoid[o][s]) {
-          mismatch[o][s] = true;
-          hasMismatch = true;
-        }
+      if (leadPromptLeader && o === leadPromptLeader) continue;
+      if (leadSelections[o] !== actualVoid[o][leadPromptSuit]) {
+        mismatch[o] = true;
+        hasMismatch = true;
       }
     }
     if (hasMismatch) {
-      setVoidMismatch(mismatch);
-      setVoidWarning("Void grid does not match played suits");
-      setVoidNeedsValidation(true);
+      setLeadMismatch(mismatch);
+      setLeadWarning("Selections do not match void status");
       return;
     }
-    setVoidMismatch(null);
-    setVoidWarning(null);
-    setVoidNeedsValidation(false);
-    setTrickReady(true);
+    setLeadPromptActive(false);
+    setLeadPromptSuit(null);
+    setLeadPromptLeader(null);
+    setLeadWarning(null);
+    setLeadMismatch(createVoidSelections());
   }
 
   function toggleRevealSeat(seat: Seat) {
@@ -720,8 +739,6 @@ export default function App() {
       setTricksWon((tw) => ({ ...tw, [winner]: tw[winner] + 1 }));
       setLeader(winner);
       setTurn(winner);
-      setTrickReady(false);
-      setVoidNeedsValidation(true);
 
       if (pauseBeforeNextTrick) {
         // Keep the completed trick visible; wait for user input.
@@ -747,8 +764,8 @@ export default function App() {
     // Only the leader may lead a new trick.
     if (trick.length === 0 && seat !== leader) return;
 
-    // Require void grid validation before any play.
-    if (voidTrackingEnabled && !trickReady) return;
+    // Require void tracking prompt to be resolved before any play.
+    if (voidTrackingEnabled && leadPromptActive) return;
 
     // Capture start-of-trick state on the first play.
     if (trick.length === 0) {
@@ -821,7 +838,6 @@ export default function App() {
     setTrick([]);
     setLeader(trickStartLeader);
     setTurn(trickStartTurn);
-    setVoidNeedsValidation(true);
   }
 
   // Basic AI: players play a random valid card when it's their turn.
@@ -830,7 +846,7 @@ export default function App() {
     if (isResolving) return;
     if (awaitContinue) return;
     if (turn === "Me" && !aiPlayMe) return;
-    if (voidTrackingEnabled && !trickReady) return;
+    if (voidTrackingEnabled && leadPromptActive) return;
 
     // If trick is empty, only the leader may lead.
     if (trick.length === 0 && turn !== leader) return;
@@ -859,7 +875,8 @@ export default function App() {
     trick,
     leader,
     awaitContinue,
-    trickReady,
+    voidTrackingEnabled,
+    leadPromptActive,
   ]);
 
   // If paused after a completed trick, advance on any key.
@@ -869,7 +886,6 @@ export default function App() {
       setTrick([]);
       setTrickNo((n) => n + 1);
       setAwaitContinue(false);
-      setVoidNeedsValidation(true);
     };
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Enter" || e.key === " " || e.code === "Space") {
@@ -1197,67 +1213,55 @@ export default function App() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="text-xs text-muted-foreground">
-                  Mark a suit as void when an opponent fails to follow. Assume not void until proven otherwise.
+                  After a lead, confirm which opponents are void in the lead suit.
                 </div>
-                <div className="grid grid-cols-5 gap-2 text-xs">
-                  <div />
-                  {SUITS.map((s) => (
-                    <div key={s} className={"text-center " + suitColorClass(s)}>
-                      {suitGlyph(s)}
-                    </div>
-                  ))}
-                  {OPPONENTS.map((o) => (
-                    <React.Fragment key={o}>
-                      <div className="font-medium">{o}</div>
-                      {SUITS.map((s) => {
-                        const mismatch = voidMismatch ? voidMismatch[o][s] : false;
-                        const disableVoidEdit = !voidTrackingEnabled || trickReady || trick.length > 0;
-                        return (
-                          <label
-                            key={o + s}
-                            className={
-                              "flex h-8 items-center justify-center rounded-md border " +
-                              (mismatch ? "border-destructive" : "border-border") +
-                              (disableVoidEdit ? " opacity-60" : "")
-                            }
-                          >
-                            <input
-                              type="checkbox"
-                              className="h-4 w-4"
-                              checked={voidGrid[o][s]}
-                              onChange={() => toggleVoidCell(o, s)}
-                              disabled={disableVoidEdit}
-                            />
-                          </label>
-                        );
-                      })}
-                    </React.Fragment>
-                  ))}
+                <div className="text-sm font-medium">
+                  {!voidTrackingEnabled
+                    ? "Void tracking is disabled"
+                    : leadPromptActive
+                      ? "Which opponents are void in the lead suit?"
+                      : trick.length === 0
+                        ? "Waiting for a card to be led..."
+                        : "Waiting for opponents to play..."}
                 </div>
-                <div className="text-xs">
-                  {!voidTrackingEnabled ? (
-                    <span className="text-muted-foreground">Void tracking disabled</span>
-                  ) : voidWarning ? (
-                    <span className="text-destructive">{voidWarning}</span>
-                  ) : voidNeedsValidation ? (
-                    <span className="text-amber-600">Click "Start Trick" to validate</span>
-                  ) : (
-                    <span className="text-emerald-600">Void grid matches played suits</span>
-                  )}
+                {leadPromptSuit ? (
+                  <div className={"text-sm " + suitColorClass(leadPromptSuit)}>
+                    Lead suit: {suitGlyph(leadPromptSuit)}
+                  </div>
+                ) : null}
+                <div className="space-y-2 text-sm">
+                  {OPPONENTS.map((o) => {
+                    const isLeader = leadPromptLeader === o;
+                    const mismatch = leadMismatch[o];
+                    const disabled = !voidTrackingEnabled || !leadPromptActive || isLeader;
+                    return (
+                      <label
+                        key={o}
+                        className={
+                          "flex items-center justify-between rounded-md border px-2 py-1 " +
+                          (mismatch ? "border-destructive" : "border-border") +
+                          (disabled ? " opacity-60" : "")
+                        }
+                      >
+                        <span>{o}</span>
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4"
+                          checked={leadSelections[o]}
+                          onChange={() => toggleLeadSelection(o)}
+                          disabled={disabled}
+                        />
+                      </label>
+                    );
+                  })}
                 </div>
+                {leadWarning ? <div className="text-xs text-destructive">{leadWarning}</div> : null}
                 <Button
-                  onClick={validateVoidGrid}
-                  disabled={
-                    !voidTrackingEnabled ||
-                    trickReady ||
-                    trick.length > 0 ||
-                    isResolving ||
-                    awaitContinue ||
-                    (trickNo === 1 && trick.length === 0)
-                  }
+                  onClick={resumeAfterLeadPrompt}
+                  disabled={!voidTrackingEnabled || !leadPromptActive || isResolving || awaitContinue}
                   className="bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-600/50"
                 >
-                  Start trick
+                  Resume
                 </Button>
               </CardContent>
             </Card>
