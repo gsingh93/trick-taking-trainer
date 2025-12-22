@@ -290,6 +290,14 @@ function determineTrickWinner(trick: PlayT[], trump: TrumpConfig): Seat {
   return best.seat;
 }
 
+function sameTrick(a: PlayT[], b: PlayT[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i].seat !== b[i].seat || a[i].card.id !== b[i].card.id) return false;
+  }
+  return true;
+}
+
 function PlayingCard({
   c,
   rotateClass,
@@ -838,6 +846,12 @@ export default function App() {
     setLeadSelections(createVoidSelections());
     setLeadMismatch(createVoidSelections());
     setLeadWarning(null);
+
+    if (trick.length === 4) {
+      const winner = determineTrickWinner(trick, trump);
+      setTricksWon((tw) => ({ ...tw, [winner]: Math.max(0, tw[winner] - 1) }));
+      setTrickHistory((h) => (h.length && sameTrick(h[h.length - 1], trick) ? h.slice(0, -1) : h));
+    }
 
     setHands((h) => {
       const next: Hands = {
