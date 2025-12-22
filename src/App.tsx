@@ -62,6 +62,7 @@ type Settings = {
   voidTrackingEnabled: boolean;
   darkMode: boolean;
   leadCountPromptEnabled: boolean;
+  checkErrorsEnabled: boolean;
   suitOrderMode: "bridge" | "poker";
   sortAscending: boolean;
   aiEnabled: boolean;
@@ -85,6 +86,7 @@ function loadSettings(): Partial<Settings> {
     if (typeof data.voidTrackingEnabled === "boolean") next.voidTrackingEnabled = data.voidTrackingEnabled;
     if (typeof data.darkMode === "boolean") next.darkMode = data.darkMode;
     if (typeof data.leadCountPromptEnabled === "boolean") next.leadCountPromptEnabled = data.leadCountPromptEnabled;
+    if (typeof data.checkErrorsEnabled === "boolean") next.checkErrorsEnabled = data.checkErrorsEnabled;
     if (data.suitOrderMode === "bridge" || data.suitOrderMode === "poker") {
       next.suitOrderMode = data.suitOrderMode;
     }
@@ -456,6 +458,9 @@ export default function App() {
   const [leadCountPromptEnabled, setLeadCountPromptEnabled] = useState(
     () => initialSettings.leadCountPromptEnabled ?? false
   );
+  const [checkErrorsEnabled, setCheckErrorsEnabled] = useState(
+    () => initialSettings.checkErrorsEnabled ?? true
+  );
   const [suitOrderMode, setSuitOrderMode] = useState<"bridge" | "poker">(
     () => initialSettings.suitOrderMode ?? "bridge"
   );
@@ -565,6 +570,7 @@ export default function App() {
       voidTrackingEnabled,
       darkMode,
       leadCountPromptEnabled,
+      checkErrorsEnabled,
       suitOrderMode,
       sortAscending,
       aiEnabled,
@@ -585,6 +591,7 @@ export default function App() {
     voidTrackingEnabled,
     darkMode,
     leadCountPromptEnabled,
+    checkErrorsEnabled,
     suitOrderMode,
     sortAscending,
     aiEnabled,
@@ -749,7 +756,7 @@ export default function App() {
       }
     }
     if (hasMismatch) {
-      setLeadMismatch(mismatch);
+      setLeadMismatch(checkErrorsEnabled ? mismatch : createVoidSelections());
       setLeadWarning("Selections do not match void status");
       return;
     }
@@ -1385,6 +1392,13 @@ export default function App() {
                 <div className="flex justify-between">
                   <span className="text-sm">Lead count prompt</span>
                   <Switch checked={leadCountPromptEnabled} onCheckedChange={setLeadCountPromptEnabled} />
+                </div>
+
+                <Separator />
+
+                <div className="flex justify-between">
+                  <span className="text-sm">Check errors</span>
+                  <Switch checked={checkErrorsEnabled} onCheckedChange={setCheckErrorsEnabled} />
                 </div>
 
                 <Separator />
