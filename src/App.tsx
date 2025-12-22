@@ -1130,74 +1130,77 @@ export default function App() {
 
                 {/* Current trick stays fixed size */}
                 <div
-                  className="h-[200px] w-[200px] sm:h-[240px] sm:w-[240px] rounded-xl border bg-emerald-600/80 p-2 sm:p-3 shadow-inner self-center justify-self-center flex flex-col"
+                  className="relative flex h-[200px] w-[200px] items-center justify-center rounded-xl border bg-emerald-600/80 p-2 shadow-inner self-center justify-self-center sm:h-[240px] sm:w-[240px] sm:p-3"
                   onClick={awaitContinue ? () => {
                     setTrick([]);
                     setTrickNo((n) => n + 1);
                     setAwaitContinue(false);
                   } : undefined}
                 >
-                  <div className="flex items-center justify-end text-white">
+                  <div className="absolute right-2 top-2 text-white">
                     <Badge className="bg-white/20 text-white hover:bg-white/20" variant="secondary">
                       {trick.length}/4
                     </Badge>
                   </div>
 
-                  <div className="flex-1 flex items-center justify-center">
-                    {/* Diamond layout */}
-                    <div className="relative h-40 w-40">
-                      {/* Across (top) */}
-                      <div className="absolute left-1/2 top-0 -translate-x-1/2">
-                        {(() => {
-                          const p = trick.find((t) => t.seat === "Across");
-                          return p ? (
-                            <PlayingCard c={p.card} highlight={trickWinner === "Across"} />
-                          ) : (
-                            <div className="h-14 w-10 opacity-20" />
-                          );
-                        })()}
-                      </div>
+                  {/* Diamond layout */}
+                  <div className="relative h-36 w-36 sm:h-40 sm:w-40">
+                    {/* Across (top) */}
+                    <div className="absolute left-1/2 top-0 -translate-x-1/2">
+                      {(() => {
+                        const p = trick.find((t) => t.seat === "Across");
+                        return p ? (
+                          <PlayingCard c={p.card} highlight={trickWinner === "Across"} />
+                        ) : (
+                          <div className="h-14 w-10 opacity-20" />
+                        );
+                      })()}
+                    </div>
 
-                      {/* Left */}
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2">
-                        {(() => {
-                          const p = trick.find((t) => t.seat === "Left");
-                          return p ? (
-                            <PlayingCard c={p.card} rotateClass="rotate-90" highlight={trickWinner === "Left"} />
-                          ) : (
-                            <div className="h-10 w-14 opacity-20" />
-                          );
-                        })()}
-                      </div>
+                    {/* Left */}
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2">
+                      {(() => {
+                        const p = trick.find((t) => t.seat === "Left");
+                        return p ? (
+                          <PlayingCard c={p.card} rotateClass="rotate-90" highlight={trickWinner === "Left"} />
+                        ) : (
+                          <div className="h-10 w-14 opacity-20" />
+                        );
+                      })()}
+                    </div>
 
-                      {/* Right */}
-                      <div className="absolute right-0 top-1/2 -translate-y-1/2">
-                        {(() => {
-                          const p = trick.find((t) => t.seat === "Right");
-                          return p ? (
-                            <PlayingCard c={p.card} rotateClass="-rotate-90" highlight={trickWinner === "Right"} />
-                          ) : (
-                            <div className="h-10 w-14 opacity-20" />
-                          );
-                        })()}
-                      </div>
+                    {/* Right */}
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2">
+                      {(() => {
+                        const p = trick.find((t) => t.seat === "Right");
+                        return p ? (
+                          <PlayingCard c={p.card} rotateClass="-rotate-90" highlight={trickWinner === "Right"} />
+                        ) : (
+                          <div className="h-10 w-14 opacity-20" />
+                        );
+                      })()}
+                    </div>
 
-                      {/* Me (bottom) */}
-                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
-                        {(() => {
-                          const p = trick.find((t) => t.seat === "Me");
-                          return p ? (
-                            <PlayingCard c={p.card} highlight={trickWinner === "Me"} />
-                          ) : (
-                            <div className="h-14 w-10 opacity-20" />
-                          );
-                        })()}
-                      </div>
+                    {/* Me (bottom) */}
+                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
+                      {(() => {
+                        const p = trick.find((t) => t.seat === "Me");
+                        return p ? (
+                          <PlayingCard c={p.card} highlight={trickWinner === "Me"} />
+                        ) : (
+                          <div className="h-14 w-10 opacity-20" />
+                        );
+                      })()}
                     </div>
                   </div>
 
-                  <div className="mt-1.5 min-h-[2rem] text-center text-xs text-white/80">
-                    {awaitContinue && !handComplete ? "Press Enter/Space or click to continue" : ""}
+                  <div className="absolute bottom-2 left-1/2 w-[190px] -translate-x-1/2 text-center text-xs text-white/80 sm:w-[220px]">
+                    {awaitContinue && !handComplete ? (
+                      <>
+                        <span className="sm:hidden">Click to continue</span>
+                        <span className="hidden sm:inline">Press Enter/Space or click to continue</span>
+                      </>
+                    ) : null}
                   </div>
                 </div>
 
