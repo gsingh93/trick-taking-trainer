@@ -973,8 +973,8 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="mx-auto max-w-6xl space-y-6">
+    <div className="min-h-screen bg-background p-3 sm:p-6">
+      <div className="mx-auto max-w-6xl space-y-4 sm:space-y-6">
         <header className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Grid3X3 className="h-5 w-5" />
@@ -1044,10 +1044,10 @@ export default function App() {
                 </div>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 grid-rows-[auto_1fr_auto] gap-3">
+            <CardContent className="p-3 sm:p-6">
+              <div className="grid grid-cols-3 grid-rows-[auto_1fr_auto] gap-x-0.5 gap-y-2 sm:gap-3">
                 {/* Across spans full width */}
-                <div className="col-span-3 rounded-xl border p-3">
+                <div className="col-span-3 rounded-xl border p-2 sm:p-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-sm font-medium">
                       <span>
@@ -1062,12 +1062,12 @@ export default function App() {
                       type="button"
                       size="sm"
                       variant="outline"
-                      className="gap-2"
+                      className="gap-2 text-emerald-600 border-emerald-600 md:text-foreground md:border-border"
                       onClick={() => toggleRevealSeat("Across")}
                       disabled={modeOpenHandVerify}
                     >
                       {shownHands.Across ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      {shownHands.Across ? "Hide" : "Reveal"}
+                      <span className="hidden md:inline">{shownHands.Across ? "Hide" : "Reveal"}</span>
                     </Button>
                   </div>
                   {shownHands.Across ? (
@@ -1087,7 +1087,7 @@ export default function App() {
                 {/* Left spans rows */}
                 <div
                   className={
-                    "row-span-2 rounded-xl border p-3 " + (shownHands.Left ? "min-h-[400px]" : "")
+                    "row-span-2 rounded-xl border p-2 sm:p-3 " + (shownHands.Left ? "min-h-[400px]" : "")
                   }
                 >
                   <div className="flex items-center justify-between">
@@ -1104,12 +1104,12 @@ export default function App() {
                       type="button"
                       size="sm"
                       variant="outline"
-                      className="gap-2"
+                      className="gap-2 text-emerald-600 border-emerald-600 md:text-foreground md:border-border"
                       onClick={() => toggleRevealSeat("Left")}
                       disabled={modeOpenHandVerify}
                     >
                       {shownHands.Left ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      {shownHands.Left ? "Hide" : "Reveal"}
+                      <span className="hidden md:inline">{shownHands.Left ? "Hide" : "Reveal"}</span>
                     </Button>
                   </div>
                   {shownHands.Left ? (
@@ -1130,7 +1130,7 @@ export default function App() {
 
                 {/* Current trick stays fixed size */}
                 <div
-                  className="h-[240px] w-[240px] rounded-xl border bg-emerald-600/80 p-3 shadow-inner self-center justify-self-center flex flex-col"
+                  className="h-[200px] w-[200px] sm:h-[240px] sm:w-[240px] rounded-xl border bg-emerald-600/80 p-2 sm:p-3 shadow-inner self-center justify-self-center flex flex-col"
                   onClick={awaitContinue ? () => {
                     setTrick([]);
                     setTrickNo((n) => n + 1);
@@ -1204,7 +1204,7 @@ export default function App() {
                 {/* Right spans rows */}
                 <div
                   className={
-                    "row-span-2 rounded-xl border p-3 " + (shownHands.Right ? "min-h-[400px]" : "")
+                    "row-span-2 rounded-xl border p-2 sm:p-3 " + (shownHands.Right ? "min-h-[400px]" : "")
                   }
                 >
                   <div className="flex items-center justify-between">
@@ -1221,12 +1221,12 @@ export default function App() {
                       type="button"
                       size="sm"
                       variant="outline"
-                      className="gap-2"
+                      className="gap-2 text-emerald-600 border-emerald-600 md:text-foreground md:border-border"
                       onClick={() => toggleRevealSeat("Right")}
                       disabled={modeOpenHandVerify}
                     >
                       {shownHands.Right ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      {shownHands.Right ? "Hide" : "Reveal"}
+                      <span className="hidden md:inline">{shownHands.Right ? "Hide" : "Reveal"}</span>
                     </Button>
                   </div>
                   {shownHands.Right ? (
@@ -1246,7 +1246,7 @@ export default function App() {
                 </div>
 
                 {/* Me spans full width */}
-                <div className="col-span-3 rounded-xl border p-3">
+                <div className="col-span-3 rounded-xl border p-2 sm:p-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-sm font-medium">
                       <span>
