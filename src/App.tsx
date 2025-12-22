@@ -1135,7 +1135,6 @@ export default function App() {
                     setTrick([]);
                     setTrickNo((n) => n + 1);
                     setAwaitContinue(false);
-                    setVoidNeedsValidation(true);
                   } : undefined}
                 >
                   <div className="flex items-center justify-end text-white">
