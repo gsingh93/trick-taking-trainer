@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Grid3X3, RefreshCw, Eye, EyeOff } from "lucide-react";
+import { Grid3X3, RefreshCw, Eye, EyeOff, Moon, Sun } from "lucide-react";
 
 /**
  * Generic trick engine (v1)
@@ -59,6 +59,7 @@ type Settings = {
   seedInput: string;
   modeOpenHandVerify: boolean;
   voidTrackingEnabled: boolean;
+  darkMode: boolean;
   suitOrderMode: "bridge" | "poker";
   sortAscending: boolean;
   aiEnabled: boolean;
@@ -80,6 +81,7 @@ function loadSettings(): Partial<Settings> {
     if (typeof data.seedInput === "string") next.seedInput = data.seedInput;
     if (typeof data.modeOpenHandVerify === "boolean") next.modeOpenHandVerify = data.modeOpenHandVerify;
     if (typeof data.voidTrackingEnabled === "boolean") next.voidTrackingEnabled = data.voidTrackingEnabled;
+    if (typeof data.darkMode === "boolean") next.darkMode = data.darkMode;
     if (data.suitOrderMode === "bridge" || data.suitOrderMode === "poker") {
       next.suitOrderMode = data.suitOrderMode;
     }
@@ -435,6 +437,7 @@ export default function App() {
   const [voidTrackingEnabled, setVoidTrackingEnabled] = useState(
     () => initialSettings.voidTrackingEnabled ?? true
   );
+  const [darkMode, setDarkMode] = useState(() => initialSettings.darkMode ?? false);
   const [suitOrderMode, setSuitOrderMode] = useState<"bridge" | "poker">(
     () => initialSettings.suitOrderMode ?? "bridge"
   );
@@ -530,6 +533,7 @@ export default function App() {
       seedInput,
       modeOpenHandVerify,
       voidTrackingEnabled,
+      darkMode,
       suitOrderMode,
       sortAscending,
       aiEnabled,
@@ -548,6 +552,7 @@ export default function App() {
     seedInput,
     modeOpenHandVerify,
     voidTrackingEnabled,
+    darkMode,
     suitOrderMode,
     sortAscending,
     aiEnabled,
@@ -590,6 +595,10 @@ export default function App() {
   }, [trick, trump]);
 
   const canPlay = (voidTrackingEnabled ? trickReady : true) && !awaitContinue;
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", darkMode);
+  }, [darkMode]);
 
   useEffect(() => {
     if (!voidTrackingEnabled) {
@@ -888,7 +897,16 @@ export default function App() {
             <Grid3X3 className="h-5 w-5" />
             <h1 className="text-xl font-semibold">Trick Taking Trainer</h1>
           </div>
-          <div className="flex flex-wrap items-start gap-4">
+          <div className="flex items-center gap-4">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label="Toggle dark mode"
+              onClick={() => setDarkMode((v) => !v)}
+            >
+              {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
             <div className="space-y-2 rounded-lg border bg-card/50 p-3">
               <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Deal</div>
               <div className="flex flex-wrap items-start gap-2">
