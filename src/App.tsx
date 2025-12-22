@@ -61,6 +61,7 @@ type Settings = {
   modeOpenHandVerify: boolean;
   voidTrackingEnabled: boolean;
   darkMode: boolean;
+  leadCountPromptEnabled: boolean;
   suitOrderMode: "bridge" | "poker";
   sortAscending: boolean;
   aiEnabled: boolean;
@@ -83,6 +84,7 @@ function loadSettings(): Partial<Settings> {
     if (typeof data.modeOpenHandVerify === "boolean") next.modeOpenHandVerify = data.modeOpenHandVerify;
     if (typeof data.voidTrackingEnabled === "boolean") next.voidTrackingEnabled = data.voidTrackingEnabled;
     if (typeof data.darkMode === "boolean") next.darkMode = data.darkMode;
+    if (typeof data.leadCountPromptEnabled === "boolean") next.leadCountPromptEnabled = data.leadCountPromptEnabled;
     if (data.suitOrderMode === "bridge" || data.suitOrderMode === "poker") {
       next.suitOrderMode = data.suitOrderMode;
     }
@@ -451,6 +453,9 @@ export default function App() {
     () => initialSettings.voidTrackingEnabled ?? true
   );
   const [darkMode, setDarkMode] = useState(() => initialSettings.darkMode ?? false);
+  const [leadCountPromptEnabled, setLeadCountPromptEnabled] = useState(
+    () => initialSettings.leadCountPromptEnabled ?? false
+  );
   const [suitOrderMode, setSuitOrderMode] = useState<"bridge" | "poker">(
     () => initialSettings.suitOrderMode ?? "bridge"
   );
@@ -486,6 +491,8 @@ export default function App() {
   const [leadSelections, setLeadSelections] = useState<VoidSelections>(() => createVoidSelections());
   const [leadMismatch, setLeadMismatch] = useState<VoidSelections>(() => createVoidSelections());
   const [leadWarning, setLeadWarning] = useState<string | null>(null);
+  const [leadCountAnswer, setLeadCountAnswer] = useState("0");
+  const [leadCountMismatch, setLeadCountMismatch] = useState(false);
 
   const [reveal, setReveal] = useState<Record<Seat, boolean>>({
     Left: false,
@@ -542,6 +549,14 @@ export default function App() {
     return out;
   }, [trickHistory]);
 
+  const leadSuitCount = useMemo(() => {
+    if (!leadPromptSuit) return 0;
+    return trickHistory.reduce((acc, t) => {
+      const lead = trickLeadSuit(t);
+      return lead === leadPromptSuit ? acc + 1 : acc;
+    }, 0);
+  }, [leadPromptSuit, trickHistory]);
+
   useEffect(() => {
     const settings: Settings = {
       dealSeed,
@@ -549,6 +564,7 @@ export default function App() {
       modeOpenHandVerify,
       voidTrackingEnabled,
       darkMode,
+      leadCountPromptEnabled,
       suitOrderMode,
       sortAscending,
       aiEnabled,
@@ -568,6 +584,7 @@ export default function App() {
     modeOpenHandVerify,
     voidTrackingEnabled,
     darkMode,
+    leadCountPromptEnabled,
     suitOrderMode,
     sortAscending,
     aiEnabled,
@@ -622,6 +639,8 @@ export default function App() {
       setLeadPromptLeader(null);
       setLeadWarning(null);
       setLeadMismatch(createVoidSelections());
+      setLeadCountAnswer("0");
+      setLeadCountMismatch(false);
       return;
     }
     if (trick.length === 0) {
@@ -630,6 +649,8 @@ export default function App() {
       setLeadPromptLeader(null);
       setLeadWarning(null);
       setLeadMismatch(createVoidSelections());
+      setLeadCountAnswer("0");
+      setLeadCountMismatch(false);
     }
   }, [voidTrackingEnabled, trick.length]);
 
@@ -644,6 +665,8 @@ export default function App() {
     setLeadSelections(createVoidSelections());
     setLeadMismatch(createVoidSelections());
     setLeadWarning(null);
+    setLeadCountAnswer("0");
+    setLeadCountMismatch(false);
   }, [voidTrackingEnabled, trick]);
 
   function cancelResolveTimer() {
@@ -666,6 +689,8 @@ export default function App() {
     setLeadSelections(createVoidSelections());
     setLeadMismatch(createVoidSelections());
     setLeadWarning(null);
+    setLeadCountAnswer("0");
+    setLeadCountMismatch(false);
     setReveal({ Left: false, Across: false, Right: false, Me: true });
     setLeader("Me");
     setTurn("Me");
@@ -728,11 +753,21 @@ export default function App() {
       setLeadWarning("Selections do not match void status");
       return;
     }
+    if (leadCountPromptEnabled) {
+      const answer = Number(leadCountAnswer);
+      if (!Number.isFinite(answer) || answer !== leadSuitCount) {
+        setLeadCountMismatch(true);
+        return;
+      }
+      setLeadCountMismatch(false);
+    }
     setLeadPromptActive(false);
     setLeadPromptSuit(null);
     setLeadPromptLeader(null);
     setLeadWarning(null);
     setLeadMismatch(createVoidSelections());
+    setLeadCountAnswer("0");
+    setLeadCountMismatch(false);
   }
 
   function toggleRevealSeat(seat: Seat) {
@@ -1287,6 +1322,35 @@ export default function App() {
                     );
                   })}
                 </div>
+                {leadCountPromptEnabled ? (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">
+                      How many times has this suit been led before this trick?
+                    </div>
+                    <Select
+                      value={leadCountAnswer}
+                      onValueChange={(v) => {
+                        setLeadCountAnswer(v);
+                        setLeadCountMismatch(false);
+                      }}
+                      disabled={!leadPromptActive || !voidTrackingEnabled}
+                    >
+                      <SelectTrigger className="h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 13 }, (_, i) => String(i)).map((n) => (
+                          <SelectItem key={n} value={n}>
+                            {n}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {leadCountMismatch ? (
+                      <div className="text-xs text-destructive">Lead count is incorrect</div>
+                    ) : null}
+                  </div>
+                ) : null}
                 {leadWarning ? <div className="text-xs text-destructive">{leadWarning}</div> : null}
                 <Button
                   onClick={resumeAfterLeadPrompt}
@@ -1312,6 +1376,13 @@ export default function App() {
                 <div className="flex justify-between">
                   <span className="text-sm">Void tracking</span>
                   <Switch checked={voidTrackingEnabled} onCheckedChange={setVoidTrackingEnabled} />
+                </div>
+
+                <Separator />
+
+                <div className="flex justify-between">
+                  <span className="text-sm">Lead count prompt</span>
+                  <Switch checked={leadCountPromptEnabled} onCheckedChange={setLeadCountPromptEnabled} />
                 </div>
 
                 <Separator />
