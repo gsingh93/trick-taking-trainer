@@ -1059,7 +1059,7 @@ export default function App() {
                     <div
                       className={
                         "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
-                        (turn === "Across"
+                        (turn === "Across" && !handComplete
                           ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
                           : "")
                       }
@@ -1107,7 +1107,7 @@ export default function App() {
                     <div
                       className={
                         "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
-                        (turn === "Left"
+                        (turn === "Left" && !handComplete
                           ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
                           : "")
                       }
@@ -1233,7 +1233,7 @@ export default function App() {
                     <div
                       className={
                         "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
-                        (turn === "Right"
+                        (turn === "Right" && !handComplete
                           ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
                           : "")
                       }
@@ -1279,7 +1279,7 @@ export default function App() {
                     <div
                       className={
                         "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
-                        (turn === "Me"
+                        (turn === "Me" && !handComplete
                           ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
                           : "")
                       }
