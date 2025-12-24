@@ -1058,7 +1058,7 @@ export default function App() {
         <div className="grid grid-cols-1 gap-1 md:grid-cols-[minmax(0,1fr)_auto] [@media(orientation:landscape)_and_(max-width:1023px)]:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
           {/* TABLE */}
           <Card className="lg:col-span-2">
-            <CardHeader>
+            <CardHeader className="pb-1">
               <CardTitle className="flex items-center justify-between">
                 <div className="flex flex-col">
                   <div className="flex items-center gap-3">
@@ -1071,7 +1071,7 @@ export default function App() {
                 </div>
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-3 sm:p-6">
+            <CardContent className="pt-1 pb-3 px-3 sm:pt-3 sm:pb-6 sm:px-6">
               <div className="grid grid-cols-[minmax(0,0.25fr)_minmax(0,0.5fr)_minmax(0,0.25fr)] grid-rows-[auto_1fr_auto] gap-x-0.5 gap-y-2 sm:grid-cols-[minmax(0,0.25fr)_minmax(0,0.5fr)_minmax(0,0.25fr)] sm:gap-3">
                 {/* Across spans full width */}
                 <div className="col-span-3 rounded-xl border p-2 sm:p-3">
