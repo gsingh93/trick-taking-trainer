@@ -999,6 +999,535 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const TableCard = () => (
+    <Card className="lg:col-span-2">
+      <CardHeader className="pb-1">
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex flex-col">
+            <div className="flex items-center gap-3">
+              <span>Table</span>
+              <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={resetTrickOnly}>
+                Reset trick
+              </Button>
+            </div>
+            <div className="pl-0.5 text-xs text-muted-foreground">Trick {trickNo}</div>
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-1 pb-3 px-3 sm:pt-3 sm:pb-6 sm:px-6">
+        <div className="grid grid-cols-[minmax(0,0.25fr)_minmax(0,0.5fr)_minmax(0,0.25fr)] grid-rows-[auto_1fr_auto] gap-x-0.5 gap-y-2 sm:grid-cols-[minmax(0,0.25fr)_minmax(0,0.5fr)_minmax(0,0.25fr)] sm:gap-3">
+          {/* Across spans full width */}
+          <div className="col-span-3 rounded-xl border p-2 sm:p-3">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <div
+                className={
+                  "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
+                  (turn === "Across" && !handComplete
+                    ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
+                    : "")
+                }
+              >
+                <span>
+                  Across <span className="text-xs text-muted-foreground">({tricksWon.Across})</span>
+                </span>
+              </div>
+              <Badge variant="outline">{hands.Across.length}</Badge>
+            </div>
+            <div className="mt-3 flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="gap-2 text-emerald-600 border-emerald-600 md:text-foreground md:border-border"
+                onClick={() => toggleRevealSeat("Across")}
+                disabled={modeOpenHandVerify}
+              >
+                {shownHands.Across ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span className="hidden md:inline">{shownHands.Across ? "Hide" : "Reveal"}</span>
+              </Button>
+            </div>
+            {shownHands.Across ? (
+              <HandRow
+                seat="Across"
+                hand={hands.Across}
+                legal={legalBySeat.Across}
+                onPlay={(s, c) => tryPlay(s, c, "human")}
+                currentTurn={turn}
+                suitOrder={suitOrder}
+                sortAscending={sortAscending}
+                canPlay={canPlay}
+              />
+            ) : null}
+          </div>
+
+          {/* Left spans rows */}
+          <div
+            className={
+              "row-span-2 rounded-xl border p-2 sm:p-3 " + (shownHands.Left ? "min-h-[400px]" : "")
+            }
+          >
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <div
+                className={
+                  "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
+                  (turn === "Left" && !handComplete
+                    ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
+                    : "")
+                }
+              >
+                <span>
+                  Left <span className="text-xs text-muted-foreground">({tricksWon.Left})</span>
+                </span>
+              </div>
+              <Badge variant="outline">{hands.Left.length}</Badge>
+            </div>
+            <div className="mt-3 flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="gap-2 text-emerald-600 border-emerald-600 md:text-foreground md:border-border"
+                onClick={() => toggleRevealSeat("Left")}
+                disabled={modeOpenHandVerify}
+              >
+                {shownHands.Left ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span className="hidden md:inline">{shownHands.Left ? "Hide" : "Reveal"}</span>
+              </Button>
+            </div>
+            {shownHands.Left ? (
+              <HandCol
+                seat="Left"
+                hand={hands.Left}
+                cardRotateClass="rotate-90 origin-center"
+                align="start"
+                legal={legalBySeat.Left}
+                onPlay={(s, c) => tryPlay(s, c, "human")}
+                currentTurn={turn}
+                suitOrder={suitOrder}
+                sortAscending={sortAscending}
+                canPlay={canPlay}
+              />
+            ) : null}
+          </div>
+
+          {/* Current trick stays fixed size */}
+          <div
+            className="relative flex h-[200px] w-[200px] items-center justify-center rounded-xl border bg-emerald-600/80 p-2 shadow-inner self-center justify-self-center sm:h-[240px] sm:w-[240px] sm:p-3"
+            onClick={awaitContinue ? () => {
+              setTrick([]);
+              setTrickNo((n) => n + 1);
+              setAwaitContinue(false);
+            } : undefined}
+          >
+            <div className="absolute right-2 top-2 text-white">
+              <Badge className="bg-white/20 text-white hover:bg-white/20" variant="secondary">
+                {trick.length}/4
+              </Badge>
+            </div>
+
+            {/* Diamond layout */}
+            <div className="relative h-36 w-36 sm:h-40 sm:w-40">
+              {/* Across (top) */}
+              <div className="absolute left-1/2 top-0 -translate-x-1/2">
+                {(() => {
+                  const p = trick.find((t) => t.seat === "Across");
+                  return p ? (
+                    <PlayingCard c={p.card} highlight={trickWinner === "Across"} />
+                  ) : (
+                    <div className="h-14 w-10 opacity-20" />
+                  );
+                })()}
+              </div>
+
+              {/* Left */}
+              <div className="absolute left-0 top-1/2 -translate-y-1/2">
+                {(() => {
+                  const p = trick.find((t) => t.seat === "Left");
+                  return p ? (
+                    <PlayingCard c={p.card} rotateClass="rotate-90" highlight={trickWinner === "Left"} />
+                  ) : (
+                    <div className="h-10 w-14 opacity-20" />
+                  );
+                })()}
+              </div>
+
+              {/* Right */}
+              <div className="absolute right-0 top-1/2 -translate-y-1/2">
+                {(() => {
+                  const p = trick.find((t) => t.seat === "Right");
+                  return p ? (
+                    <PlayingCard c={p.card} rotateClass="-rotate-90" highlight={trickWinner === "Right"} />
+                  ) : (
+                    <div className="h-10 w-14 opacity-20" />
+                  );
+                })()}
+              </div>
+
+              {/* Me (bottom) */}
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
+                {(() => {
+                  const p = trick.find((t) => t.seat === "Me");
+                  return p ? (
+                    <PlayingCard c={p.card} highlight={trickWinner === "Me"} />
+                  ) : (
+                    <div className="h-14 w-10 opacity-20" />
+                  );
+                })()}
+              </div>
+            </div>
+
+            <div className="absolute bottom-2 left-1/2 w-[190px] -translate-x-1/2 text-center text-xs text-white/80 sm:w-[220px]">
+              {awaitContinue && !handComplete ? (
+                <>
+                  <span className="sm:hidden">Click to continue</span>
+                  <span className="hidden sm:inline">Press Enter/Space or click to continue</span>
+                </>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Right spans rows */}
+          <div
+            className={
+              "row-span-2 rounded-xl border p-2 sm:p-3 " + (shownHands.Right ? "min-h-[400px]" : "")
+            }
+          >
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <div
+                className={
+                  "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
+                  (turn === "Right" && !handComplete
+                    ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
+                    : "")
+                }
+              >
+                <span>
+                  Right <span className="text-xs text-muted-foreground">({tricksWon.Right})</span>
+                </span>
+              </div>
+              <Badge variant="outline">{hands.Right.length}</Badge>
+            </div>
+            <div className="mt-3 flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="gap-2 text-emerald-600 border-emerald-600 md:text-foreground md:border-border"
+                onClick={() => toggleRevealSeat("Right")}
+                disabled={modeOpenHandVerify}
+              >
+                {shownHands.Right ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span className="hidden md:inline">{shownHands.Right ? "Hide" : "Reveal"}</span>
+              </Button>
+            </div>
+            {shownHands.Right ? (
+              <HandCol
+                seat="Right"
+                hand={hands.Right}
+                cardRotateClass="-rotate-90 origin-center"
+                align="end"
+                legal={legalBySeat.Right}
+                onPlay={(s, c) => tryPlay(s, c, "human")}
+                currentTurn={turn}
+                suitOrder={suitOrder}
+                sortAscending={sortAscending}
+                canPlay={canPlay}
+              />
+            ) : null}
+          </div>
+
+          {/* Me spans full width */}
+          <div className="col-span-3 rounded-xl border p-2 sm:p-3">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <div
+                className={
+                  "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
+                  (turn === "Me" && !handComplete
+                    ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
+                    : "")
+                }
+              >
+                <span>
+                  Me <span className="text-xs text-muted-foreground">({tricksWon.Me})</span>
+                </span>
+              </div>
+              <Badge variant="outline">{hands.Me.length}</Badge>
+            </div>
+            <HandRow
+              seat="Me"
+              hand={hands.Me}
+              legal={legalBySeat.Me}
+              onPlay={(s, c) => tryPlay(s, c, "human")}
+              currentTurn={turn}
+              suitOrder={suitOrder}
+              sortAscending={sortAscending}
+              canPlay={canPlay}
+            />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const VoidTrackingCard = () => (
+    <Card>
+      <CardHeader>
+        <CardTitle>Void tracking</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="text-xs text-muted-foreground">
+          After a lead, confirm which opponents are void in the lead suit.
+        </div>
+        <div className="text-sm font-medium">
+          {!voidTrackingEnabled
+            ? "Void tracking is disabled"
+            : leadPromptActive
+              ? "Which opponents are void in the lead suit?"
+              : trick.length === 0
+                ? "Waiting for a card to be led..."
+                : anyVoidObserved
+                  ? "Trick in progress..."
+                  : "Waiting for first off-suit..."}
+        </div>
+        {leadPromptSuit ? (
+          <div className={"text-sm " + suitColorClass(leadPromptSuit)}>
+            Lead suit: {suitGlyph(leadPromptSuit)}
+          </div>
+        ) : null}
+        <div className="space-y-2 text-sm">
+          {OPPONENTS.map((o) => {
+            const isLeader = leadPromptLeader === o;
+            const mismatch = leadMismatch[o];
+            const disabled = !voidTrackingEnabled || !leadPromptActive || isLeader;
+            return (
+              <label
+                key={o}
+                className={
+                  "flex items-center justify-between rounded-md border px-2 py-1 " +
+                  (mismatch ? "border-destructive" : "border-border") +
+                  (disabled ? " opacity-60" : "")
+                }
+              >
+                <span>{o}</span>
+                <input
+                  type="checkbox"
+                  className="h-4 w-4"
+                  checked={leadSelections[o]}
+                  onChange={() => toggleLeadSelection(o)}
+                  disabled={disabled}
+                />
+              </label>
+            );
+          })}
+        </div>
+        {leadCountPromptEnabled ? (
+          <div className="space-y-2">
+            <div className="text-sm font-medium">
+              How many times has this suit been led before this trick?
+            </div>
+            <Select
+              value={leadCountAnswer}
+              onValueChange={(v) => {
+                setLeadCountAnswer(v);
+                setLeadCountMismatch(false);
+              }}
+              disabled={!leadPromptActive || !voidTrackingEnabled}
+            >
+              <SelectTrigger className="h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 13 }, (_, i) => String(i)).map((n) => (
+                  <SelectItem key={n} value={n}>
+                    {n}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {leadCountMismatch ? <div className="text-xs text-destructive">Lead count is incorrect</div> : null}
+          </div>
+        ) : null}
+        {leadWarning ? <div className="text-xs text-destructive">{leadWarning}</div> : null}
+        <Button
+          onClick={resumeAfterLeadPrompt}
+          disabled={!voidTrackingEnabled || !leadPromptActive || isResolving || awaitContinue}
+          className="bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-600/50"
+        >
+          Resume
+        </Button>
+      </CardContent>
+    </Card>
+  );
+
+  const SettingsCard = () => (
+    <Card>
+      <CardHeader>
+        <CardTitle>Training Settings</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex justify-between">
+          <span className="text-sm">Open-hand verify</span>
+          <Switch checked={modeOpenHandVerify} onCheckedChange={setModeOpenHandVerify} />
+        </div>
+
+        <Separator />
+
+        <div className="space-y-3">
+          <div className="flex justify-between">
+            <span className="text-sm">Void tracking</span>
+            <Switch checked={voidTrackingEnabled} onCheckedChange={setVoidTrackingEnabled} />
+          </div>
+
+          <div className={"flex items-center justify-between gap-2 " + (!voidTrackingEnabled ? "opacity-50" : "")}>
+            <div className="flex items-center gap-2 text-sm">
+              <span>Prompt after first void</span>
+              <span
+                className="inline-flex h-4 w-4 cursor-pointer select-none items-center justify-center rounded-full border text-[10px] font-semibold text-muted-foreground"
+                title={"Global: after any off-suit, prompt on every lead\nPer suit: only prompt after off-suit in that suit"}
+              >
+                ?
+              </span>
+            </div>
+            <Select
+              value={voidPromptScope}
+              onValueChange={(v) => setVoidPromptScope(v as "global" | "per-suit")}
+              disabled={!voidTrackingEnabled}
+            >
+              <SelectTrigger className="h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="global">Global</SelectItem>
+                <SelectItem value="per-suit">Per suit</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <Separator />
+
+        <div className="flex justify-between">
+          <span className="text-sm">Lead count tracking</span>
+          <Switch checked={leadCountPromptEnabled} onCheckedChange={setLeadCountPromptEnabled} />
+        </div>
+
+        <Separator />
+
+        <div className="flex justify-between">
+          <span className="text-sm">Check errors</span>
+          <Switch checked={checkErrorsEnabled} onCheckedChange={setCheckErrorsEnabled} />
+        </div>
+
+        <div className="h-1" />
+        <CardTitle>Gameplay &amp; UI Settings</CardTitle>
+
+        <div className="flex justify-between">
+          <span className="text-sm">Basic AI (opponents)</span>
+          <Switch checked={aiEnabled} onCheckedChange={setAiEnabled} />
+        </div>
+
+        <div className={"flex justify-between " + (!aiEnabled ? "opacity-50" : "")}>
+          <span className="text-sm">AI for me</span>
+          <Switch checked={aiPlayMe} onCheckedChange={setAiPlayMe} disabled={!aiEnabled} />
+        </div>
+
+        <div className={"grid grid-cols-[minmax(0,1fr)_auto] gap-2 " + (!aiEnabled ? "opacity-50" : "")}>
+          <span className="text-sm">AI delay (ms)</span>
+          <input
+            type="number"
+            min={0}
+            step={250}
+            value={aiDelayMs}
+            disabled={!aiEnabled}
+            onChange={(e) => setAiDelayMs(Number(e.target.value) || 0)}
+            className="h-8 w-20 rounded-md border bg-background px-2 text-sm"
+          />
+        </div>
+
+        <div className="flex justify-between">
+          <span className="text-sm">Pause before next trick</span>
+          <Switch checked={pauseBeforeNextTrick} onCheckedChange={setPauseBeforeNextTrick} />
+        </div>
+
+        <Separator />
+
+        <div className="flex justify-between">
+          <span className="text-sm">Trump enabled</span>
+          <Switch checked={trump.enabled} onCheckedChange={(v) => setTrump((t) => ({ ...t, enabled: v }))} />
+        </div>
+
+        <div className={"grid grid-cols-[minmax(0,1fr)_auto] gap-2 " + (!trump.enabled ? "opacity-50" : "")}>
+          <span className="text-sm">Trump suit</span>
+          <Select value={trump.suit} onValueChange={(v) => setTrump((t) => ({ ...t, suit: v as Suit }))} disabled={!trump.enabled}>
+            <SelectTrigger className="h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SUITS.map((s) => (
+                <SelectItem key={s} value={s}>
+                  <span className={suitColorClass(s)}>{suitGlyph(s)}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className={"flex justify-between " + (!trump.enabled ? "opacity-50" : "")}>
+          <div className="flex items-center gap-2">
+            <span className="text-sm">Must break</span>
+            <span
+              className="inline-flex h-4 w-4 cursor-pointer select-none items-center justify-center rounded-full border text-[10px] font-semibold text-muted-foreground"
+              title="Prevents leading trump until trump has been played (unless you only have trump)"
+            >
+              ?
+            </span>
+          </div>
+          <Switch checked={trump.mustBreak} onCheckedChange={(v) => setTrump((t) => ({ ...t, mustBreak: v }))} disabled={!trump.enabled} />
+        </div>
+
+        <Separator />
+
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+          <span className="text-sm">Suit order</span>
+          <Select value={suitOrderMode} onValueChange={(v) => setSuitOrderMode(v as "bridge" | "poker")}>
+            <SelectTrigger className="h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="bridge">
+                Bridge (
+                <span className="inline-flex gap-1">
+                  {["S", "H", "D", "C"].map((s) => (
+                    <span key={s} className={suitColorClass(s as Suit)}>
+                      {suitGlyph(s as Suit)}
+                    </span>
+                  ))}
+                </span>
+                )
+              </SelectItem>
+              <SelectItem value="poker">
+                Poker (
+                <span className="inline-flex gap-1">
+                  {["C", "D", "H", "S"].map((s) => (
+                    <span key={s} className={suitColorClass(s as Suit)}>
+                      {suitGlyph(s as Suit)}
+                    </span>
+                  ))}
+                </span>
+                )
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex justify-between">
+          <span className="text-sm">Sort ascending</span>
+          <Switch checked={sortAscending} onCheckedChange={setSortAscending} />
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="min-h-screen bg-background p-3 sm:p-6">
       <div className="mx-auto max-w-6xl space-y-4 sm:space-y-6">
@@ -1056,533 +1585,10 @@ export default function App() {
         </header>
 
         <div className="grid grid-cols-1 gap-1 md:grid-cols-[minmax(0,1fr)_auto] [@media(orientation:landscape)_and_(max-width:1023px)]:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-          {/* TABLE */}
-          <Card className="lg:col-span-2">
-            <CardHeader className="pb-1">
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-3">
-                    <span>Table</span>
-                    <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={resetTrickOnly}>
-                      Reset trick
-                    </Button>
-                  </div>
-                  <div className="pl-0.5 text-xs text-muted-foreground">Trick {trickNo}</div>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-1 pb-3 px-3 sm:pt-3 sm:pb-6 sm:px-6">
-              <div className="grid grid-cols-[minmax(0,0.25fr)_minmax(0,0.5fr)_minmax(0,0.25fr)] grid-rows-[auto_1fr_auto] gap-x-0.5 gap-y-2 sm:grid-cols-[minmax(0,0.25fr)_minmax(0,0.5fr)_minmax(0,0.25fr)] sm:gap-3">
-                {/* Across spans full width */}
-                <div className="col-span-3 rounded-xl border p-2 sm:p-3">
-                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                    <div
-                      className={
-                        "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
-                        (turn === "Across" && !handComplete
-                          ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
-                          : "")
-                      }
-                    >
-                      <span>
-                        Across <span className="text-xs text-muted-foreground">({tricksWon.Across})</span>
-                      </span>
-                    </div>
-                    <Badge variant="outline">{hands.Across.length}</Badge>
-                  </div>
-                  <div className="mt-3 flex items-center gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="gap-2 text-emerald-600 border-emerald-600 md:text-foreground md:border-border"
-                      onClick={() => toggleRevealSeat("Across")}
-                      disabled={modeOpenHandVerify}
-                    >
-                      {shownHands.Across ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      <span className="hidden md:inline">{shownHands.Across ? "Hide" : "Reveal"}</span>
-                    </Button>
-                  </div>
-                  {shownHands.Across ? (
-                    <HandRow
-                      seat="Across"
-                      hand={hands.Across}
-                      legal={legalBySeat.Across}
-                      onPlay={(s, c) => tryPlay(s, c, "human")}
-                      currentTurn={turn}
-                      suitOrder={suitOrder}
-                      sortAscending={sortAscending}
-                      canPlay={canPlay}
-                    />
-                  ) : null}
-                </div>
-
-                {/* Left spans rows */}
-                <div
-                  className={
-                    "row-span-2 rounded-xl border p-2 sm:p-3 " + (shownHands.Left ? "min-h-[400px]" : "")
-                  }
-                >
-                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                    <div
-                      className={
-                        "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
-                        (turn === "Left" && !handComplete
-                          ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
-                          : "")
-                      }
-                    >
-                      <span>
-                        Left <span className="text-xs text-muted-foreground">({tricksWon.Left})</span>
-                      </span>
-                    </div>
-                    <Badge variant="outline">{hands.Left.length}</Badge>
-                  </div>
-                  <div className="mt-3 flex items-center gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="gap-2 text-emerald-600 border-emerald-600 md:text-foreground md:border-border"
-                      onClick={() => toggleRevealSeat("Left")}
-                      disabled={modeOpenHandVerify}
-                    >
-                      {shownHands.Left ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      <span className="hidden md:inline">{shownHands.Left ? "Hide" : "Reveal"}</span>
-                    </Button>
-                  </div>
-                  {shownHands.Left ? (
-                    <HandCol
-                      seat="Left"
-                      hand={hands.Left}
-                      cardRotateClass="rotate-90 origin-center"
-                      align="start"
-                      legal={legalBySeat.Left}
-                      onPlay={(s, c) => tryPlay(s, c, "human")}
-                      currentTurn={turn}
-                      suitOrder={suitOrder}
-                      sortAscending={sortAscending}
-                      canPlay={canPlay}
-                    />
-                  ) : null}
-                </div>
-
-                {/* Current trick stays fixed size */}
-                <div
-                  className="relative flex h-[200px] w-[200px] items-center justify-center rounded-xl border bg-emerald-600/80 p-2 shadow-inner self-center justify-self-center sm:h-[240px] sm:w-[240px] sm:p-3"
-                  onClick={awaitContinue ? () => {
-                    setTrick([]);
-                    setTrickNo((n) => n + 1);
-                    setAwaitContinue(false);
-                  } : undefined}
-                >
-                  <div className="absolute right-2 top-2 text-white">
-                    <Badge className="bg-white/20 text-white hover:bg-white/20" variant="secondary">
-                      {trick.length}/4
-                    </Badge>
-                  </div>
-
-                  {/* Diamond layout */}
-                  <div className="relative h-36 w-36 sm:h-40 sm:w-40">
-                    {/* Across (top) */}
-                    <div className="absolute left-1/2 top-0 -translate-x-1/2">
-                      {(() => {
-                        const p = trick.find((t) => t.seat === "Across");
-                        return p ? (
-                          <PlayingCard c={p.card} highlight={trickWinner === "Across"} />
-                        ) : (
-                          <div className="h-14 w-10 opacity-20" />
-                        );
-                      })()}
-                    </div>
-
-                    {/* Left */}
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2">
-                      {(() => {
-                        const p = trick.find((t) => t.seat === "Left");
-                        return p ? (
-                          <PlayingCard c={p.card} rotateClass="rotate-90" highlight={trickWinner === "Left"} />
-                        ) : (
-                          <div className="h-10 w-14 opacity-20" />
-                        );
-                      })()}
-                    </div>
-
-                    {/* Right */}
-                    <div className="absolute right-0 top-1/2 -translate-y-1/2">
-                      {(() => {
-                        const p = trick.find((t) => t.seat === "Right");
-                        return p ? (
-                          <PlayingCard c={p.card} rotateClass="-rotate-90" highlight={trickWinner === "Right"} />
-                        ) : (
-                          <div className="h-10 w-14 opacity-20" />
-                        );
-                      })()}
-                    </div>
-
-                    {/* Me (bottom) */}
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
-                      {(() => {
-                        const p = trick.find((t) => t.seat === "Me");
-                        return p ? (
-                          <PlayingCard c={p.card} highlight={trickWinner === "Me"} />
-                        ) : (
-                          <div className="h-14 w-10 opacity-20" />
-                        );
-                      })()}
-                    </div>
-                  </div>
-
-                  <div className="absolute bottom-2 left-1/2 w-[190px] -translate-x-1/2 text-center text-xs text-white/80 sm:w-[220px]">
-                    {awaitContinue && !handComplete ? (
-                      <>
-                        <span className="sm:hidden">Click to continue</span>
-                        <span className="hidden sm:inline">Press Enter/Space or click to continue</span>
-                      </>
-                    ) : null}
-                  </div>
-                </div>
-
-                {/* Right spans rows */}
-                <div
-                  className={
-                    "row-span-2 rounded-xl border p-2 sm:p-3 " + (shownHands.Right ? "min-h-[400px]" : "")
-                  }
-                >
-                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                    <div
-                      className={
-                        "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
-                        (turn === "Right" && !handComplete
-                          ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
-                          : "")
-                      }
-                    >
-                      <span>
-                        Right <span className="text-xs text-muted-foreground">({tricksWon.Right})</span>
-                      </span>
-                    </div>
-                    <Badge variant="outline">{hands.Right.length}</Badge>
-                  </div>
-                  <div className="mt-3 flex items-center gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="gap-2 text-emerald-600 border-emerald-600 md:text-foreground md:border-border"
-                      onClick={() => toggleRevealSeat("Right")}
-                      disabled={modeOpenHandVerify}
-                    >
-                      {shownHands.Right ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      <span className="hidden md:inline">{shownHands.Right ? "Hide" : "Reveal"}</span>
-                    </Button>
-                  </div>
-                  {shownHands.Right ? (
-                    <HandCol
-                      seat="Right"
-                      hand={hands.Right}
-                      cardRotateClass="-rotate-90 origin-center"
-                      align="end"
-                      legal={legalBySeat.Right}
-                      onPlay={(s, c) => tryPlay(s, c, "human")}
-                      currentTurn={turn}
-                      suitOrder={suitOrder}
-                      sortAscending={sortAscending}
-                      canPlay={canPlay}
-                    />
-                  ) : null}
-                </div>
-
-                {/* Me spans full width */}
-                <div className="col-span-3 rounded-xl border p-2 sm:p-3">
-                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                    <div
-                      className={
-                        "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
-                        (turn === "Me" && !handComplete
-                          ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
-                          : "")
-                      }
-                    >
-                      <span>
-                        Me <span className="text-xs text-muted-foreground">({tricksWon.Me})</span>
-                      </span>
-                    </div>
-                    <Badge variant="outline">{hands.Me.length}</Badge>
-                  </div>
-                  <HandRow
-                    seat="Me"
-                    hand={hands.Me}
-                    legal={legalBySeat.Me}
-                    onPlay={(s, c) => tryPlay(s, c, "human")}
-                    currentTurn={turn}
-                    suitOrder={suitOrder}
-                    sortAscending={sortAscending}
-                    canPlay={canPlay}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* TRAINING COLUMN */}
+          <TableCard />
           <div className="space-y-6 w-full md:max-w-[330px] md:justify-self-end">
-            <Card>
-              <CardHeader>
-                <CardTitle>Void tracking</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-xs text-muted-foreground">
-                  After a lead, confirm which opponents are void in the lead suit.
-                </div>
-                <div className="text-sm font-medium">
-                  {!voidTrackingEnabled
-                    ? "Void tracking is disabled"
-                    : leadPromptActive
-                      ? "Which opponents are void in the lead suit?"
-                      : trick.length === 0
-                        ? "Waiting for a card to be led..."
-                        : anyVoidObserved
-                          ? "Trick in progress..."
-                          : "Waiting for first off-suit..."}
-                </div>
-                {leadPromptSuit ? (
-                  <div className={"text-sm " + suitColorClass(leadPromptSuit)}>
-                    Lead suit: {suitGlyph(leadPromptSuit)}
-                  </div>
-                ) : null}
-                <div className="space-y-2 text-sm">
-                  {OPPONENTS.map((o) => {
-                    const isLeader = leadPromptLeader === o;
-                    const mismatch = leadMismatch[o];
-                    const disabled = !voidTrackingEnabled || !leadPromptActive || isLeader;
-                    return (
-                      <label
-                        key={o}
-                        className={
-                          "flex items-center justify-between rounded-md border px-2 py-1 " +
-                          (mismatch ? "border-destructive" : "border-border") +
-                          (disabled ? " opacity-60" : "")
-                        }
-                      >
-                        <span>{o}</span>
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4"
-                          checked={leadSelections[o]}
-                          onChange={() => toggleLeadSelection(o)}
-                          disabled={disabled}
-                        />
-                      </label>
-                    );
-                  })}
-                </div>
-                {leadCountPromptEnabled ? (
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium">
-                      How many times has this suit been led before this trick?
-                    </div>
-                    <Select
-                      value={leadCountAnswer}
-                      onValueChange={(v) => {
-                        setLeadCountAnswer(v);
-                        setLeadCountMismatch(false);
-                      }}
-                      disabled={!leadPromptActive || !voidTrackingEnabled}
-                    >
-                      <SelectTrigger className="h-8">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 13 }, (_, i) => String(i)).map((n) => (
-                          <SelectItem key={n} value={n}>
-                            {n}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {leadCountMismatch ? (
-                      <div className="text-xs text-destructive">Lead count is incorrect</div>
-                    ) : null}
-                  </div>
-                ) : null}
-                {leadWarning ? <div className="text-xs text-destructive">{leadWarning}</div> : null}
-                <Button
-                  onClick={resumeAfterLeadPrompt}
-                  disabled={!voidTrackingEnabled || !leadPromptActive || isResolving || awaitContinue}
-                  className="bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-600/50"
-                >
-                  Resume
-                </Button>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Training Settings</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between">
-                  <span className="text-sm">Open-hand verify</span>
-                  <Switch checked={modeOpenHandVerify} onCheckedChange={setModeOpenHandVerify} />
-                </div>
-
-                <Separator />
-
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-sm">Void tracking</span>
-                    <Switch checked={voidTrackingEnabled} onCheckedChange={setVoidTrackingEnabled} />
-                  </div>
-
-                  <div className={"flex items-center justify-between gap-2 " + (!voidTrackingEnabled ? "opacity-50" : "")}>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span>Prompt after first void</span>
-                      <span
-                        className="inline-flex h-4 w-4 cursor-pointer select-none items-center justify-center rounded-full border text-[10px] font-semibold text-muted-foreground"
-                        title={"Global: after any off-suit, prompt on every lead\nPer suit: only prompt after off-suit in that suit"}
-                      >
-                        ?
-                      </span>
-                    </div>
-                    <Select
-                      value={voidPromptScope}
-                      onValueChange={(v) => setVoidPromptScope(v as "global" | "per-suit")}
-                      disabled={!voidTrackingEnabled}
-                    >
-                      <SelectTrigger className="h-8">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="global">Global</SelectItem>
-                        <SelectItem value="per-suit">Per suit</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="flex justify-between">
-                  <span className="text-sm">Lead count tracking</span>
-                  <Switch checked={leadCountPromptEnabled} onCheckedChange={setLeadCountPromptEnabled} />
-                </div>
-
-                <Separator />
-
-                <div className="flex justify-between">
-                  <span className="text-sm">Check errors</span>
-                  <Switch checked={checkErrorsEnabled} onCheckedChange={setCheckErrorsEnabled} />
-                </div>
-
-                <div className="h-1" />
-                <CardTitle>Gameplay &amp; UI Settings</CardTitle>
-
-                <div className="flex justify-between">
-                  <span className="text-sm">Basic AI (opponents)</span>
-                  <Switch checked={aiEnabled} onCheckedChange={setAiEnabled} />
-                </div>
-
-                <div className={"flex justify-between " + (!aiEnabled ? "opacity-50" : "")}>
-                  <span className="text-sm">AI for me</span>
-                  <Switch checked={aiPlayMe} onCheckedChange={setAiPlayMe} disabled={!aiEnabled} />
-                </div>
-
-                <div className={"grid grid-cols-[minmax(0,1fr)_auto] gap-2 " + (!aiEnabled ? "opacity-50" : "")}>
-                  <span className="text-sm">AI delay (ms)</span>
-                  <input
-                    type="number"
-                    min={0}
-                    step={250}
-                    value={aiDelayMs}
-                    disabled={!aiEnabled}
-                    onChange={(e) => setAiDelayMs(Number(e.target.value) || 0)}
-                    className="h-8 w-20 rounded-md border bg-background px-2 text-sm"
-                  />
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-sm">Pause before next trick</span>
-                  <Switch checked={pauseBeforeNextTrick} onCheckedChange={setPauseBeforeNextTrick} />
-                </div>
-
-                <Separator />
-
-                <div className="flex justify-between">
-                  <span className="text-sm">Trump enabled</span>
-                  <Switch checked={trump.enabled} onCheckedChange={(v) => setTrump((t) => ({ ...t, enabled: v }))} />
-                </div>
-
-                <div className={"grid grid-cols-[minmax(0,1fr)_auto] gap-2 " + (!trump.enabled ? "opacity-50" : "")}>
-                  <span className="text-sm">Trump suit</span>
-                  <Select value={trump.suit} onValueChange={(v) => setTrump((t) => ({ ...t, suit: v as Suit }))} disabled={!trump.enabled}>
-                    <SelectTrigger className="h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SUITS.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          <span className={suitColorClass(s)}>{suitGlyph(s)}</span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className={"flex justify-between " + (!trump.enabled ? "opacity-50" : "")}>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm">Must break</span>
-                    <span
-                      className="inline-flex h-4 w-4 cursor-pointer select-none items-center justify-center rounded-full border text-[10px] font-semibold text-muted-foreground"
-                      title="Prevents leading trump until trump has been played (unless you only have trump)"
-                    >
-                      ?
-                    </span>
-                  </div>
-                  <Switch checked={trump.mustBreak} onCheckedChange={(v) => setTrump((t) => ({ ...t, mustBreak: v }))} disabled={!trump.enabled} />
-                </div>
-
-                <Separator />
-
-                <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-                  <span className="text-sm">Suit order</span>
-                  <Select value={suitOrderMode} onValueChange={(v) => setSuitOrderMode(v as "bridge" | "poker")}>
-                    <SelectTrigger className="h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="bridge">
-                        Bridge (
-                        <span className="inline-flex gap-1">
-                          {["S", "H", "D", "C"].map((s) => (
-                            <span key={s} className={suitColorClass(s as Suit)}>
-                              {suitGlyph(s as Suit)}
-                            </span>
-                          ))}
-                        </span>
-                        )
-                      </SelectItem>
-                      <SelectItem value="poker">
-                        Poker (
-                        <span className="inline-flex gap-1">
-                          {["C", "D", "H", "S"].map((s) => (
-                            <span key={s} className={suitColorClass(s as Suit)}>
-                              {suitGlyph(s as Suit)}
-                            </span>
-                          ))}
-                        </span>
-                        )
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-sm">Sort ascending</span>
-                  <Switch checked={sortAscending} onCheckedChange={setSortAscending} />
-                </div>
-
-              </CardContent>
-            </Card>
+            <VoidTrackingCard />
+            <SettingsCard />
           </div>
         </div>
       </div>
