@@ -421,7 +421,7 @@ function HandCol({
   const gridAlign = align === "end" ? "justify-items-end" : "justify-items-start";
   return (
     <div className={"mt-3 flex " + (align === "end" ? "justify-end" : "justify-start")}>
-      <div className={"grid grid-cols-1 gap-0 sm:grid-cols-2 " + gridAlign}>
+      <div className={"grid grid-cols-1 gap-0 lg:grid-cols-2 " + gridAlign}>
         {sortHand(hand, suitOrder, sortAscending).map((c) => (
           <div key={c.id} className="relative h-10 w-14 overflow-visible">
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
@@ -1072,7 +1072,7 @@ export default function App() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-3 sm:p-6">
-              <div className="grid grid-cols-[minmax(0,0.7fr)_auto_minmax(0,0.7fr)] grid-rows-[auto_1fr_auto] gap-x-0.5 gap-y-2 sm:grid-cols-3 sm:gap-3">
+              <div className="grid grid-cols-[minmax(0,0.25fr)_minmax(0,0.5fr)_minmax(0,0.25fr)] grid-rows-[auto_1fr_auto] gap-x-0.5 gap-y-2 sm:grid-cols-[minmax(0,0.25fr)_minmax(0,0.5fr)_minmax(0,0.25fr)] sm:gap-3">
                 {/* Across spans full width */}
                 <div className="col-span-3 rounded-xl border p-2 sm:p-3">
                   <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
