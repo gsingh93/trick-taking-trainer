@@ -1434,8 +1434,28 @@ export default function App() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="bridge">Bridge (S H D C)</SelectItem>
-                      <SelectItem value="poker">Poker (C D H S)</SelectItem>
+                  <SelectItem value="bridge">
+                    Bridge (
+                    <span className="inline-flex gap-1">
+                      {["S", "H", "D", "C"].map((s) => (
+                        <span key={s} className={suitColorClass(s as Suit)}>
+                          {suitGlyph(s as Suit)}
+                        </span>
+                      ))}
+                    </span>
+                    )
+                  </SelectItem>
+                  <SelectItem value="poker">
+                    Poker (
+                    <span className="inline-flex gap-1">
+                      {["C", "D", "H", "S"].map((s) => (
+                        <span key={s} className={suitColorClass(s as Suit)}>
+                          {suitGlyph(s as Suit)}
+                        </span>
+                      ))}
+                    </span>
+                    )
+                  </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1496,7 +1516,7 @@ export default function App() {
                     <SelectContent>
                       {SUITS.map((s) => (
                         <SelectItem key={s} value={s}>
-                          {suitGlyph(s)}
+                          <span className={suitColorClass(s)}>{suitGlyph(s)}</span>
                         </SelectItem>
                       ))}
                     </SelectContent>
