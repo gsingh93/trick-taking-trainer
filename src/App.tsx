@@ -1527,7 +1527,7 @@ export default function App() {
                   <div className="flex items-center gap-2">
                     <span className="text-sm">Must break</span>
                     <span
-                      className="inline-flex h-4 w-4 items-center justify-center rounded-full border text-[10px] font-semibold text-muted-foreground"
+                      className="inline-flex h-4 w-4 cursor-pointer select-none items-center justify-center rounded-full border text-[10px] font-semibold text-muted-foreground"
                       title="Prevents leading trump until trump has been played (unless you only have trump)"
                     >
                       ?
