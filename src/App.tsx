@@ -1590,14 +1590,22 @@ export default function App() {
           </div>
         </header>
 
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 gap-1 md:grid-cols-[minmax(0,1fr)_auto] [@media(orientation:landscape)_and_(max-width:1023px)]:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+        <div className="hidden space-y-6 [@media(max-height:499px)]:block">
+          <div className="grid grid-cols-1 gap-1 md:grid-cols-[minmax(0,1fr)_auto]">
             <TableCard />
             <div className="w-full md:max-w-[330px] md:justify-self-end md:self-center">
               <VoidTrackingCard />
             </div>
           </div>
           <div className="md:max-w-[330px] md:justify-self-end">
+            <SettingsCard />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_auto] md:gap-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] [@media(max-height:499px)]:hidden">
+          <TableCard />
+          <div className="space-y-6 w-full md:max-w-[330px] md:justify-self-end">
+            <VoidTrackingCard />
             <SettingsCard />
           </div>
         </div>
