@@ -548,7 +548,8 @@ export default function App() {
 
   const actualVoid = useMemo<VoidGrid>(() => {
     const out = createVoidGrid();
-    for (const t of trickHistory) {
+    const observedTricks = trick.length > 1 ? [...trickHistory, trick] : trickHistory;
+    for (const t of observedTricks) {
       const lead = trickLeadSuit(t);
       if (!lead) continue;
       for (let i = 1; i < t.length; i++) {
@@ -559,7 +560,7 @@ export default function App() {
       }
     }
     return out;
-  }, [trickHistory]);
+  }, [trickHistory, trick]);
 
   const anyVoidObserved = useMemo(() => {
     return OPPONENTS.some((o) => SUITS.some((s) => actualVoid[o][s]));
