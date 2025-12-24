@@ -1270,56 +1270,59 @@ export default function App() {
   );
 
   const VoidTrackingCard = () => (
-    <Card>
+    <Card className="flex flex-col">
       <CardHeader>
         <CardTitle>Void tracking</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="text-xs text-muted-foreground">
-          After a lead, confirm which opponents are void in the lead suit.
-        </div>
-        <div className="text-sm font-medium">
-          {!voidTrackingEnabled
-            ? "Void tracking is disabled"
-            : leadPromptActive
-              ? "Which opponents are void in the lead suit?"
-              : trick.length === 0
-                ? "Waiting for a card to be led..."
-                : anyVoidObserved
-                  ? "Trick in progress..."
-                  : "Waiting for first off-suit..."}
-        </div>
-        {leadPromptSuit ? (
-          <div className={"text-sm " + suitColorClass(leadPromptSuit)}>
-            Lead suit: {suitGlyph(leadPromptSuit)}
+      <CardContent className="flex flex-col gap-4">
+        <div className="space-y-2">
+          <div className="text-xs text-muted-foreground">
+            After a lead, confirm which opponents are void in the lead suit.
           </div>
-        ) : null}
-        <div className="space-y-2 text-sm">
-          {OPPONENTS.map((o) => {
-            const isLeader = leadPromptLeader === o;
-            const mismatch = leadMismatch[o];
-            const disabled = !voidTrackingEnabled || !leadPromptActive || isLeader;
-            return (
-              <label
-                key={o}
-                className={
-                  "flex items-center justify-between rounded-md border px-2 py-1 " +
-                  (mismatch ? "border-destructive" : "border-border") +
-                  (disabled ? " opacity-60" : "")
-                }
-              >
-                <span>{o}</span>
-                <input
-                  type="checkbox"
-                  className="h-4 w-4"
-                  checked={leadSelections[o]}
-                  onChange={() => toggleLeadSelection(o)}
-                  disabled={disabled}
-                />
-              </label>
-            );
-          })}
+          <div className="text-sm font-medium">
+            {!voidTrackingEnabled
+              ? "Void tracking is disabled"
+              : leadPromptActive
+                ? "Which opponents are void in the lead suit?"
+                : trick.length === 0
+                  ? "Waiting for a card to be led..."
+                  : anyVoidObserved
+                    ? "Trick in progress..."
+                    : "Waiting for first off-suit..."}
+          </div>
+          {leadPromptSuit ? (
+            <div className={"text-sm " + suitColorClass(leadPromptSuit)}>
+              Lead suit: {suitGlyph(leadPromptSuit)}
+            </div>
+          ) : null}
+          <div className="space-y-2 text-sm">
+            {OPPONENTS.map((o) => {
+              const isLeader = leadPromptLeader === o;
+              const mismatch = leadMismatch[o];
+              const disabled = !voidTrackingEnabled || !leadPromptActive || isLeader;
+              return (
+                <label
+                  key={o}
+                  className={
+                    "flex items-center justify-between rounded-md border px-2 py-1 " +
+                    (mismatch ? "border-destructive" : "border-border") +
+                    (disabled ? " opacity-60" : "")
+                  }
+                >
+                  <span>{o}</span>
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4"
+                    checked={leadSelections[o]}
+                    onChange={() => toggleLeadSelection(o)}
+                    disabled={disabled}
+                  />
+                </label>
+              );
+            })}
+          </div>
         </div>
+
         {leadCountPromptEnabled ? (
           <div className="space-y-2">
             <div className="text-sm font-medium">
@@ -1347,14 +1350,17 @@ export default function App() {
             {leadCountMismatch ? <div className="text-xs text-destructive">Lead count is incorrect</div> : null}
           </div>
         ) : null}
-        {leadWarning ? <div className="text-xs text-destructive">{leadWarning}</div> : null}
-        <Button
-          onClick={resumeAfterLeadPrompt}
-          disabled={!voidTrackingEnabled || !leadPromptActive || isResolving || awaitContinue}
-          className="bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-600/50"
-        >
-          Resume
-        </Button>
+
+        <div className="space-y-2">
+          {leadWarning ? <div className="text-xs text-destructive">{leadWarning}</div> : null}
+          <Button
+            onClick={resumeAfterLeadPrompt}
+            disabled={!voidTrackingEnabled || !leadPromptActive || isResolving || awaitContinue}
+            className="bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-600/50"
+          >
+            Resume
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
@@ -1584,10 +1590,14 @@ export default function App() {
           </div>
         </header>
 
-        <div className="grid grid-cols-1 gap-1 md:grid-cols-[minmax(0,1fr)_auto] [@media(orientation:landscape)_and_(max-width:1023px)]:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-          <TableCard />
-          <div className="space-y-6 w-full md:max-w-[330px] md:justify-self-end">
-            <VoidTrackingCard />
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 gap-1 md:grid-cols-[minmax(0,1fr)_auto] [@media(orientation:landscape)_and_(max-width:1023px)]:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+            <TableCard />
+            <div className="w-full md:max-w-[330px] md:justify-self-end md:self-center">
+              <VoidTrackingCard />
+            </div>
+          </div>
+          <div className="md:max-w-[330px] md:justify-self-end">
             <SettingsCard />
           </div>
         </div>
