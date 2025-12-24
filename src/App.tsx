@@ -1487,7 +1487,7 @@ export default function App() {
                   <Switch checked={aiPlayMe} onCheckedChange={setAiPlayMe} disabled={!aiEnabled} />
                 </div>
 
-                <div className={"grid grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-2 " + (!aiEnabled ? "opacity-50" : "")}>
+                <div className={"grid grid-cols-[minmax(0,1fr)_auto] gap-2 " + (!aiEnabled ? "opacity-50" : "")}>
                   <span className="text-sm">AI delay (ms)</span>
                   <input
                     type="number"
@@ -1496,7 +1496,7 @@ export default function App() {
                     value={aiDelayMs}
                     disabled={!aiEnabled}
                     onChange={(e) => setAiDelayMs(Number(e.target.value) || 0)}
-                    className="h-8 rounded-md border bg-background px-2 text-sm"
+                    className="h-8 w-20 rounded-md border bg-background px-2 text-sm"
                   />
                 </div>
 
@@ -1512,7 +1512,7 @@ export default function App() {
                   <Switch checked={trump.enabled} onCheckedChange={(v) => setTrump((t) => ({ ...t, enabled: v }))} />
                 </div>
 
-                <div className={"grid grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-2 " + (!trump.enabled ? "opacity-50" : "")}>
+                <div className={"grid grid-cols-[minmax(0,1fr)_auto] gap-2 " + (!trump.enabled ? "opacity-50" : "")}>
                   <span className="text-sm">Trump suit</span>
                   <Select value={trump.suit} onValueChange={(v) => setTrump((t) => ({ ...t, suit: v as Suit }))} disabled={!trump.enabled}>
                     <SelectTrigger className="h-8">
@@ -1543,7 +1543,7 @@ export default function App() {
 
                 <Separator />
 
-                <div className="grid grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-2">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
                   <span className="text-sm">Suit order</span>
                   <Select value={suitOrderMode} onValueChange={(v) => setSuitOrderMode(v as "bridge" | "poker")}>
                     <SelectTrigger className="h-8">
