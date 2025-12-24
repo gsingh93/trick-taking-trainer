@@ -1431,8 +1431,8 @@ export default function App() {
                     <Switch checked={voidTrackingEnabled} onCheckedChange={setVoidTrackingEnabled} />
                   </div>
 
-                  <div className={"grid grid-cols-2 gap-2 " + (!voidTrackingEnabled ? "opacity-50" : "")}>
-                    <span className="text-xs">Prompt after first void</span>
+                <div className={"grid grid-cols-2 gap-2 " + (!voidTrackingEnabled ? "opacity-50" : "")}>
+                    <span className="text-sm">Prompt after first void</span>
                     <Select
                       value={voidPromptScope}
                       onValueChange={(v) => setVoidPromptScope(v as "global" | "per-suit")}
@@ -1464,7 +1464,7 @@ export default function App() {
                 <Separator />
 
                 <div className="grid grid-cols-2 gap-2">
-                  <span className="text-xs">Suit order</span>
+                  <span className="text-sm">Suit order</span>
                   <Select value={suitOrderMode} onValueChange={(v) => setSuitOrderMode(v as "bridge" | "poker")}>
                     <SelectTrigger className="h-8">
                       <SelectValue />
@@ -1516,7 +1516,7 @@ export default function App() {
                 </div>
 
                 <div className={"grid grid-cols-2 gap-2 " + (!aiEnabled ? "opacity-50" : "")}>
-                  <span className="text-xs">AI delay (ms)</span>
+                  <span className="text-sm">AI delay (ms)</span>
                   <input
                     type="number"
                     min={0}
@@ -1544,7 +1544,7 @@ export default function App() {
                 </div>
 
                 <div className={"grid grid-cols-2 gap-2 " + (!trump.enabled ? "opacity-50" : "")}>
-                  <span className="text-xs">Trump suit</span>
+                  <span className="text-sm">Trump suit</span>
                   <Select value={trump.suit} onValueChange={(v) => setTrump((t) => ({ ...t, suit: v as Suit }))} disabled={!trump.enabled}>
                     <SelectTrigger className="h-8">
                       <SelectValue />
