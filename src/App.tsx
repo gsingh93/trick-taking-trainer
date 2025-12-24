@@ -1504,7 +1504,15 @@ export default function App() {
                 </div>
 
                 <div className={"flex justify-between " + (!trump.enabled ? "opacity-50" : "")}>
-                  <span className="text-sm">Must break</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">Must break</span>
+                    <span
+                      className="inline-flex h-4 w-4 items-center justify-center rounded-full border text-[10px] font-semibold text-muted-foreground"
+                      title="Prevents leading trump until trump has been played (unless you only have trump)"
+                    >
+                      ?
+                    </span>
+                  </div>
                   <Switch checked={trump.mustBreak} onCheckedChange={(v) => setTrump((t) => ({ ...t, mustBreak: v }))} disabled={!trump.enabled} />
                 </div>
 
