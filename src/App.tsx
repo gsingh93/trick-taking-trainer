@@ -1341,7 +1341,9 @@ export default function App() {
                       ? "Which opponents are void in the lead suit?"
                       : trick.length === 0
                         ? "Waiting for a card to be led..."
-                        : "Waiting for opponents to play..."}
+                        : anyVoidObserved
+                          ? "Trick in progress..."
+                          : "Waiting for first off-suit..."}
                 </div>
                 {leadPromptSuit ? (
                   <div className={"text-sm " + suitColorClass(leadPromptSuit)}>
