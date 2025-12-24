@@ -1415,7 +1415,7 @@ export default function App() {
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle>Settings</CardTitle>
+                <CardTitle>Training Settings</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex justify-between">
@@ -1431,7 +1431,7 @@ export default function App() {
                     <Switch checked={voidTrackingEnabled} onCheckedChange={setVoidTrackingEnabled} />
                   </div>
 
-                <div className={"grid grid-cols-2 gap-2 " + (!voidTrackingEnabled ? "opacity-50" : "")}>
+                  <div className={"grid grid-cols-2 gap-2 " + (!voidTrackingEnabled ? "opacity-50" : "")}>
                     <span className="text-sm">Prompt after first void</span>
                     <Select
                       value={voidPromptScope}
@@ -1447,63 +1447,24 @@ export default function App() {
                       </SelectContent>
                     </Select>
                   </div>
-
-                  <div className="flex justify-between">
-                    <span className="text-sm">Check errors</span>
-                    <Switch checked={checkErrorsEnabled} onCheckedChange={setCheckErrorsEnabled} />
-                  </div>
                 </div>
 
                 <Separator />
 
                 <div className="flex justify-between">
-                  <span className="text-sm">Lead count prompt</span>
+                  <span className="text-sm">Lead count tracking</span>
                   <Switch checked={leadCountPromptEnabled} onCheckedChange={setLeadCountPromptEnabled} />
                 </div>
 
                 <Separator />
 
-                <div className="grid grid-cols-2 gap-2">
-                  <span className="text-sm">Suit order</span>
-                  <Select value={suitOrderMode} onValueChange={(v) => setSuitOrderMode(v as "bridge" | "poker")}>
-                    <SelectTrigger className="h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                  <SelectItem value="bridge">
-                    Bridge (
-                    <span className="inline-flex gap-1">
-                      {["S", "H", "D", "C"].map((s) => (
-                        <span key={s} className={suitColorClass(s as Suit)}>
-                          {suitGlyph(s as Suit)}
-                        </span>
-                      ))}
-                    </span>
-                    )
-                  </SelectItem>
-                  <SelectItem value="poker">
-                    Poker (
-                    <span className="inline-flex gap-1">
-                      {["C", "D", "H", "S"].map((s) => (
-                        <span key={s} className={suitColorClass(s as Suit)}>
-                          {suitGlyph(s as Suit)}
-                        </span>
-                      ))}
-                    </span>
-                    )
-                  </SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="flex justify-between">
+                  <span className="text-sm">Check errors</span>
+                  <Switch checked={checkErrorsEnabled} onCheckedChange={setCheckErrorsEnabled} />
                 </div>
 
-                <div className="flex justify-between">
-                  <span className="text-sm">Sort ascending</span>
-                  <Switch
-                    checked={sortAscending}
-                    onCheckedChange={setSortAscending}
-                  />
-                </div>
-                <Separator />
+                <div className="h-1" />
+                <CardTitle>Gameplay &amp; UI Settings</CardTitle>
 
                 <div className="flex justify-between">
                   <span className="text-sm">Basic AI (opponents)</span>
@@ -1530,10 +1491,7 @@ export default function App() {
 
                 <div className="flex justify-between">
                   <span className="text-sm">Pause before next trick</span>
-                  <Switch
-                    checked={pauseBeforeNextTrick}
-                    onCheckedChange={setPauseBeforeNextTrick}
-                  />
+                  <Switch checked={pauseBeforeNextTrick} onCheckedChange={setPauseBeforeNextTrick} />
                 </div>
 
                 <Separator />
@@ -1570,6 +1528,46 @@ export default function App() {
                     </span>
                   </div>
                   <Switch checked={trump.mustBreak} onCheckedChange={(v) => setTrump((t) => ({ ...t, mustBreak: v }))} disabled={!trump.enabled} />
+                </div>
+
+                <Separator />
+
+                <div className="grid grid-cols-2 gap-2">
+                  <span className="text-sm">Suit order</span>
+                  <Select value={suitOrderMode} onValueChange={(v) => setSuitOrderMode(v as "bridge" | "poker")}>
+                    <SelectTrigger className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bridge">
+                        Bridge (
+                        <span className="inline-flex gap-1">
+                          {["S", "H", "D", "C"].map((s) => (
+                            <span key={s} className={suitColorClass(s as Suit)}>
+                              {suitGlyph(s as Suit)}
+                            </span>
+                          ))}
+                        </span>
+                        )
+                      </SelectItem>
+                      <SelectItem value="poker">
+                        Poker (
+                        <span className="inline-flex gap-1">
+                          {["C", "D", "H", "S"].map((s) => (
+                            <span key={s} className={suitColorClass(s as Suit)}>
+                              {suitGlyph(s as Suit)}
+                            </span>
+                          ))}
+                        </span>
+                        )
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className="text-sm">Sort ascending</span>
+                  <Switch checked={sortAscending} onCheckedChange={setSortAscending} />
                 </div>
 
               </CardContent>
