@@ -63,6 +63,7 @@ type Settings = {
   darkMode: boolean;
   leadCountPromptEnabled: boolean;
   checkErrorsEnabled: boolean;
+  voidPromptScope: "global" | "per-suit";
   suitOrderMode: "bridge" | "poker";
   sortAscending: boolean;
   aiEnabled: boolean;
@@ -87,6 +88,9 @@ function loadSettings(): Partial<Settings> {
     if (typeof data.darkMode === "boolean") next.darkMode = data.darkMode;
     if (typeof data.leadCountPromptEnabled === "boolean") next.leadCountPromptEnabled = data.leadCountPromptEnabled;
     if (typeof data.checkErrorsEnabled === "boolean") next.checkErrorsEnabled = data.checkErrorsEnabled;
+    if (data.voidPromptScope === "global" || data.voidPromptScope === "per-suit") {
+      next.voidPromptScope = data.voidPromptScope;
+    }
     if (data.suitOrderMode === "bridge" || data.suitOrderMode === "poker") {
       next.suitOrderMode = data.suitOrderMode;
     }
@@ -461,6 +465,9 @@ export default function App() {
   const [checkErrorsEnabled, setCheckErrorsEnabled] = useState(
     () => initialSettings.checkErrorsEnabled ?? true
   );
+  const [voidPromptScope, setVoidPromptScope] = useState<"global" | "per-suit">(
+    () => initialSettings.voidPromptScope ?? "global"
+  );
   const [suitOrderMode, setSuitOrderMode] = useState<"bridge" | "poker">(
     () => initialSettings.suitOrderMode ?? "bridge"
   );
@@ -554,6 +561,10 @@ export default function App() {
     return out;
   }, [trickHistory]);
 
+  const anyVoidObserved = useMemo(() => {
+    return OPPONENTS.some((o) => SUITS.some((s) => actualVoid[o][s]));
+  }, [actualVoid]);
+
   const leadSuitCount = useMemo(() => {
     if (!leadPromptSuit) return 0;
     return trickHistory.reduce((acc, t) => {
@@ -571,6 +582,7 @@ export default function App() {
       darkMode,
       leadCountPromptEnabled,
       checkErrorsEnabled,
+      voidPromptScope,
       suitOrderMode,
       sortAscending,
       aiEnabled,
@@ -592,6 +604,7 @@ export default function App() {
     darkMode,
     leadCountPromptEnabled,
     checkErrorsEnabled,
+    voidPromptScope,
     suitOrderMode,
     sortAscending,
     aiEnabled,
@@ -666,15 +679,21 @@ export default function App() {
     if (trick.length !== 1) return;
     if (trickNo === 1) return;
     const leadSeat = trick[0].seat;
+    const leadSuit = trick[0].card.suit;
+    const shouldPrompt =
+      voidPromptScope === "global"
+        ? anyVoidObserved
+        : OPPONENTS.some((o) => actualVoid[o][leadSuit]);
+    if (!shouldPrompt) return;
     setLeadPromptActive(true);
-    setLeadPromptSuit(trick[0].card.suit);
+    setLeadPromptSuit(leadSuit);
     setLeadPromptLeader(leadSeat === "Me" ? null : leadSeat);
     setLeadSelections(createVoidSelections());
     setLeadMismatch(createVoidSelections());
     setLeadWarning(null);
     setLeadCountAnswer("0");
     setLeadCountMismatch(false);
-  }, [voidTrackingEnabled, trick]);
+  }, [voidTrackingEnabled, trick, trickNo, actualVoid, anyVoidObserved, voidPromptScope]);
 
   function cancelResolveTimer() {
     if (resolveTimerRef.current != null) {
@@ -1406,9 +1425,33 @@ export default function App() {
 
                 <Separator />
 
-                <div className="flex justify-between">
-                  <span className="text-sm">Void tracking</span>
-                  <Switch checked={voidTrackingEnabled} onCheckedChange={setVoidTrackingEnabled} />
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-sm">Void tracking</span>
+                    <Switch checked={voidTrackingEnabled} onCheckedChange={setVoidTrackingEnabled} />
+                  </div>
+
+                  <div className={"grid grid-cols-2 gap-2 " + (!voidTrackingEnabled ? "opacity-50" : "")}>
+                    <span className="text-xs">Prompt after first void</span>
+                    <Select
+                      value={voidPromptScope}
+                      onValueChange={(v) => setVoidPromptScope(v as "global" | "per-suit")}
+                      disabled={!voidTrackingEnabled}
+                    >
+                      <SelectTrigger className="h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="global">Global</SelectItem>
+                        <SelectItem value="per-suit">Per suit</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-sm">Check errors</span>
+                    <Switch checked={checkErrorsEnabled} onCheckedChange={setCheckErrorsEnabled} />
+                  </div>
                 </div>
 
                 <Separator />
@@ -1416,13 +1459,6 @@ export default function App() {
                 <div className="flex justify-between">
                   <span className="text-sm">Lead count prompt</span>
                   <Switch checked={leadCountPromptEnabled} onCheckedChange={setLeadCountPromptEnabled} />
-                </div>
-
-                <Separator />
-
-                <div className="flex justify-between">
-                  <span className="text-sm">Check errors</span>
-                  <Switch checked={checkErrorsEnabled} onCheckedChange={setCheckErrorsEnabled} />
                 </div>
 
                 <Separator />
