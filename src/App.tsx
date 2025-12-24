@@ -1055,7 +1055,7 @@ export default function App() {
           </div>
         </header>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 [@media(orientation:landscape)_and_(max-width:1023px)]:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-1 md:grid-cols-[minmax(0,1fr)_auto] [@media(orientation:landscape)_and_(max-width:1023px)]:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
           {/* TABLE */}
           <Card className="lg:col-span-2">
             <CardHeader>
@@ -1326,7 +1326,7 @@ export default function App() {
           </Card>
 
           {/* TRAINING COLUMN */}
-          <div className="space-y-6">
+          <div className="space-y-6 w-full md:max-w-[330px] md:justify-self-end">
             <Card>
               <CardHeader>
                 <CardTitle>Void tracking</CardTitle>
