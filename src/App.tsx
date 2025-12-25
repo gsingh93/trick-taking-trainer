@@ -190,6 +190,33 @@ function createVoidSelections(): VoidSelections {
   return { Left: false, Across: false, Right: false };
 }
 
+function useMediaQuery(query: string) {
+  const getMatch = () => (typeof window !== "undefined" ? window.matchMedia(query).matches : false);
+  const [matches, setMatches] = useState(getMatch);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia(query);
+    const onChange = (event: MediaQueryListEvent) => setMatches(event.matches);
+    if (mql.addEventListener) {
+      mql.addEventListener("change", onChange);
+    } else {
+      // Safari < 14
+      mql.addListener(onChange);
+    }
+    setMatches(mql.matches);
+    return () => {
+      if (mql.removeEventListener) {
+        mql.removeEventListener("change", onChange);
+      } else {
+        mql.removeListener(onChange);
+      }
+    };
+  }, [query]);
+
+  return matches;
+}
+
 function sortHand(hand: CardT[], suitOrder: Suit[], sortAscending: boolean): CardT[] {
   const suitIndex = new Map<Suit, number>(suitOrder.map((s, i) => [s, i]));
   const rankFactor = sortAscending ? 1 : -1;
@@ -449,6 +476,7 @@ function HandCol({
 }
 
 export default function App() {
+  const isShortViewport = useMediaQuery("(max-height: 499px)");
   const initialSettings = useMemo(() => loadSettings(), []);
   const initialSeed = initialSettings.dealSeed ?? Math.floor(Math.random() * 1_000_000_000);
 
@@ -1590,25 +1618,27 @@ export default function App() {
           </div>
         </header>
 
-        <div className="hidden space-y-6 [@media(max-height:499px)]:block">
-          <div className="grid grid-cols-1 gap-1 md:grid-cols-[minmax(0,1fr)_auto]">
-            <TableCard />
-            <div className="w-full md:max-w-[330px] md:justify-self-end md:self-center">
-              <VoidTrackingCard />
+        {isShortViewport ? (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 gap-1 md:grid-cols-[minmax(0,1fr)_auto]">
+              <TableCard />
+              <div className="w-full md:max-w-[330px] md:justify-self-end md:self-center">
+                <VoidTrackingCard />
+              </div>
+            </div>
+            <div className="md:max-w-[330px] md:justify-self-end">
+              <SettingsCard />
             </div>
           </div>
-          <div className="md:max-w-[330px] md:justify-self-end">
-            <SettingsCard />
+        ) : (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_auto] md:gap-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+            <TableCard />
+            <div className="space-y-6 w-full md:max-w-[330px] md:justify-self-end">
+              <VoidTrackingCard />
+              <SettingsCard />
+            </div>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_auto] md:gap-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] [@media(max-height:499px)]:hidden">
-          <TableCard />
-          <div className="space-y-6 w-full md:max-w-[330px] md:justify-self-end">
-            <VoidTrackingCard />
-            <SettingsCard />
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
