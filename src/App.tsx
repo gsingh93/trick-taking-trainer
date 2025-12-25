@@ -1615,55 +1615,57 @@ export default function App() {
 }
 
 // Sanity tests (runtime assertions)
-const _deck = buildDeck();
-console.assert(_deck.length === 52, "Deck should have 52 cards");
-console.assert(new Set(_deck.map((c) => c.id)).size === 52, "Deck ids should be unique");
-console.assert(
-  SUITS.every((s) => _deck.filter((c) => c.suit === s).length === 13),
-  "Each suit should have 13 cards"
-);
+if (import.meta.env.DEV) {
+  const _deck = buildDeck();
+  console.assert(_deck.length === 52, "Deck should have 52 cards");
+  console.assert(new Set(_deck.map((c) => c.id)).size === 52, "Deck ids should be unique");
+  console.assert(
+    SUITS.every((s) => _deck.filter((c) => c.suit === s).length === 13),
+    "Each suit should have 13 cards"
+  );
 
-const _hands = dealNewHands(createRng(1));
-console.assert(SEATS.every((s) => _hands[s].length === 13), "Each seat should be dealt 13 cards");
+  const _hands = dealNewHands(createRng(1));
+  console.assert(SEATS.every((s) => _hands[s].length === 13), "Each seat should be dealt 13 cards");
 
-const _dealtIds = SEATS.reduce<string[]>((acc, s) => acc.concat(_hands[s].map((c) => c.id)), []);
-console.assert(_dealtIds.length === 52, "Dealt hands should have 52 total cards");
-console.assert(new Set(_dealtIds).size === 52, "Dealt hands should cover all 52 unique cards");
+  const _dealtIds = SEATS.reduce<string[]>((acc, s) => acc.concat(_hands[s].map((c) => c.id)), []);
+  console.assert(_dealtIds.length === 52, "Dealt hands should have 52 total cards");
+  console.assert(new Set(_dealtIds).size === 52, "Dealt hands should cover all 52 unique cards");
 
-// Trick winner tests (generic)
-const _tNoTrump: TrumpConfig = { enabled: false, suit: "S", mustBreak: true };
-const _tTrumpS: TrumpConfig = { enabled: true, suit: "S", mustBreak: true };
+  // Trick winner tests (generic)
+  const _tNoTrump: TrumpConfig = { enabled: false, suit: "S", mustBreak: true };
+  const _tTrumpS: TrumpConfig = { enabled: true, suit: "S", mustBreak: true };
 
-const _trick1: PlayT[] = [
-  { seat: "Me", card: { suit: "H", rank: 10, id: "H10" } },
-  { seat: "Left", card: { suit: "H", rank: 12, id: "H12" } },
-  { seat: "Across", card: { suit: "H", rank: 3, id: "H3" } },
-  { seat: "Right", card: { suit: "H", rank: 14, id: "H14" } },
-];
-console.assert(determineTrickWinner(_trick1, _tNoTrump) === "Right", "Highest of lead suit should win");
+  const _trick1: PlayT[] = [
+    { seat: "Me", card: { suit: "H", rank: 10, id: "H10" } },
+    { seat: "Left", card: { suit: "H", rank: 12, id: "H12" } },
+    { seat: "Across", card: { suit: "H", rank: 3, id: "H3" } },
+    { seat: "Right", card: { suit: "H", rank: 14, id: "H14" } },
+  ];
+  console.assert(determineTrickWinner(_trick1, _tNoTrump) === "Right", "Highest of lead suit should win");
 
-const _trick2: PlayT[] = [
-  { seat: "Me", card: { suit: "H", rank: 10, id: "H10" } },
-  { seat: "Left", card: { suit: "S", rank: 2, id: "S2" } },
-  { seat: "Across", card: { suit: "H", rank: 14, id: "H14" } },
-  { seat: "Right", card: { suit: "S", rank: 11, id: "S11" } },
-];
-console.assert(determineTrickWinner(_trick2, _tTrumpS) === "Right", "Highest trump should win when trump played");
+  const _trick2: PlayT[] = [
+    { seat: "Me", card: { suit: "H", rank: 10, id: "H10" } },
+    { seat: "Left", card: { suit: "S", rank: 2, id: "S2" } },
+    { seat: "Across", card: { suit: "H", rank: 14, id: "H14" } },
+    { seat: "Right", card: { suit: "S", rank: 11, id: "S11" } },
+  ];
+  console.assert(determineTrickWinner(_trick2, _tTrumpS) === "Right", "Highest trump should win when trump played");
 
-// Legality tests: must-follow
-const _handFollow: CardT[] = [
-  { suit: "H", rank: 2, id: "H2" },
-  { suit: "S", rank: 14, id: "S14" },
-];
-const _leadTrick: PlayT[] = [{ seat: "Me", card: { suit: "H", rank: 10, id: "H10" } }];
-console.assert(
-  isLegalPlay({
-    hand: _handFollow,
-    card: { suit: "S", rank: 14, id: "S14" },
-    trick: _leadTrick,
-    isLeader: false,
-    trump: _tNoTrump,
-    trumpBroken: false,
-  }) === false,
-  "Must-follow should reject off-suit when holding lead suit"
-);
+  // Legality tests: must-follow
+  const _handFollow: CardT[] = [
+    { suit: "H", rank: 2, id: "H2" },
+    { suit: "S", rank: 14, id: "S14" },
+  ];
+  const _leadTrick: PlayT[] = [{ seat: "Me", card: { suit: "H", rank: 10, id: "H10" } }];
+  console.assert(
+    isLegalPlay({
+      hand: _handFollow,
+      card: { suit: "S", rank: 14, id: "S14" },
+      trick: _leadTrick,
+      isLeader: false,
+      trump: _tNoTrump,
+      trumpBroken: false,
+    }) === false,
+    "Must-follow should reject off-suit when holding lead suit"
+  );
+}
