@@ -91,6 +91,7 @@ type Settings = {
   aiDelayMs: number;
   pauseBeforeNextTrick: boolean;
   aiPlayMe: boolean;
+  seatLabelMode: "relative" | "compass";
   trump: TrumpConfig;
 };
 
@@ -124,6 +125,9 @@ function loadSettings(): Partial<Settings> {
       next.pauseBeforeNextTrick = data.pauseBeforeNextTrick;
     }
     if (typeof data.aiPlayMe === "boolean") next.aiPlayMe = data.aiPlayMe;
+    if (data.seatLabelMode === "relative" || data.seatLabelMode === "compass") {
+      next.seatLabelMode = data.seatLabelMode;
+    }
     if (typeof data.trump === "object" && data.trump) {
       const t = data.trump as Record<string, unknown>;
       if (
@@ -364,6 +368,9 @@ export default function App() {
     () => initialSettings.pauseBeforeNextTrick ?? true
   );
   const [aiPlayMe, setAiPlayMe] = useState(() => initialSettings.aiPlayMe ?? false);
+  const [seatLabelMode, setSeatLabelMode] = useState<"relative" | "compass">(
+    () => initialSettings.seatLabelMode ?? "relative"
+  );
   const [awaitContinue, setAwaitContinue] = useState(false);
 
   const [trump, setTrump] = useState<TrumpConfig>(() => {
@@ -425,6 +432,12 @@ export default function App() {
     return visible;
   }, [reveal, modeOpenHandVerify]);
 
+  const seatLabels = useMemo<Record<Seat, string>>(() => {
+    return seatLabelMode === "compass"
+      ? { Left: "West", Across: "North", Right: "East", Me: "South" }
+      : { Left: "Left", Across: "Across", Right: "Right", Me: "Me" };
+  }, [seatLabelMode]);
+
   const suitOrder = useMemo<Suit[]>(() => {
     return suitOrderMode === "bridge" ? ["S", "H", "D", "C"] : ["C", "D", "H", "S"];
   }, [suitOrderMode]);
@@ -458,6 +471,7 @@ export default function App() {
       aiDelayMs,
       pauseBeforeNextTrick,
       aiPlayMe,
+      seatLabelMode,
       trump,
     };
     try {
@@ -480,6 +494,7 @@ export default function App() {
     aiDelayMs,
     pauseBeforeNextTrick,
     aiPlayMe,
+    seatLabelMode,
     trump,
   ]);
 
@@ -906,7 +921,8 @@ export default function App() {
                 }
               >
                 <span>
-                  Across <span className="text-xs text-muted-foreground">({displayTricksWon.Across})</span>
+                  {seatLabels.Across}{" "}
+                  <span className="text-xs text-muted-foreground">({displayTricksWon.Across})</span>
                 </span>
               </div>
               <Badge variant="outline">{displayHands.Across.length}</Badge>
@@ -954,7 +970,8 @@ export default function App() {
                 }
               >
                 <span>
-                  Left <span className="text-xs text-muted-foreground">({displayTricksWon.Left})</span>
+                  {seatLabels.Left}{" "}
+                  <span className="text-xs text-muted-foreground">({displayTricksWon.Left})</span>
                 </span>
               </div>
               <Badge variant="outline">{displayHands.Left.length}</Badge>
@@ -1091,7 +1108,8 @@ export default function App() {
                 }
               >
                 <span>
-                  Right <span className="text-xs text-muted-foreground">({displayTricksWon.Right})</span>
+                  {seatLabels.Right}{" "}
+                  <span className="text-xs text-muted-foreground">({displayTricksWon.Right})</span>
                 </span>
               </div>
               <Badge variant="outline">{displayHands.Right.length}</Badge>
@@ -1137,7 +1155,8 @@ export default function App() {
                 }
               >
                 <span>
-                  Me <span className="text-xs text-muted-foreground">({displayTricksWon.Me})</span>
+                  {seatLabels.Me}{" "}
+                  <span className="text-xs text-muted-foreground">({displayTricksWon.Me})</span>
                 </span>
               </div>
               <Badge variant="outline">{displayHands.Me.length}</Badge>
@@ -1200,7 +1219,7 @@ export default function App() {
                     (disabled ? " opacity-60" : "")
                   }
                 >
-                  <span>{o}</span>
+                  <span>{seatLabels[o]}</span>
                   <input
                     type="checkbox"
                     className="h-4 w-4"
@@ -1271,7 +1290,7 @@ export default function App() {
             {trickHistory.map((t, idx) => {
               const leadSuit = trickLeadSuit(t);
               const winner = t.length === 4 ? determineTrickWinner(t, trump) : null;
-              const leadSeat = t[0]?.seat ?? "-";
+              const leadSeat = t[0]?.seat ? seatLabels[t[0].seat] : "-";
               const isActive = viewedTrickIndex === idx;
               return (
                 <button
@@ -1295,7 +1314,7 @@ export default function App() {
                   </div>
                   <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
                     <span>Lead: {leadSeat}</span>
-                    {winner ? <span>Winner: {winner}</span> : null}
+                    {winner ? <span>Winner: {seatLabels[winner]}</span> : null}
                   </div>
                 </button>
               );
@@ -1553,6 +1572,21 @@ export default function App() {
         <div className="flex justify-between">
           <span className="text-sm">Sort ascending</span>
           <Switch checked={sortAscending} onCheckedChange={setSortAscending} />
+        </div>
+
+        <Separator />
+
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+          <span className="text-sm">Seat labels</span>
+          <Select value={seatLabelMode} onValueChange={(v) => setSeatLabelMode(v as "relative" | "compass")}>
+            <SelectTrigger className="h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="relative">Left / Across / Right / Me</SelectItem>
+              <SelectItem value="compass">West / North / East / South</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </CardContent>
     </Card>
