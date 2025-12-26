@@ -1380,7 +1380,7 @@ export default function App() {
                 className="bg-emerald-600 text-white hover:bg-emerald-700"
                 onClick={() => resumeFromHistory(viewedTrickIndex, viewedTrickStep)}
               >
-                Replay from this point
+                Play from this point
               </Button>
             </div>
           </div>
