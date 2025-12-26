@@ -14,15 +14,20 @@ import {
 import { chooseCardToPlay } from "@/engine/ai/random";
 import {
   sortHand,
-  nextSeat,
   trickLeadSuit,
-  isTrump,
   isLegalPlay,
   determineTrickWinner,
-  sameTrick,
-  cloneHands,
 } from "@/engine/rules";
 import { buildDeck, createRng, dealNewHands } from "@/engine/deck";
+import {
+  initGameState,
+  applyPlay,
+  resolveTrick,
+  advanceToNextTrick,
+  resetTrick,
+  buildHistorySnapshot,
+  type GameState,
+} from "@/engine/state";
 import {
   SUITS,
   OPPONENTS,
@@ -85,24 +90,6 @@ type Settings = {
   pauseBeforeNextTrick: boolean;
   aiPlayMe: boolean;
   trump: TrumpConfig;
-};
-
-type ReplayState = {
-  hands: Hands;
-  tricksWon: Record<Seat, number>;
-  leader: Seat;
-  turn: Seat;
-  trumpBroken: boolean;
-  trickNo: number;
-  handComplete: boolean;
-  trick: PlayT[];
-  awaitContinue: boolean;
-};
-
-type HistorySnapshot = ReplayState & {
-  historySlice: PlayT[][];
-  trickStartLeader: Seat;
-  trickStartTurn: Seat;
 };
 
 function loadSettings(): Partial<Settings> {
@@ -180,123 +167,6 @@ function createVoidGrid(): VoidGrid {
 
 function createVoidSelections(): VoidSelections {
   return { Left: false, Across: false, Right: false };
-}
-
-function replayStateFromHistory(
-  history: PlayT[][],
-  seed: number,
-  trump: TrumpConfig,
-  pauseBeforeNextTrick: boolean
-): ReplayState {
-  const hands = dealNewHands(createRng(seed));
-  const tricksWon: Record<Seat, number> = { Left: 0, Across: 0, Right: 0, Me: 0 };
-  let leader: Seat = "Me";
-  let trumpBroken = false;
-
-  for (const t of history) {
-    for (const play of t) {
-      const hand = hands[play.seat];
-      const idx = hand.findIndex((c) => c.id === play.card.id);
-      if (idx >= 0) {
-        hand.splice(idx, 1);
-      }
-      if (isTrump(play.card, trump)) trumpBroken = true;
-    }
-    if (t.length === 4) {
-      const winner = determineTrickWinner(t, trump);
-      tricksWon[winner] += 1;
-      leader = winner;
-    }
-  }
-
-  const completedTricks = history.length;
-  const handComplete = completedTricks >= 13;
-  let awaitContinue = false;
-  let trick: PlayT[] = [];
-  let trickNo = completedTricks + 1;
-
-  if (completedTricks > 0) {
-    if (handComplete) {
-      trickNo = 13;
-      trick = history[completedTricks - 1];
-    } else if (pauseBeforeNextTrick) {
-      awaitContinue = true;
-      trickNo = completedTricks;
-      trick = history[completedTricks - 1];
-    }
-  }
-
-  return {
-    hands,
-    tricksWon,
-    leader,
-    turn: leader,
-    trumpBroken,
-    trickNo,
-    handComplete,
-    trick,
-    awaitContinue,
-  };
-}
-
-function buildHistorySnapshot(
-  history: PlayT[][],
-  trickIndex: number,
-  step: number,
-  seed: number,
-  trump: TrumpConfig
-): HistorySnapshot {
-  const prior = history.slice(0, trickIndex);
-  const base = replayStateFromHistory(prior, seed, trump, false);
-  const trickPlays = history[trickIndex] ?? [];
-  const maxStep = Math.min(step, trickPlays.length);
-
-  const hands = cloneHands(base.hands);
-
-  const trick: PlayT[] = [];
-  let leader = base.leader;
-  let turn = base.leader;
-  let trumpBroken = base.trumpBroken;
-  let tricksWon = { ...base.tricksWon };
-
-  for (let i = 0; i < maxStep; i++) {
-    const play = trickPlays[i];
-    const hand = hands[play.seat];
-    const idx = hand.findIndex((c) => c.id === play.card.id);
-    if (idx >= 0) hand.splice(idx, 1);
-    trick.push(play);
-    if (isTrump(play.card, trump)) trumpBroken = true;
-    turn = nextSeat(play.seat);
-  }
-
-  let awaitContinue = false;
-  let handComplete = false;
-  let historySlice = prior;
-
-  if (maxStep >= 4 && trickPlays.length === 4) {
-    const winner = determineTrickWinner(trickPlays, trump);
-    tricksWon = { ...tricksWon, [winner]: tricksWon[winner] + 1 };
-    leader = winner;
-    turn = winner;
-    awaitContinue = true;
-    historySlice = history.slice(0, trickIndex + 1);
-    handComplete = trickIndex >= 12;
-  }
-
-  return {
-    hands,
-    tricksWon,
-    leader,
-    turn,
-    trumpBroken,
-    trickNo: trickIndex + 1,
-    handComplete,
-    trick,
-    awaitContinue,
-    historySlice,
-    trickStartLeader: base.leader,
-    trickStartTurn: base.leader,
-  };
 }
 
 function useMediaQuery(query: string) {
@@ -511,13 +381,11 @@ export default function App() {
       }
     );
   });
-  const [trumpBroken, setTrumpBroken] = useState(false);
 
   const [dealSeed, setDealSeed] = useState(() => initialSeed);
   const [seedInput, setSeedInput] = useState(() => initialSettings.seedInput ?? String(initialSeed));
   const [seedError, setSeedError] = useState<string | null>(null);
-  const [hands, setHands] = useState<Hands>(() => dealNewHands(createRng(initialSeed)));
-  const [trickHistory, setTrickHistory] = useState<PlayT[][]>([]);
+  const [game, setGame] = useState<GameState>(() => initGameState(initialSeed));
   const [viewedTrickIndex, setViewedTrickIndex] = useState<number | null>(null);
   const [viewedTrickStep, setViewedTrickStep] = useState(0);
   const [historyPlaying, setHistoryPlaying] = useState(false);
@@ -537,23 +405,20 @@ export default function App() {
     Me: true,
   });
 
-  const [leader, setLeader] = useState<Seat>("Me");
-  const [trickStartLeader, setTrickStartLeader] = useState<Seat>("Me");
-  const [trickStartTurn, setTrickStartTurn] = useState<Seat>("Me");
   const resolveTimerRef = useRef<number | null>(null);
-
-  const [tricksWon, setTricksWon] = useState<Record<Seat, number>>({
-    Left: 0,
-    Across: 0,
-    Right: 0,
-    Me: 0,
-  });
-
-  const [turn, setTurn] = useState<Seat>("Me");
-  const [trick, setTrick] = useState<PlayT[]>([]);
   const [isResolving, setIsResolving] = useState(false);
-  const [trickNo, setTrickNo] = useState(1);
-  const [handComplete, setHandComplete] = useState(false);
+
+  const {
+    hands,
+    trickHistory,
+    leader,
+    turn,
+    trick,
+    trickNo,
+    handComplete,
+    trumpBroken,
+    tricksWon,
+  } = game;
 
   const shownHands = useMemo(() => {
     const visible: Record<Seat, boolean> = { ...reveal };
@@ -770,9 +635,7 @@ export default function App() {
     cancelResolveTimer();
     setDealSeed(seed);
     setSeedInput(String(seed));
-    setTricksWon({ Left: 0, Across: 0, Right: 0, Me: 0 });
-    setHands(dealNewHands(createRng(seed)));
-    setTrickHistory([]);
+    setGame(initGameState(seed));
     setViewedTrickIndex(null);
     setViewedTrickStep(0);
     setHistoryPlaying(false);
@@ -785,14 +648,6 @@ export default function App() {
     setLeadCountAnswer("0");
     setLeadCountMismatch(false);
     setReveal({ Left: false, Across: false, Right: false, Me: true });
-    setLeader("Me");
-    setTurn("Me");
-    setTrickStartLeader("Me");
-    setTrickStartTurn("Me");
-    setTrick([]);
-    setTrickNo(1);
-    setHandComplete(false);
-    setTrumpBroken(false);
     setIsResolving(false);
     setAwaitContinue(false);
   }
@@ -868,19 +723,20 @@ export default function App() {
     setReveal((r) => ({ ...r, [seat]: !r[seat] }));
   }
 
-  function resolveTrickAfterDelay(finalTrick: PlayT[]) {
+  function resolveTrickAfterDelay() {
     setIsResolving(true);
     cancelResolveTimer();
 
     resolveTimerRef.current = window.setTimeout(() => {
-      const winner = determineTrickWinner(finalTrick, trump);
-      setTrickHistory((h) => [...h, finalTrick]);
-      setTricksWon((tw) => ({ ...tw, [winner]: tw[winner] + 1 }));
-      setLeader(winner);
-      setTurn(winner);
+      let resolvedState: GameState | null = null;
+      setGame((g) => {
+        const next = resolveTrick(g, trump);
+        resolvedState = next;
+        return next;
+      });
 
-      if (trickNo >= 13) {
-        setHandComplete(true);
+      if (!resolvedState) return;
+      if (resolvedState.handComplete) {
         setIsResolving(false);
         setAwaitContinue(false);
         resolveTimerRef.current = null;
@@ -896,8 +752,7 @@ export default function App() {
       }
 
       // Default: advance after the delay.
-      setTrick([]);
-      setTrickNo((n) => n + 1);
+      setGame((g) => advanceToNextTrick(g));
       setIsResolving(false);
       setAwaitContinue(false);
       resolveTimerRef.current = null;
@@ -915,12 +770,6 @@ export default function App() {
 
     // Require void tracking prompt to be resolved before any play.
     if (voidTrackingEnabled && leadPromptActive) return;
-
-    // Capture start-of-trick state on the first play.
-    if (trick.length === 0) {
-      setTrickStartLeader(leader);
-      setTrickStartTurn(leader);
-    }
 
     if (seat !== turn) return;
 
@@ -941,27 +790,16 @@ export default function App() {
       return;
     }
 
-    // Remove from hand
-    setHands((h) => ({
-      ...h,
-      [seat]: h[seat].filter((c) => c.id !== card.id),
-    }));
-
-    // Append to trick
     const nextTrick = [...trick, { seat, card }];
-    setTrick(nextTrick);
-
-    // Trump gets broken if a trump card is played when trump enabled.
-    if (isTrump(card, trump)) setTrumpBroken(true);
+    setGame((g) => applyPlay(g, { seat, card }, trump));
 
     // Advance turn or resolve
     if (nextTrick.length < 4) {
-      setTurn(nextSeat(seat));
       return;
     }
 
     // Final card played: keep the trick visible, then resolve after the configured delay.
-    resolveTrickAfterDelay(nextTrick);
+    resolveTrickAfterDelay();
   }
 
   function resetTrickOnly() {
@@ -970,53 +808,33 @@ export default function App() {
     cancelResolveTimer();
     setIsResolving(false);
     setAwaitContinue(false);
-    setHandComplete(false);
     setLeadPromptActive(false);
     setLeadPromptSuit(null);
     setLeadPromptLeader(null);
     setLeadSelections(createVoidSelections());
     setLeadMismatch(createVoidSelections());
     setLeadWarning(null);
-
-    if (trick.length === 4) {
-      const winner = determineTrickWinner(trick, trump);
-      setTricksWon((tw) => ({ ...tw, [winner]: Math.max(0, tw[winner] - 1) }));
-      setTrickHistory((h) => (h.length && sameTrick(h[h.length - 1], trick) ? h.slice(0, -1) : h));
-    }
-
-    setHands((h) => {
-      const next: Hands = {
-        Left: h.Left.slice(),
-        Across: h.Across.slice(),
-        Right: h.Right.slice(),
-        Me: h.Me.slice(),
-      };
-      for (const p of trick) {
-        next[p.seat].push(p.card);
-      }
-      return next;
-    });
-
-    setTrick([]);
-    setLeader(trickStartLeader);
-    setTurn(trickStartTurn);
+    setGame((g) => resetTrick(g, trump));
   }
 
   function resumeFromHistory(index: number, step: number) {
     if (index < 0 || index >= trickHistory.length) return;
     cancelResolveTimer();
     const snapshot = buildHistorySnapshot(trickHistory, index, step, dealSeed, trump);
-    setTrickHistory(snapshot.historySlice);
-    setHands(snapshot.hands);
-    setTricksWon(snapshot.tricksWon);
-    setLeader(snapshot.leader);
-    setTurn(snapshot.turn);
-    setTrickStartLeader(snapshot.trickStartLeader);
-    setTrickStartTurn(snapshot.trickStartTurn);
-    setTrumpBroken(snapshot.trumpBroken);
-    setTrickNo(snapshot.trickNo);
-    setTrick(snapshot.trick);
-    setHandComplete(snapshot.handComplete);
+    setGame((g) => ({
+      ...g,
+      hands: snapshot.hands,
+      tricksWon: snapshot.tricksWon,
+      leader: snapshot.leader,
+      turn: snapshot.turn,
+      trumpBroken: snapshot.trumpBroken,
+      trickNo: snapshot.trickNo,
+      trick: snapshot.trick,
+      handComplete: snapshot.handComplete,
+      trickHistory: snapshot.historySlice,
+      trickStartLeader: snapshot.trickStartLeader,
+      trickStartTurn: snapshot.trickStartTurn,
+    }));
     setAwaitContinue(snapshot.awaitContinue);
     setIsResolving(false);
     setLeadPromptActive(false);
@@ -1078,8 +896,7 @@ export default function App() {
   useEffect(() => {
     if (!awaitContinue || handComplete || isViewingHistory) return;
     const advance = () => {
-      setTrick([]);
-      setTrickNo((n) => n + 1);
+      setGame((g) => advanceToNextTrick(g));
       setAwaitContinue(false);
     };
     const onKeyDown = (e: KeyboardEvent) => {
@@ -1224,8 +1041,7 @@ export default function App() {
             onClick={
               awaitContinue && !handComplete && !isViewingHistory
                 ? () => {
-                    setTrick([]);
-                    setTrickNo((n) => n + 1);
+                    setGame((g) => advanceToNextTrick(g));
                     setAwaitContinue(false);
                   }
                 : undefined
