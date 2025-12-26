@@ -11,7 +11,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Grid3X3, RefreshCw, Eye, EyeOff, Moon, Sun } from "lucide-react";
+import {
+  Grid3X3,
+  RefreshCw,
+  Eye,
+  EyeOff,
+  Moon,
+  Sun,
+  SkipBack,
+  SkipForward,
+  StepBack,
+  StepForward,
+  Play,
+  Pause,
+} from "lucide-react";
 
 /**
  * Generic trick engine (v1)
@@ -71,6 +84,24 @@ type Settings = {
   pauseBeforeNextTrick: boolean;
   aiPlayMe: boolean;
   trump: TrumpConfig;
+};
+
+type ReplayState = {
+  hands: Hands;
+  tricksWon: Record<Seat, number>;
+  leader: Seat;
+  turn: Seat;
+  trumpBroken: boolean;
+  trickNo: number;
+  handComplete: boolean;
+  trick: PlayT[];
+  awaitContinue: boolean;
+};
+
+type HistorySnapshot = ReplayState & {
+  historySlice: PlayT[][];
+  trickStartLeader: Seat;
+  trickStartTurn: Seat;
 };
 
 function loadSettings(): Partial<Settings> {
@@ -188,6 +219,128 @@ function createVoidGrid(): VoidGrid {
 
 function createVoidSelections(): VoidSelections {
   return { Left: false, Across: false, Right: false };
+}
+
+function replayStateFromHistory(
+  history: PlayT[][],
+  seed: number,
+  trump: TrumpConfig,
+  pauseBeforeNextTrick: boolean
+): ReplayState {
+  const hands = dealNewHands(createRng(seed));
+  const tricksWon: Record<Seat, number> = { Left: 0, Across: 0, Right: 0, Me: 0 };
+  let leader: Seat = "Me";
+  let trumpBroken = false;
+
+  for (const t of history) {
+    for (const play of t) {
+      const hand = hands[play.seat];
+      const idx = hand.findIndex((c) => c.id === play.card.id);
+      if (idx >= 0) {
+        hand.splice(idx, 1);
+      }
+      if (isTrump(play.card, trump)) trumpBroken = true;
+    }
+    if (t.length === 4) {
+      const winner = determineTrickWinner(t, trump);
+      tricksWon[winner] += 1;
+      leader = winner;
+    }
+  }
+
+  const completedTricks = history.length;
+  const handComplete = completedTricks >= 13;
+  let awaitContinue = false;
+  let trick: PlayT[] = [];
+  let trickNo = completedTricks + 1;
+
+  if (completedTricks > 0) {
+    if (handComplete) {
+      trickNo = 13;
+      trick = history[completedTricks - 1];
+    } else if (pauseBeforeNextTrick) {
+      awaitContinue = true;
+      trickNo = completedTricks;
+      trick = history[completedTricks - 1];
+    }
+  }
+
+  return {
+    hands,
+    tricksWon,
+    leader,
+    turn: leader,
+    trumpBroken,
+    trickNo,
+    handComplete,
+    trick,
+    awaitContinue,
+  };
+}
+
+function buildHistorySnapshot(
+  history: PlayT[][],
+  trickIndex: number,
+  step: number,
+  seed: number,
+  trump: TrumpConfig
+): HistorySnapshot {
+  const prior = history.slice(0, trickIndex);
+  const base = replayStateFromHistory(prior, seed, trump, false);
+  const trickPlays = history[trickIndex] ?? [];
+  const maxStep = Math.min(step, trickPlays.length);
+
+  const hands: Hands = {
+    Left: base.hands.Left.slice(),
+    Across: base.hands.Across.slice(),
+    Right: base.hands.Right.slice(),
+    Me: base.hands.Me.slice(),
+  };
+
+  const trick: PlayT[] = [];
+  let leader = base.leader;
+  let turn = base.leader;
+  let trumpBroken = base.trumpBroken;
+  let tricksWon = { ...base.tricksWon };
+
+  for (let i = 0; i < maxStep; i++) {
+    const play = trickPlays[i];
+    const hand = hands[play.seat];
+    const idx = hand.findIndex((c) => c.id === play.card.id);
+    if (idx >= 0) hand.splice(idx, 1);
+    trick.push(play);
+    if (isTrump(play.card, trump)) trumpBroken = true;
+    turn = nextSeat(play.seat);
+  }
+
+  let awaitContinue = false;
+  let handComplete = false;
+  let historySlice = prior;
+
+  if (maxStep >= 4 && trickPlays.length === 4) {
+    const winner = determineTrickWinner(trickPlays, trump);
+    tricksWon = { ...tricksWon, [winner]: tricksWon[winner] + 1 };
+    leader = winner;
+    turn = winner;
+    awaitContinue = true;
+    historySlice = history.slice(0, trickIndex + 1);
+    handComplete = trickIndex >= 12;
+  }
+
+  return {
+    hands,
+    tricksWon,
+    leader,
+    turn,
+    trumpBroken,
+    trickNo: trickIndex + 1,
+    handComplete,
+    trick,
+    awaitContinue,
+    historySlice,
+    trickStartLeader: base.leader,
+    trickStartTurn: base.leader,
+  };
 }
 
 function useMediaQuery(query: string) {
@@ -525,6 +678,9 @@ export default function App() {
   const [seedError, setSeedError] = useState<string | null>(null);
   const [hands, setHands] = useState<Hands>(() => dealNewHands(createRng(initialSeed)));
   const [trickHistory, setTrickHistory] = useState<PlayT[][]>([]);
+  const [viewedTrickIndex, setViewedTrickIndex] = useState<number | null>(null);
+  const [viewedTrickStep, setViewedTrickStep] = useState(0);
+  const [historyPlaying, setHistoryPlaying] = useState(false);
   const [leadPromptActive, setLeadPromptActive] = useState(false);
   const [leadPromptSuit, setLeadPromptSuit] = useState<Suit | null>(null);
   const [leadPromptLeader, setLeadPromptLeader] = useState<Opp | null>(null);
@@ -670,16 +826,55 @@ export default function App() {
     return out;
   }, [hands, trick, leader, trump, trumpBroken]);
 
-  const trickWinner = useMemo<Seat | null>(() => {
-    if (trick.length !== 4) return null;
-    return determineTrickWinner(trick, trump);
-  }, [trick, trump]);
+  const isViewingHistory =
+    viewedTrickIndex != null && viewedTrickIndex >= 0 && viewedTrickIndex < trickHistory.length;
+  const historySnapshot = useMemo(() => {
+    if (!isViewingHistory || viewedTrickIndex == null) return null;
+    return buildHistorySnapshot(trickHistory, viewedTrickIndex, viewedTrickStep, dealSeed, trump);
+  }, [isViewingHistory, viewedTrickIndex, viewedTrickStep, trickHistory, dealSeed, trump]);
 
-  const canPlay = !leadPromptActive && !awaitContinue && !handComplete;
+  const displayHands = historySnapshot?.hands ?? hands;
+  const displayTurn = historySnapshot?.turn ?? turn;
+  const displayTricksWon = historySnapshot?.tricksWon ?? tricksWon;
+  const displayTrick = historySnapshot?.trick ?? trick;
+  const displayTrickNo = historySnapshot?.trickNo ?? trickNo;
+  const displayHandComplete = historySnapshot?.handComplete ?? handComplete;
+  const displayTrickWinner = useMemo<Seat | null>(() => {
+    if (displayTrick.length !== 4) return null;
+    return determineTrickWinner(displayTrick, trump);
+  }, [displayTrick, trump]);
+
+  const canPlay = !leadPromptActive && !awaitContinue && !handComplete && !isViewingHistory;
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
+
+  useEffect(() => {
+    if (viewedTrickIndex != null && viewedTrickIndex >= trickHistory.length) {
+      setViewedTrickIndex(null);
+    }
+  }, [viewedTrickIndex, trickHistory.length]);
+
+  useEffect(() => {
+    if (viewedTrickIndex == null) {
+      setHistoryPlaying(false);
+      setViewedTrickStep(0);
+    }
+  }, [viewedTrickIndex]);
+
+  useEffect(() => {
+    if (!isViewingHistory || !historyPlaying || viewedTrickIndex == null) return;
+    const maxStep = trickHistory[viewedTrickIndex]?.length ?? 0;
+    if (viewedTrickStep >= maxStep) {
+      setHistoryPlaying(false);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setViewedTrickStep((s) => Math.min(s + 1, maxStep));
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [isViewingHistory, historyPlaying, viewedTrickIndex, viewedTrickStep, trickHistory]);
 
   useEffect(() => {
     if (!voidTrackingEnabled) {
@@ -738,6 +933,9 @@ export default function App() {
     setTricksWon({ Left: 0, Across: 0, Right: 0, Me: 0 });
     setHands(dealNewHands(createRng(seed)));
     setTrickHistory([]);
+    setViewedTrickIndex(null);
+    setViewedTrickStep(0);
+    setHistoryPlaying(false);
     setLeadPromptActive(false);
     setLeadPromptSuit(null);
     setLeadPromptLeader(null);
@@ -793,6 +991,7 @@ export default function App() {
   }
 
   function resumeAfterLeadPrompt() {
+    if (isViewingHistory) return;
     if (!leadPromptActive || !leadPromptSuit) return;
     const mismatch = createVoidSelections();
     let hasMismatch = false;
@@ -867,6 +1066,7 @@ export default function App() {
 
   function tryPlay(seat: Seat, card: CardT, source: "human" | "ai" = "human") {
     if (isResolving) return;
+    if (isViewingHistory) return;
     if (awaitContinue) return;
     if (handComplete) return;
 
@@ -925,6 +1125,7 @@ export default function App() {
   }
 
   function resetTrickOnly() {
+    if (isViewingHistory) return;
     // Undo the in-progress trick: return played cards to hands, cancel resolution, restore turn/leader.
     cancelResolveTimer();
     setIsResolving(false);
@@ -961,12 +1162,43 @@ export default function App() {
     setTurn(trickStartTurn);
   }
 
+  function resumeFromHistory(index: number, step: number) {
+    if (index < 0 || index >= trickHistory.length) return;
+    cancelResolveTimer();
+    const snapshot = buildHistorySnapshot(trickHistory, index, step, dealSeed, trump);
+    setTrickHistory(snapshot.historySlice);
+    setHands(snapshot.hands);
+    setTricksWon(snapshot.tricksWon);
+    setLeader(snapshot.leader);
+    setTurn(snapshot.turn);
+    setTrickStartLeader(snapshot.trickStartLeader);
+    setTrickStartTurn(snapshot.trickStartTurn);
+    setTrumpBroken(snapshot.trumpBroken);
+    setTrickNo(snapshot.trickNo);
+    setTrick(snapshot.trick);
+    setHandComplete(snapshot.handComplete);
+    setAwaitContinue(snapshot.awaitContinue);
+    setIsResolving(false);
+    setLeadPromptActive(false);
+    setLeadPromptSuit(null);
+    setLeadPromptLeader(null);
+    setLeadSelections(createVoidSelections());
+    setLeadMismatch(createVoidSelections());
+    setLeadWarning(null);
+    setLeadCountAnswer("0");
+    setLeadCountMismatch(false);
+    setViewedTrickIndex(null);
+    setViewedTrickStep(0);
+    setHistoryPlaying(false);
+  }
+
   // Basic AI: players play a random valid card when it's their turn.
   useEffect(() => {
     if (!aiEnabled) return;
     if (isResolving) return;
     if (handComplete) return;
     if (awaitContinue) return;
+    if (isViewingHistory) return;
     if (turn === "Me" && !aiPlayMe) return;
     if (voidTrackingEnabled && leadPromptActive) return;
 
@@ -999,11 +1231,12 @@ export default function App() {
     awaitContinue,
     voidTrackingEnabled,
     leadPromptActive,
+    isViewingHistory,
   ]);
 
   // If paused after a completed trick, advance on any key.
   useEffect(() => {
-    if (!awaitContinue || handComplete) return;
+    if (!awaitContinue || handComplete || isViewingHistory) return;
     const advance = () => {
       setTrick([]);
       setTrickNo((n) => n + 1);
@@ -1019,7 +1252,7 @@ export default function App() {
     return () => {
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [awaitContinue, handComplete]);
+  }, [awaitContinue, handComplete, isViewingHistory]);
 
   // Cleanup any pending timers on unmount.
   useEffect(() => {
@@ -1034,11 +1267,18 @@ export default function App() {
           <div className="flex flex-col">
             <div className="flex items-center gap-3">
               <span>Table</span>
-              <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={resetTrickOnly}>
+              <Button
+                size="sm"
+                className="bg-emerald-600 text-white hover:bg-emerald-700"
+                onClick={resetTrickOnly}
+                disabled={isViewingHistory}
+              >
                 Reset trick
               </Button>
             </div>
-            <div className="pl-0.5 text-xs text-muted-foreground">Trick {trickNo}</div>
+            <div className="pl-0.5 text-xs text-muted-foreground">
+              {isViewingHistory ? `Viewing trick ${displayTrickNo}` : `Trick ${trickNo}`}
+            </div>
           </div>
         </CardTitle>
       </CardHeader>
@@ -1050,16 +1290,16 @@ export default function App() {
               <div
                 className={
                   "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
-                  (turn === "Across" && !handComplete
+                  (displayTurn === "Across" && !displayHandComplete
                     ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
                     : "")
                 }
               >
                 <span>
-                  Across <span className="text-xs text-muted-foreground">({tricksWon.Across})</span>
+                  Across <span className="text-xs text-muted-foreground">({displayTricksWon.Across})</span>
                 </span>
               </div>
-              <Badge variant="outline">{hands.Across.length}</Badge>
+              <Badge variant="outline">{displayHands.Across.length}</Badge>
             </div>
             <div className="mt-3 flex items-center gap-2">
               <Button
@@ -1068,7 +1308,7 @@ export default function App() {
                 variant="outline"
                 className="gap-2 text-emerald-600 border-emerald-600 md:text-foreground md:border-border"
                 onClick={() => toggleRevealSeat("Across")}
-                disabled={modeOpenHandVerify}
+                disabled={modeOpenHandVerify || isViewingHistory}
               >
                 {shownHands.Across ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 <span className="hidden md:inline">{shownHands.Across ? "Hide" : "Reveal"}</span>
@@ -1077,10 +1317,10 @@ export default function App() {
             {shownHands.Across ? (
               <HandRow
                 seat="Across"
-                hand={hands.Across}
+                hand={displayHands.Across}
                 legal={legalBySeat.Across}
                 onPlay={(s, c) => tryPlay(s, c, "human")}
-                currentTurn={turn}
+                currentTurn={displayTurn}
                 suitOrder={suitOrder}
                 sortAscending={sortAscending}
                 canPlay={canPlay}
@@ -1098,16 +1338,16 @@ export default function App() {
               <div
                 className={
                   "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
-                  (turn === "Left" && !handComplete
+                  (displayTurn === "Left" && !displayHandComplete
                     ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
                     : "")
                 }
               >
                 <span>
-                  Left <span className="text-xs text-muted-foreground">({tricksWon.Left})</span>
+                  Left <span className="text-xs text-muted-foreground">({displayTricksWon.Left})</span>
                 </span>
               </div>
-              <Badge variant="outline">{hands.Left.length}</Badge>
+              <Badge variant="outline">{displayHands.Left.length}</Badge>
             </div>
             <div className="mt-3 flex items-center gap-2">
               <Button
@@ -1116,7 +1356,7 @@ export default function App() {
                 variant="outline"
                 className="gap-2 text-emerald-600 border-emerald-600 md:text-foreground md:border-border"
                 onClick={() => toggleRevealSeat("Left")}
-                disabled={modeOpenHandVerify}
+                disabled={modeOpenHandVerify || isViewingHistory}
               >
                 {shownHands.Left ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 <span className="hidden md:inline">{shownHands.Left ? "Hide" : "Reveal"}</span>
@@ -1125,12 +1365,12 @@ export default function App() {
             {shownHands.Left ? (
               <HandCol
                 seat="Left"
-                hand={hands.Left}
+                hand={displayHands.Left}
                 cardRotateClass="rotate-90 origin-center"
                 align="start"
                 legal={legalBySeat.Left}
                 onPlay={(s, c) => tryPlay(s, c, "human")}
-                currentTurn={turn}
+                currentTurn={displayTurn}
                 suitOrder={suitOrder}
                 sortAscending={sortAscending}
                 canPlay={canPlay}
@@ -1141,15 +1381,19 @@ export default function App() {
           {/* Current trick stays fixed size */}
           <div
             className="relative flex h-[200px] w-[200px] items-center justify-center rounded-xl border bg-emerald-600/80 p-2 shadow-inner self-center justify-self-center sm:h-[240px] sm:w-[240px] sm:p-3"
-            onClick={awaitContinue ? () => {
-              setTrick([]);
-              setTrickNo((n) => n + 1);
-              setAwaitContinue(false);
-            } : undefined}
+            onClick={
+              awaitContinue && !handComplete && !isViewingHistory
+                ? () => {
+                    setTrick([]);
+                    setTrickNo((n) => n + 1);
+                    setAwaitContinue(false);
+                  }
+                : undefined
+            }
           >
             <div className="absolute right-2 top-2 text-white">
               <Badge className="bg-white/20 text-white hover:bg-white/20" variant="secondary">
-                {trick.length}/4
+                {displayTrick.length}/4
               </Badge>
             </div>
 
@@ -1158,9 +1402,9 @@ export default function App() {
               {/* Across (top) */}
               <div className="absolute left-1/2 top-0 -translate-x-1/2">
                 {(() => {
-                  const p = trick.find((t) => t.seat === "Across");
+                  const p = displayTrick.find((t) => t.seat === "Across");
                   return p ? (
-                    <PlayingCard c={p.card} highlight={trickWinner === "Across"} />
+                    <PlayingCard c={p.card} highlight={displayTrickWinner === "Across"} />
                   ) : (
                     <div className="h-14 w-10 opacity-20" />
                   );
@@ -1170,9 +1414,13 @@ export default function App() {
               {/* Left */}
               <div className="absolute left-0 top-1/2 -translate-y-1/2">
                 {(() => {
-                  const p = trick.find((t) => t.seat === "Left");
+                  const p = displayTrick.find((t) => t.seat === "Left");
                   return p ? (
-                    <PlayingCard c={p.card} rotateClass="rotate-90" highlight={trickWinner === "Left"} />
+                    <PlayingCard
+                      c={p.card}
+                      rotateClass="rotate-90"
+                      highlight={displayTrickWinner === "Left"}
+                    />
                   ) : (
                     <div className="h-10 w-14 opacity-20" />
                   );
@@ -1182,9 +1430,13 @@ export default function App() {
               {/* Right */}
               <div className="absolute right-0 top-1/2 -translate-y-1/2">
                 {(() => {
-                  const p = trick.find((t) => t.seat === "Right");
+                  const p = displayTrick.find((t) => t.seat === "Right");
                   return p ? (
-                    <PlayingCard c={p.card} rotateClass="-rotate-90" highlight={trickWinner === "Right"} />
+                    <PlayingCard
+                      c={p.card}
+                      rotateClass="-rotate-90"
+                      highlight={displayTrickWinner === "Right"}
+                    />
                   ) : (
                     <div className="h-10 w-14 opacity-20" />
                   );
@@ -1194,9 +1446,9 @@ export default function App() {
               {/* Me (bottom) */}
               <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
                 {(() => {
-                  const p = trick.find((t) => t.seat === "Me");
+                  const p = displayTrick.find((t) => t.seat === "Me");
                   return p ? (
-                    <PlayingCard c={p.card} highlight={trickWinner === "Me"} />
+                    <PlayingCard c={p.card} highlight={displayTrickWinner === "Me"} />
                   ) : (
                     <div className="h-14 w-10 opacity-20" />
                   );
@@ -1205,7 +1457,7 @@ export default function App() {
             </div>
 
             <div className="absolute bottom-2 left-1/2 w-[190px] -translate-x-1/2 text-center text-xs text-white/80 sm:w-[220px]">
-              {awaitContinue && !handComplete ? (
+              {awaitContinue && !handComplete && !isViewingHistory ? (
                 <>
                   <span className="sm:hidden">Click to continue</span>
                   <span className="hidden sm:inline">Press Enter/Space or click to continue</span>
@@ -1224,16 +1476,16 @@ export default function App() {
               <div
                 className={
                   "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
-                  (turn === "Right" && !handComplete
+                  (displayTurn === "Right" && !displayHandComplete
                     ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
                     : "")
                 }
               >
                 <span>
-                  Right <span className="text-xs text-muted-foreground">({tricksWon.Right})</span>
+                  Right <span className="text-xs text-muted-foreground">({displayTricksWon.Right})</span>
                 </span>
               </div>
-              <Badge variant="outline">{hands.Right.length}</Badge>
+              <Badge variant="outline">{displayHands.Right.length}</Badge>
             </div>
             <div className="mt-3 flex items-center gap-2">
               <Button
@@ -1242,7 +1494,7 @@ export default function App() {
                 variant="outline"
                 className="gap-2 text-emerald-600 border-emerald-600 md:text-foreground md:border-border"
                 onClick={() => toggleRevealSeat("Right")}
-                disabled={modeOpenHandVerify}
+                disabled={modeOpenHandVerify || isViewingHistory}
               >
                 {shownHands.Right ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 <span className="hidden md:inline">{shownHands.Right ? "Hide" : "Reveal"}</span>
@@ -1251,12 +1503,12 @@ export default function App() {
             {shownHands.Right ? (
               <HandCol
                 seat="Right"
-                hand={hands.Right}
+                hand={displayHands.Right}
                 cardRotateClass="-rotate-90 origin-center"
                 align="end"
                 legal={legalBySeat.Right}
                 onPlay={(s, c) => tryPlay(s, c, "human")}
-                currentTurn={turn}
+                currentTurn={displayTurn}
                 suitOrder={suitOrder}
                 sortAscending={sortAscending}
                 canPlay={canPlay}
@@ -1270,23 +1522,23 @@ export default function App() {
               <div
                 className={
                   "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
-                  (turn === "Me" && !handComplete
+                  (displayTurn === "Me" && !displayHandComplete
                     ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
                     : "")
                 }
               >
                 <span>
-                  Me <span className="text-xs text-muted-foreground">({tricksWon.Me})</span>
+                  Me <span className="text-xs text-muted-foreground">({displayTricksWon.Me})</span>
                 </span>
               </div>
-              <Badge variant="outline">{hands.Me.length}</Badge>
+              <Badge variant="outline">{displayHands.Me.length}</Badge>
             </div>
             <HandRow
               seat="Me"
-              hand={hands.Me}
+              hand={displayHands.Me}
               legal={legalBySeat.Me}
               onPlay={(s, c) => tryPlay(s, c, "human")}
-              currentTurn={turn}
+              currentTurn={displayTurn}
               suitOrder={suitOrder}
               sortAscending={sortAscending}
               canPlay={canPlay}
@@ -1310,7 +1562,9 @@ export default function App() {
           <div className="text-sm font-medium">
             {!voidTrackingEnabled
               ? "Void tracking is disabled"
-              : leadPromptActive
+              : isViewingHistory
+                ? "Viewing trick history"
+                : leadPromptActive
                 ? "Which opponents are void in the lead suit?"
                 : trick.length === 0
                   ? "Waiting for a card to be led..."
@@ -1327,7 +1581,7 @@ export default function App() {
             {OPPONENTS.map((o) => {
               const isLeader = leadPromptLeader === o;
               const mismatch = leadMismatch[o];
-              const disabled = !voidTrackingEnabled || !leadPromptActive || isLeader;
+              const disabled = !voidTrackingEnabled || isViewingHistory || !leadPromptActive || isLeader;
               return (
                 <label
                   key={o}
@@ -1383,12 +1637,145 @@ export default function App() {
           {leadWarning ? <div className="text-xs text-destructive">{leadWarning}</div> : null}
           <Button
             onClick={resumeAfterLeadPrompt}
-            disabled={!voidTrackingEnabled || !leadPromptActive || isResolving || awaitContinue}
+            disabled={
+              !voidTrackingEnabled || isViewingHistory || !leadPromptActive || isResolving || awaitContinue
+            }
             className="bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-600/50"
           >
             Resume
           </Button>
         </div>
+      </CardContent>
+    </Card>
+  );
+
+  const TrickHistoryCard = () => (
+    <Card className="flex flex-col">
+      <CardHeader>
+        <CardTitle>Trick history</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        {trickHistory.length === 0 ? (
+          <div className="text-xs text-muted-foreground">No completed tricks yet</div>
+        ) : (
+          <div className="space-y-2">
+            {trickHistory.map((t, idx) => {
+              const leadSuit = trickLeadSuit(t);
+              const winner = t.length === 4 ? determineTrickWinner(t, trump) : null;
+              const leadSeat = t[0]?.seat ?? "-";
+              const isActive = viewedTrickIndex === idx;
+              return (
+                <button
+                  key={`${idx}-${t[0]?.card.id ?? "trick"}`}
+                  type="button"
+                  onClick={() => {
+                    setViewedTrickIndex(idx);
+                    setViewedTrickStep(0);
+                    setHistoryPlaying(false);
+                  }}
+                  className={
+                    "w-full rounded-md border px-2 py-2 text-left text-xs transition " +
+                    (isActive
+                      ? "border-emerald-400 bg-emerald-50 text-emerald-900 dark:border-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-100"
+                      : "border-border hover:bg-accent")
+                  }
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium">Trick {idx + 1}</span>
+                    {leadSuit ? <span className={suitColorClass(leadSuit)}>{suitGlyph(leadSuit)}</span> : null}
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                    <span>Lead: {leadSeat}</span>
+                    {winner ? <span>Winner: {winner}</span> : null}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {isViewingHistory && viewedTrickIndex != null ? (
+          <div className="space-y-2">
+            <div className="text-xs text-muted-foreground">
+              Viewing trick {viewedTrickIndex + 1} • Step {Math.min(viewedTrickStep, 4)}/4
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setViewedTrickStep(0);
+                  setHistoryPlaying(false);
+                }}
+                aria-label="Jump to start"
+              >
+                <SkipBack className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setViewedTrickStep((s) => Math.max(0, s - 1));
+                  setHistoryPlaying(false);
+                }}
+                aria-label="Step back"
+              >
+                <StepBack className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const maxStep = trickHistory[viewedTrickIndex]?.length ?? 0;
+                  if (viewedTrickStep >= maxStep) {
+                    setHistoryPlaying(false);
+                    return;
+                  }
+                  setHistoryPlaying((p) => !p);
+                }}
+                aria-label={historyPlaying ? "Pause" : "Play"}
+              >
+                {historyPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const maxStep = trickHistory[viewedTrickIndex]?.length ?? 0;
+                  setViewedTrickStep((s) => Math.min(maxStep, s + 1));
+                  setHistoryPlaying(false);
+                }}
+                aria-label="Step forward"
+              >
+                <StepForward className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const maxStep = trickHistory[viewedTrickIndex]?.length ?? 0;
+                  setViewedTrickStep(maxStep);
+                  setHistoryPlaying(false);
+                }}
+                aria-label="Jump to end"
+              >
+                <SkipForward className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={() => setViewedTrickIndex(null)}>
+                Return to live
+              </Button>
+              <Button
+                size="sm"
+                className="bg-emerald-600 text-white hover:bg-emerald-700"
+                onClick={() => resumeFromHistory(viewedTrickIndex, viewedTrickStep)}
+              >
+                Replay from this point
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -1626,7 +2013,8 @@ export default function App() {
                 <VoidTrackingCard />
               </div>
             </div>
-            <div className="md:max-w-[330px] md:justify-self-end">
+            <div className="space-y-6 md:max-w-[330px] md:justify-self-end">
+              <TrickHistoryCard />
               <SettingsCard />
             </div>
           </div>
@@ -1635,6 +2023,7 @@ export default function App() {
             <TableCard />
             <div className="space-y-6 w-full md:max-w-[330px] md:justify-self-end">
               <VoidTrackingCard />
+              <TrickHistoryCard />
               <SettingsCard />
             </div>
           </div>
