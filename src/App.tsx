@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { chooseCardToPlay } from "@/engine/ai/random";
 import {
   Grid3X3,
   RefreshCw,
@@ -1208,9 +1209,9 @@ export default function App() {
     const legal = legalBySeat[turn];
     if (!legal || legal.size === 0) return;
 
-    const ids = Array.from(legal);
-    const pickId = ids[Math.floor(Math.random() * ids.length)];
-    const card = hands[turn].find((c) => c.id === pickId);
+    const decision = chooseCardToPlay(hands[turn], legal);
+    if (!decision) return;
+    const card = hands[turn].find((c) => c.id === decision.cardId);
     if (!card) return;
 
     const timer = window.setTimeout(() => {
