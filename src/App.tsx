@@ -13,6 +13,29 @@ import {
 } from "@/components/ui/select";
 import { chooseCardToPlay } from "@/engine/ai/random";
 import {
+  sortHand,
+  nextSeat,
+  trickLeadSuit,
+  isTrump,
+  isLegalPlay,
+  determineTrickWinner,
+  sameTrick,
+  cloneHands,
+} from "@/engine/rules";
+import {
+  SUITS,
+  OPPONENTS,
+  SEATS,
+  type Suit,
+  type Opp,
+  type Seat,
+  type Rank,
+  type CardT,
+  type Hands,
+  type PlayT,
+  type TrumpConfig,
+} from "@/engine/types";
+import {
   Grid3X3,
   RefreshCw,
   Eye,
@@ -41,31 +64,8 @@ import {
  * - Restores leader/turn to the state at the start of the trick
  */
 
-type Suit = "S" | "H" | "D" | "C";
-const SUITS: Suit[] = ["S", "H", "D", "C"];
-
-type Opp = "Left" | "Across" | "Right";
-const OPPONENTS: Opp[] = ["Left", "Across", "Right"];
-
-type Seat = Opp | "Me";
-const SEATS: Seat[] = ["Left", "Across", "Right", "Me"];
-
-type Rank = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14; // 11=J,12=Q,13=K,14=A
-
-type CardT = { suit: Suit; rank: Rank; id: string };
-
-type Hands = Record<Seat, CardT[]>;
-
 type VoidGrid = Record<Opp, Record<Suit, boolean>>;
 type VoidSelections = Record<Opp, boolean>;
-
-type PlayT = { seat: Seat; card: CardT };
-
-type TrumpConfig = {
-  enabled: boolean;
-  suit: Suit;
-  mustBreak: boolean;
-};
 
 const SETTINGS_KEY = "trick-taking-trainer:settings";
 
@@ -291,12 +291,7 @@ function buildHistorySnapshot(
   const trickPlays = history[trickIndex] ?? [];
   const maxStep = Math.min(step, trickPlays.length);
 
-  const hands: Hands = {
-    Left: base.hands.Left.slice(),
-    Across: base.hands.Across.slice(),
-    Right: base.hands.Right.slice(),
-    Me: base.hands.Me.slice(),
-  };
+  const hands = cloneHands(base.hands);
 
   const trick: PlayT[] = [];
   let leader = base.leader;
@@ -369,122 +364,6 @@ function useMediaQuery(query: string) {
   }, [query]);
 
   return matches;
-}
-
-function sortHand(hand: CardT[], suitOrder: Suit[], sortAscending: boolean): CardT[] {
-  const suitIndex = new Map<Suit, number>(suitOrder.map((s, i) => [s, i]));
-  const rankFactor = sortAscending ? 1 : -1;
-  return hand
-    .slice()
-    .sort(
-      (a, b) =>
-        (suitIndex.get(a.suit) ?? 0) - (suitIndex.get(b.suit) ?? 0) ||
-        (a.rank - b.rank) * rankFactor
-    );
-}
-
-function nextSeat(seat: Seat): Seat {
-  const i = SEATS.indexOf(seat);
-  return SEATS[(i + 1) % SEATS.length];
-}
-
-function trickLeadSuit(trick: PlayT[]): Suit | null {
-  return trick.length ? trick[0].card.suit : null;
-}
-
-function canFollowSuit(hand: CardT[], suit: Suit): boolean {
-  return hand.some((c) => c.suit === suit);
-}
-
-function isTrump(card: CardT, trump: TrumpConfig): boolean {
-  return trump.enabled && card.suit === trump.suit;
-}
-
-function isLegalPlay(args: {
-  hand: CardT[];
-  card: CardT;
-  trick: PlayT[];
-  isLeader: boolean;
-  trump: TrumpConfig;
-  trumpBroken: boolean;
-}): boolean {
-  const { hand, card, trick, isLeader, trump, trumpBroken } = args;
-
-  // Card must be in hand
-  if (!hand.some((c) => c.id === card.id)) return false;
-
-  const lead = trickLeadSuit(trick);
-
-  // If leading and mustBreak is enabled, restrict leading trump until broken (unless only trump in hand)
-  if (
-    isLeader &&
-    trick.length === 0 &&
-    trump.enabled &&
-    trump.mustBreak &&
-    !trumpBroken &&
-    isTrump(card, trump)
-  ) {
-    const hasNonTrump = hand.some((c) => !isTrump(c, trump));
-    if (hasNonTrump) return false;
-  }
-
-  // Must-follow lead suit
-  if (lead) {
-    const hasLead = canFollowSuit(hand, lead);
-    if (hasLead && card.suit !== lead) return false;
-  }
-
-  return true;
-}
-
-function compareCardsInTrick(a: CardT, b: CardT, lead: Suit, trump: TrumpConfig): number {
-  // return +1 if a wins over b, -1 if b wins over a
-  const aTrump = isTrump(a, trump);
-  const bTrump = isTrump(b, trump);
-
-  if (aTrump && !bTrump) return 1;
-  if (!aTrump && bTrump) return -1;
-
-  // both trump or both non-trump
-  const aFollow = a.suit === lead;
-  const bFollow = b.suit === lead;
-
-  if (aTrump && bTrump) {
-    return a.rank === b.rank ? 0 : a.rank > b.rank ? 1 : -1;
-  }
-
-  // neither trump
-  if (aFollow && !bFollow) return 1;
-  if (!aFollow && bFollow) return -1;
-
-  // both same category (both lead suit, or both off-suit) -> compare rank only if same suit
-  if (a.suit === b.suit) {
-    return a.rank === b.rank ? 0 : a.rank > b.rank ? 1 : -1;
-  }
-
-  // off-suit incomparable: earlier winner stays
-  return 0;
-}
-
-function determineTrickWinner(trick: PlayT[], trump: TrumpConfig): Seat {
-  const lead = trickLeadSuit(trick);
-  if (!lead) throw new Error("Cannot determine winner of empty trick");
-
-  let best = trick[0];
-  for (let i = 1; i < trick.length; i++) {
-    const challenger = trick[i];
-    const cmp = compareCardsInTrick(challenger.card, best.card, lead, trump);
-    if (cmp === 1) best = challenger;
-  }
-  return best.seat;
-}
-
-function sameTrick(a: PlayT[], b: PlayT[]): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    if (a[i].seat !== b[i].seat || a[i].card.id !== b[i].card.id) return false;
-  }
-  return true;
 }
 
 function PlayingCard({
