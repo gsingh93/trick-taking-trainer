@@ -15,7 +15,6 @@ import { chooseCardToPlay } from "@/engine/ai/random";
 import {
   sortHand,
   trickLeadSuit,
-  isLegalPlay,
   determineTrickWinner,
 } from "@/engine/rules";
 import { buildDeck, createRng, dealNewHands } from "@/engine/deck";
@@ -26,7 +25,12 @@ import {
   advanceToNextTrick,
   resetTrick,
   buildHistorySnapshot,
+  computeLegalBySeat,
+  computeActualVoid,
+  trickLeadCount,
+  isPlayLegal,
   type GameState,
+  type VoidGrid,
 } from "@/engine/state";
 import {
   SUITS,
@@ -36,7 +40,6 @@ import {
   type Opp,
   type Seat,
   type CardT,
-  type Hands,
   type PlayT,
   type TrumpConfig,
 } from "@/engine/types";
@@ -69,7 +72,6 @@ import {
  * - Restores leader/turn to the state at the start of the trick
  */
 
-type VoidGrid = Record<Opp, Record<Suit, boolean>>;
 type VoidSelections = Record<Opp, boolean>;
 
 const SETTINGS_KEY = "trick-taking-trainer:settings";
@@ -156,14 +158,6 @@ function rankGlyph(n: Rank) {
 }
 
  
-
-function createVoidGrid(): VoidGrid {
-  return {
-    Left: { S: false, H: false, D: false, C: false },
-    Across: { S: false, H: false, D: false, C: false },
-    Right: { S: false, H: false, D: false, C: false },
-  };
-}
 
 function createVoidSelections(): VoidSelections {
   return { Left: false, Across: false, Right: false };
@@ -436,19 +430,7 @@ export default function App() {
   }, [suitOrderMode]);
 
   const actualVoid = useMemo<VoidGrid>(() => {
-    const out = createVoidGrid();
-    const observedTricks = trick.length > 1 ? [...trickHistory, trick] : trickHistory;
-    for (const t of observedTricks) {
-      const lead = trickLeadSuit(t);
-      if (!lead) continue;
-      for (let i = 1; i < t.length; i++) {
-        const play = t[i];
-        if (play.card.suit !== lead && play.seat !== "Me") {
-          out[play.seat][lead] = true;
-        }
-      }
-    }
-    return out;
+    return computeActualVoid(trickHistory, trick);
   }, [trickHistory, trick]);
 
   const anyVoidObserved = useMemo(() => {
@@ -457,10 +439,7 @@ export default function App() {
 
   const leadSuitCount = useMemo(() => {
     if (!leadPromptSuit) return 0;
-    return trickHistory.reduce((acc, t) => {
-      const lead = trickLeadSuit(t);
-      return lead === leadPromptSuit ? acc + 1 : acc;
-    }, 0);
+    return trickLeadCount(trickHistory, leadPromptSuit);
   }, [leadPromptSuit, trickHistory]);
 
   useEffect(() => {
@@ -505,31 +484,8 @@ export default function App() {
   ]);
 
   const legalBySeat = useMemo(() => {
-    const out: Record<Seat, Set<string>> = {
-      Left: new Set(),
-      Across: new Set(),
-      Right: new Set(),
-      Me: new Set(),
-    };
-    for (const s of SEATS) {
-      const isLeaderNow = s === leader && trick.length === 0;
-      for (const c of hands[s]) {
-        if (
-          isLegalPlay({
-            hand: hands[s],
-            card: c,
-            trick,
-            isLeader: isLeaderNow,
-            trump,
-            trumpBroken,
-          })
-        ) {
-          out[s].add(c.id);
-        }
-      }
-    }
-    return out;
-  }, [hands, trick, leader, trump, trumpBroken]);
+    return computeLegalBySeat(game, trump);
+  }, [game, trump]);
 
   const isViewingHistory =
     viewedTrickIndex != null && viewedTrickIndex >= 0 && viewedTrickIndex < trickHistory.length;
@@ -776,15 +732,12 @@ export default function App() {
     // If a human is trying to play an opponent hand, require it to be revealed.
     if (source === "human" && seat !== "Me" && !shownHands[seat]) return;
 
-    const isLeaderNow = seat === leader && trick.length === 0;
     if (
-      !isLegalPlay({
-        hand: hands[seat],
+      !isPlayLegal({
+        state: game,
+        seat,
         card,
-        trick,
-        isLeader: isLeaderNow,
         trump,
-        trumpBroken,
       })
     ) {
       return;
@@ -1732,14 +1685,20 @@ if (import.meta.env.DEV) {
     { suit: "S", rank: 14, id: "S14" },
   ];
   const _leadTrick: PlayT[] = [{ seat: "Me", card: { suit: "H", rank: 10, id: "H10" } }];
+  const _base = initGameState(1);
+  const _state = {
+    ..._base,
+    hands: { ..._base.hands, Me: _handFollow },
+    leader: "Left",
+    turn: "Me",
+    trick: _leadTrick,
+  };
   console.assert(
-    isLegalPlay({
-      hand: _handFollow,
+    isPlayLegal({
+      state: _state,
+      seat: "Me",
       card: { suit: "S", rank: 14, id: "S14" },
-      trick: _leadTrick,
-      isLeader: false,
       trump: _tNoTrump,
-      trumpBroken: false,
     }) === false,
     "Must-follow should reject off-suit when holding lead suit"
   );

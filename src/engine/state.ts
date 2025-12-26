@@ -1,5 +1,5 @@
-import type { Hands, PlayT, Seat, Suit, TrumpConfig } from "./types";
-import { determineTrickWinner, isTrump, nextSeat, sameTrick, trickLeadSuit, cloneHands } from "./rules";
+import type { Hands, Opp, PlayT, Seat, Suit, TrumpConfig } from "./types";
+import { determineTrickWinner, isLegalPlay, isTrump, nextSeat, sameTrick, trickLeadSuit, cloneHands } from "./rules";
 import { createRng, dealNewHands } from "./deck";
 
 export type GameState = {
@@ -254,4 +254,75 @@ export function trickLeadCount(trickHistory: PlayT[][], suit: Suit): number {
     const lead = trickLeadSuit(t);
     return lead === suit ? acc + 1 : acc;
   }, 0);
+}
+
+export function computeLegalBySeat(state: GameState, trump: TrumpConfig): Record<Seat, Set<string>> {
+  const out: Record<Seat, Set<string>> = {
+    Left: new Set(),
+    Across: new Set(),
+    Right: new Set(),
+    Me: new Set(),
+  };
+  for (const seat of Object.keys(state.hands) as Seat[]) {
+    const isLeaderNow = seat === state.leader && state.trick.length === 0;
+    for (const c of state.hands[seat]) {
+      if (
+        isLegalPlay({
+          hand: state.hands[seat],
+          card: c,
+          trick: state.trick,
+          isLeader: isLeaderNow,
+          trump,
+          trumpBroken: state.trumpBroken,
+        })
+      ) {
+        out[seat].add(c.id);
+      }
+    }
+  }
+  return out;
+}
+
+export type VoidGrid = Record<Opp, Record<Suit, boolean>>;
+
+export function createVoidGrid(): VoidGrid {
+  return {
+    Left: { S: false, H: false, D: false, C: false },
+    Across: { S: false, H: false, D: false, C: false },
+    Right: { S: false, H: false, D: false, C: false },
+  };
+}
+
+export function computeActualVoid(trickHistory: PlayT[][], currentTrick: PlayT[]): VoidGrid {
+  const out = createVoidGrid();
+  const observedTricks = currentTrick.length > 1 ? [...trickHistory, currentTrick] : trickHistory;
+  for (const t of observedTricks) {
+    const lead = trickLeadSuit(t);
+    if (!lead) continue;
+    for (let i = 1; i < t.length; i++) {
+      const play = t[i];
+      if (play.card.suit !== lead && play.seat !== "Me") {
+        out[play.seat as Opp][lead] = true;
+      }
+    }
+  }
+  return out;
+}
+
+export function isPlayLegal(args: {
+  state: GameState;
+  seat: Seat;
+  card: PlayT["card"];
+  trump: TrumpConfig;
+}): boolean {
+  const { state, seat, card, trump } = args;
+  const isLeaderNow = seat === state.leader && state.trick.length === 0;
+  return isLegalPlay({
+    hand: state.hands[seat],
+    card,
+    trick: state.trick,
+    isLeader: isLeaderNow,
+    trump,
+    trumpBroken: state.trumpBroken,
+  });
 }
