@@ -29,6 +29,7 @@ import {
   computeActualVoid,
   trickLeadCount,
   isPlayLegal,
+  isHandInProgress,
   type GameState,
   type VoidGrid,
 } from "@/engine/state";
@@ -88,6 +89,7 @@ type Settings = {
   suitOrderMode: "bridge" | "poker";
   sortAscending: boolean;
   aiEnabled: boolean;
+  aiMode: "random" | "bidding";
   aiDelayMs: number;
   pauseBeforeNextTrick: boolean;
   aiPlayMe: boolean;
@@ -118,6 +120,7 @@ function loadSettings(): Partial<Settings> {
     }
     if (typeof data.sortAscending === "boolean") next.sortAscending = data.sortAscending;
     if (typeof data.aiEnabled === "boolean") next.aiEnabled = data.aiEnabled;
+    if (data.aiMode === "random" || data.aiMode === "bidding") next.aiMode = data.aiMode;
     if (typeof data.aiDelayMs === "number" && Number.isFinite(data.aiDelayMs) && data.aiDelayMs >= 0) {
       next.aiDelayMs = Math.floor(data.aiDelayMs);
     }
@@ -363,11 +366,17 @@ export default function App() {
   const [sortAscending, setSortAscending] = useState(() => initialSettings.sortAscending ?? true);
 
   const [aiEnabled, setAiEnabled] = useState(() => initialSettings.aiEnabled ?? true);
+  const [aiMode, setAiMode] = useState<"random" | "bidding">(
+    () => initialSettings.aiMode ?? "random"
+  );
   const [aiDelayMs, setAiDelayMs] = useState(() => initialSettings.aiDelayMs ?? 1000);
   const [pauseBeforeNextTrick, setPauseBeforeNextTrick] = useState(
     () => initialSettings.pauseBeforeNextTrick ?? true
   );
   const [aiPlayMe, setAiPlayMe] = useState(() => initialSettings.aiPlayMe ?? false);
+  const [aiModeLocked, setAiModeLocked] = useState<"random" | "bidding">(
+    () => initialSettings.aiMode ?? "random"
+  );
   const [seatLabelMode, setSeatLabelMode] = useState<"relative" | "compass">(
     () => initialSettings.seatLabelMode ?? "relative"
   );
@@ -420,6 +429,8 @@ export default function App() {
     trumpBroken,
     tricksWon,
   } = game;
+  const handInProgress = isHandInProgress(game);
+  const activeAiMode = handInProgress ? aiModeLocked : aiMode;
 
   const shownHands = useMemo(() => {
     const visible: Record<Seat, boolean> = { ...reveal };
@@ -468,6 +479,7 @@ export default function App() {
       suitOrderMode,
       sortAscending,
       aiEnabled,
+      aiMode,
       aiDelayMs,
       pauseBeforeNextTrick,
       aiPlayMe,
@@ -491,6 +503,7 @@ export default function App() {
     suitOrderMode,
     sortAscending,
     aiEnabled,
+    aiMode,
     aiDelayMs,
     pauseBeforeNextTrick,
     aiPlayMe,
@@ -525,6 +538,12 @@ export default function App() {
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
+
+  useEffect(() => {
+    if (!handInProgress) {
+      setAiModeLocked(aiMode);
+    }
+  }, [handInProgress, aiMode]);
 
   useEffect(() => {
     if (viewedTrickIndex != null && viewedTrickIndex >= trickHistory.length) {
@@ -821,6 +840,7 @@ export default function App() {
   // Basic AI: players play a random valid card when it's their turn.
   useEffect(() => {
     if (!aiEnabled) return;
+    if (activeAiMode !== "random") return;
     if (isResolving) return;
     if (handComplete) return;
     if (awaitContinue) return;
@@ -858,6 +878,7 @@ export default function App() {
     voidTrackingEnabled,
     leadPromptActive,
     isViewingHistory,
+    activeAiMode,
   ]);
 
   // If paused after a completed trick, advance on any key.
@@ -1473,6 +1494,23 @@ export default function App() {
         <div className="flex justify-between">
           <span className="text-sm">Basic AI (opponents)</span>
           <Switch checked={aiEnabled} onCheckedChange={setAiEnabled} />
+        </div>
+
+        <div className={"grid grid-cols-[minmax(0,1fr)_auto] gap-2 " + (handInProgress ? "opacity-50" : "")}>
+          <span className="text-sm">AI mode</span>
+          <Select
+            value={aiMode}
+            onValueChange={(v) => setAiMode(v as "random" | "bidding")}
+            disabled={handInProgress}
+          >
+            <SelectTrigger className="h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="random">Random</SelectItem>
+              <SelectItem value="bidding">Bidding</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className={"flex justify-between " + (!aiEnabled ? "opacity-50" : "")}>

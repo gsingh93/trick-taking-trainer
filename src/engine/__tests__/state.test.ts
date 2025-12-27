@@ -9,6 +9,7 @@ import {
   resolveTrick,
   advanceToNextTrick,
   buildHistorySnapshot,
+  isHandInProgress,
 } from "../state";
 import type { CardT, PlayT, TrumpConfig } from "../types";
 
@@ -20,6 +21,14 @@ describe("state", () => {
     const next = applyPlay(base, { seat: "Me", card }, trump);
     expect(next.trick).toHaveLength(1);
     expect(next.hands.Me.find((c) => c.id === card.id)).toBeUndefined();
+  });
+
+  it("isHandInProgress tracks whether any trick has started", () => {
+    const base = initGameState(1);
+    expect(isHandInProgress(base)).toBe(false);
+    const card = base.hands.Me[0];
+    const played = applyPlay(base, { seat: "Me", card }, { enabled: false, suit: "S", mustBreak: true });
+    expect(isHandInProgress(played)).toBe(true);
   });
 
   it("resolveTrick updates winner and history", () => {

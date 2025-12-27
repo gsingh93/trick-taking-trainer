@@ -326,3 +326,7 @@ export function isPlayLegal(args: {
     trumpBroken: state.trumpBroken,
   });
 }
+
+export function isHandInProgress(state: GameState): boolean {
+  return state.trickHistory.length > 0 || state.trick.length > 0;
+}
