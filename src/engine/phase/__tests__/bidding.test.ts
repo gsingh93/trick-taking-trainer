@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { buildBidOrder, currentBidder, initBidState, isBiddingComplete, submitBid } from "../bidding";
+import {
+  buildBidOrder,
+  currentBidder,
+  initBidState,
+  isBiddingComplete,
+  submitBid,
+  evaluateExactBids,
+} from "../bidding";
 
 describe("bidding phase", () => {
   it("builds a bid order starting from the chosen seat", () => {
@@ -22,5 +29,16 @@ describe("bidding phase", () => {
     const state = submitBid(initBidState("Me"), "Left", 2);
     expect(state.bids.Left).toBeNull();
     expect(currentBidder(state)).toBe("Me");
+  });
+
+  it("evaluates exact bids against tricks won", () => {
+    const results = evaluateExactBids(
+      { Left: 2, Across: 0, Right: 5, Me: null },
+      { Left: 2, Across: 1, Right: 5, Me: 3 }
+    );
+    expect(results.Left.made).toBe(true);
+    expect(results.Across.made).toBe(false);
+    expect(results.Right.made).toBe(true);
+    expect(results.Me.made).toBe(false);
   });
 });

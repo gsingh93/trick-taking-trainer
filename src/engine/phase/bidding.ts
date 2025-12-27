@@ -8,6 +8,12 @@ export type BidState = {
   revealed: Record<Seat, boolean>;
 };
 
+export type BidOutcome = {
+  bid: number | null;
+  tricksWon: number;
+  made: boolean;
+};
+
 export function buildBidOrder(start: Seat = "Me"): Seat[] {
   const order: Seat[] = [start];
   let cur = start;
@@ -44,5 +50,25 @@ export function submitBid(state: BidState, seat: Seat, bid: number): BidState {
     index: nextIndex,
     bids: { ...state.bids, [seat]: bid },
     revealed: { ...state.revealed, [seat]: true },
+  };
+}
+
+export function evaluateExactBids(
+  bids: Record<Seat, number | null>,
+  tricksWon: Record<Seat, number>
+): Record<Seat, BidOutcome> {
+  return {
+    Left: { bid: bids.Left, tricksWon: tricksWon.Left, made: bids.Left != null && tricksWon.Left === bids.Left },
+    Across: {
+      bid: bids.Across,
+      tricksWon: tricksWon.Across,
+      made: bids.Across != null && tricksWon.Across === bids.Across,
+    },
+    Right: {
+      bid: bids.Right,
+      tricksWon: tricksWon.Right,
+      made: bids.Right != null && tricksWon.Right === bids.Right,
+    },
+    Me: { bid: bids.Me, tricksWon: tricksWon.Me, made: bids.Me != null && tricksWon.Me === bids.Me },
   };
 }

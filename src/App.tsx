@@ -33,7 +33,14 @@ import {
   type GameState,
   type VoidGrid,
 } from "@/engine/state";
-import { currentBidder, initBidState, isBiddingComplete, submitBid, type BidState } from "@/engine/phase/bidding";
+import {
+  currentBidder,
+  initBidState,
+  isBiddingComplete,
+  submitBid,
+  evaluateExactBids,
+  type BidState,
+} from "@/engine/phase/bidding";
 import {
   SUITS,
   OPPONENTS,
@@ -436,6 +443,10 @@ export default function App() {
   const activeAiMode = handInProgress ? aiModeLocked : aiMode;
   const biddingActive = activeAiMode === "bidding";
   const biddingComplete = !biddingActive || (bidState && isBiddingComplete(bidState));
+  const bidResults = useMemo(() => {
+    if (!bidState || !biddingComplete) return null;
+    return evaluateExactBids(bidState.bids, tricksWon);
+  }, [bidState, biddingComplete, tricksWon]);
 
   const shownHands = useMemo(() => {
     const visible: Record<Seat, boolean> = { ...reveal };
@@ -877,7 +888,7 @@ export default function App() {
   // Basic AI: players play a random valid card when it's their turn.
   useEffect(() => {
     if (!aiEnabled) return;
-    if (activeAiMode !== "random") return;
+    if (biddingActive && !biddingComplete) return;
     if (isResolving) return;
     if (handComplete) return;
     if (awaitContinue) return;
@@ -915,7 +926,8 @@ export default function App() {
     voidTrackingEnabled,
     leadPromptActive,
     isViewingHistory,
-    activeAiMode,
+    biddingActive,
+    biddingComplete,
   ]);
 
   // Bidding phase: auto-bid for non-user seats in order.
@@ -981,6 +993,27 @@ export default function App() {
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-1 pb-3 px-3 sm:pt-3 sm:pb-6 sm:px-6">
+        {handComplete && biddingActive && bidResults ? (
+          <div className="mb-3 rounded-lg border bg-card/70 px-3 py-2 text-xs">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Bid Results
+            </div>
+            <div className="mt-2 space-y-1">
+              {SEATS.map((seat) => {
+                const result = bidResults[seat];
+                const statusClass = result.made ? "text-emerald-700" : "text-destructive";
+                return (
+                  <div key={seat} className="flex items-center justify-between">
+                    <span>{seatLabels[seat]}</span>
+                    <span className={statusClass}>
+                      {result.bid == null ? "No bid" : result.made ? "Made" : "Missed"}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
         <div className="grid grid-cols-[minmax(0,0.25fr)_minmax(0,0.5fr)_minmax(0,0.25fr)] grid-rows-[auto_1fr_auto] gap-x-0.5 gap-y-2 sm:grid-cols-[minmax(0,0.25fr)_minmax(0,0.5fr)_minmax(0,0.25fr)] sm:gap-3">
           {/* Across spans full width */}
           <div className="col-span-3 rounded-xl border p-2 sm:p-3">
@@ -1306,12 +1339,12 @@ export default function App() {
               : isViewingHistory
                 ? "Viewing trick history"
                 : leadPromptActive
-                ? "Which opponents are void in the lead suit?"
-                : trick.length === 0
-                  ? "Waiting for a card to be led..."
-                  : anyVoidObserved
-                    ? "Trick in progress..."
-                    : "Waiting for first off-suit..."}
+                  ? "Which opponents are void in the lead suit?"
+                  : trick.length === 0
+                    ? "Waiting for a card to be led..."
+                    : anyVoidObserved
+                      ? "Trick in progress..."
+                      : "Waiting for first off-suit..."}
           </div>
           {leadPromptSuit ? (
             <div className={"text-sm " + suitColorClass(leadPromptSuit)}>
