@@ -12,6 +12,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { chooseCardToPlay } from "@/engine/ai/random";
+import { shouldRunAi } from "@/engine/ai/logic";
+import { canAdvanceTrick, canPlayCard } from "@/engine/flow";
 import {
   sortHand,
   trickLeadSuit,
@@ -560,12 +562,14 @@ export default function App() {
     return determineTrickWinner(displayTrick, trump);
   }, [displayTrick, trump]);
 
-  const canPlay =
-    !leadPromptActive &&
-    !awaitContinue &&
-    !handComplete &&
-    !isViewingHistory &&
-    (!biddingActive || biddingComplete);
+  const canPlay = canPlayCard({
+    leadPromptActive,
+    awaitContinue,
+    handComplete,
+    isViewingHistory,
+    biddingActive,
+    biddingComplete: !!biddingComplete,
+  });
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
@@ -887,17 +891,24 @@ export default function App() {
 
   // Basic AI: players play a random valid card when it's their turn.
   useEffect(() => {
-    if (!aiEnabled) return;
-    if (biddingActive && !biddingComplete) return;
-    if (isResolving) return;
-    if (handComplete) return;
-    if (awaitContinue) return;
-    if (isViewingHistory) return;
-    if (turn === "Me" && !aiPlayMe) return;
-    if (voidTrackingEnabled && leadPromptActive) return;
-
-    // If trick is empty, only the leader may lead.
-    if (trick.length === 0 && turn !== leader) return;
+    if (
+      !shouldRunAi({
+        aiEnabled,
+        biddingActive,
+        biddingComplete: !!biddingComplete,
+        isResolving,
+        handComplete,
+        awaitContinue,
+        isViewingHistory,
+        turn,
+        aiPlayMe,
+        leadPromptActive: voidTrackingEnabled && leadPromptActive,
+        trickLength: trick.length,
+        leader,
+      })
+    ) {
+      return;
+    }
 
     const legal = legalBySeat[turn];
     if (!legal || legal.size === 0) return;
@@ -947,7 +958,7 @@ export default function App() {
 
   // If paused after a completed trick, advance on any key.
   useEffect(() => {
-    if (!awaitContinue || handComplete || isViewingHistory) return;
+    if (!canAdvanceTrick({ awaitContinue, handComplete, isViewingHistory })) return;
     const advance = () => {
       setGame((g) => advanceToNextTrick(g));
       setAwaitContinue(false);
@@ -1121,7 +1132,7 @@ export default function App() {
           <div
             className="relative flex h-[200px] w-[200px] items-center justify-center rounded-xl border bg-emerald-600/80 p-2 shadow-inner self-center justify-self-center sm:h-[240px] sm:w-[240px] sm:p-3"
             onClick={
-              awaitContinue && !handComplete && !isViewingHistory
+              canAdvanceTrick({ awaitContinue, handComplete, isViewingHistory })
                 ? () => {
                     setGame((g) => advanceToNextTrick(g));
                     setAwaitContinue(false);
