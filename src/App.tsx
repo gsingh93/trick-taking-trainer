@@ -33,6 +33,7 @@ import {
   type GameState,
   type VoidGrid,
 } from "@/engine/state";
+import { currentBidder, initBidState, isBiddingComplete, submitBid, type BidState } from "@/engine/phase/bidding";
 import {
   SUITS,
   OPPONENTS,
@@ -377,6 +378,8 @@ export default function App() {
   const [aiModeLocked, setAiModeLocked] = useState<"random" | "bidding">(
     () => initialSettings.aiMode ?? "random"
   );
+  const [bidState, setBidState] = useState<BidState | null>(null);
+  const [bidInput, setBidInput] = useState("0");
   const [seatLabelMode, setSeatLabelMode] = useState<"relative" | "compass">(
     () => initialSettings.seatLabelMode ?? "relative"
   );
@@ -431,6 +434,8 @@ export default function App() {
   } = game;
   const handInProgress = isHandInProgress(game);
   const activeAiMode = handInProgress ? aiModeLocked : aiMode;
+  const biddingActive = activeAiMode === "bidding";
+  const biddingComplete = !biddingActive || (bidState && isBiddingComplete(bidState));
 
   const shownHands = useMemo(() => {
     const visible: Record<Seat, boolean> = { ...reveal };
@@ -448,6 +453,17 @@ export default function App() {
       ? { Left: "West", Across: "North", Right: "East", Me: "South" }
       : { Left: "Left", Across: "Across", Right: "Right", Me: "Me" };
   }, [seatLabelMode]);
+
+  const bidDisplay = useMemo<Record<Seat, string> | null>(() => {
+    if (!bidState) return null;
+    return {
+      Left: bidState.revealed.Left && bidState.bids.Left != null ? String(bidState.bids.Left) : "?",
+      Across:
+        bidState.revealed.Across && bidState.bids.Across != null ? String(bidState.bids.Across) : "?",
+      Right: bidState.revealed.Right && bidState.bids.Right != null ? String(bidState.bids.Right) : "?",
+      Me: bidState.revealed.Me && bidState.bids.Me != null ? String(bidState.bids.Me) : "?",
+    };
+  }, [bidState]);
 
   const suitOrder = useMemo<Suit[]>(() => {
     return suitOrderMode === "bridge" ? ["S", "H", "D", "C"] : ["C", "D", "H", "S"];
@@ -533,7 +549,12 @@ export default function App() {
     return determineTrickWinner(displayTrick, trump);
   }, [displayTrick, trump]);
 
-  const canPlay = !leadPromptActive && !awaitContinue && !handComplete && !isViewingHistory;
+  const canPlay =
+    !leadPromptActive &&
+    !awaitContinue &&
+    !handComplete &&
+    !isViewingHistory &&
+    (!biddingActive || biddingComplete);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
@@ -544,6 +565,15 @@ export default function App() {
       setAiModeLocked(aiMode);
     }
   }, [handInProgress, aiMode]);
+
+  useEffect(() => {
+    if (biddingActive) {
+      setBidState((prev) => prev ?? initBidState("Me"));
+      setBidInput("0");
+    } else if (bidState) {
+      setBidState(null);
+    }
+  }, [biddingActive, bidState]);
 
   useEffect(() => {
     if (viewedTrickIndex != null && viewedTrickIndex >= trickHistory.length) {
@@ -629,6 +659,8 @@ export default function App() {
     setViewedTrickIndex(null);
     setViewedTrickStep(0);
     setHistoryPlaying(false);
+    setBidState(aiMode === "bidding" ? initBidState("Me") : null);
+    setBidInput("0");
     setLeadPromptActive(false);
     setLeadPromptSuit(null);
     setLeadPromptLeader(null);
@@ -709,6 +741,10 @@ export default function App() {
     setLeadCountMismatch(false);
   }
 
+  function submitBidForSeat(seat: Seat, bid: number) {
+    setBidState((prev) => (prev ? submitBid(prev, seat, bid) : prev));
+  }
+
   function toggleRevealSeat(seat: Seat) {
     setReveal((r) => ({ ...r, [seat]: !r[seat] }));
   }
@@ -754,6 +790,7 @@ export default function App() {
     if (isViewingHistory) return;
     if (awaitContinue) return;
     if (handComplete) return;
+    if (biddingActive && !biddingComplete) return;
 
     // Only the leader may lead a new trick.
     if (trick.length === 0 && seat !== leader) return;
@@ -881,6 +918,21 @@ export default function App() {
     activeAiMode,
   ]);
 
+  // Bidding phase: auto-bid for non-user seats in order.
+  useEffect(() => {
+    if (!biddingActive || !bidState) return;
+    if (isBiddingComplete(bidState)) return;
+    const seat = currentBidder(bidState);
+    if (!seat || seat === "Me") return;
+
+    const timer = window.setTimeout(() => {
+      const bid = Math.floor(Math.random() * 14);
+      submitBidForSeat(seat, bid);
+    }, aiDelayMs);
+
+    return () => clearTimeout(timer);
+  }, [biddingActive, bidState, aiDelayMs]);
+
   // If paused after a completed trick, advance on any key.
   useEffect(() => {
     if (!awaitContinue || handComplete || isViewingHistory) return;
@@ -943,7 +995,10 @@ export default function App() {
               >
                 <span>
                   {seatLabels.Across}{" "}
-                  <span className="text-xs text-muted-foreground">({displayTricksWon.Across})</span>
+                  <span className="text-xs text-muted-foreground">
+                    ({displayTricksWon.Across}
+                    {bidDisplay ? `/${bidDisplay.Across}` : ""})
+                  </span>
                 </span>
               </div>
               <Badge variant="outline">{displayHands.Across.length}</Badge>
@@ -992,7 +1047,10 @@ export default function App() {
               >
                 <span>
                   {seatLabels.Left}{" "}
-                  <span className="text-xs text-muted-foreground">({displayTricksWon.Left})</span>
+                  <span className="text-xs text-muted-foreground">
+                    ({displayTricksWon.Left}
+                    {bidDisplay ? `/${bidDisplay.Left}` : ""})
+                  </span>
                 </span>
               </div>
               <Badge variant="outline">{displayHands.Left.length}</Badge>
@@ -1111,6 +1169,34 @@ export default function App() {
                 </>
               ) : null}
             </div>
+
+            {biddingActive && bidState && currentBidder(bidState) === "Me" && !isBiddingComplete(bidState) ? (
+              <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40">
+                <div className="w-[170px] space-y-3 rounded-lg border bg-card px-3 py-3 text-sm shadow-lg">
+                  <div className="text-sm font-medium">Enter your bid</div>
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+                    <Select value={bidInput} onValueChange={(v) => setBidInput(v)}>
+                      <SelectTrigger className="h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 14 }, (_, i) => String(i)).map((n) => (
+                          <SelectItem key={n} value={n}>
+                            {n}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      className="bg-emerald-600 text-white hover:bg-emerald-700"
+                      onClick={() => submitBidForSeat("Me", Number(bidInput))}
+                    >
+                      Bid
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           {/* Right spans rows */}
@@ -1130,7 +1216,10 @@ export default function App() {
               >
                 <span>
                   {seatLabels.Right}{" "}
-                  <span className="text-xs text-muted-foreground">({displayTricksWon.Right})</span>
+                  <span className="text-xs text-muted-foreground">
+                    ({displayTricksWon.Right}
+                    {bidDisplay ? `/${bidDisplay.Right}` : ""})
+                  </span>
                 </span>
               </div>
               <Badge variant="outline">{displayHands.Right.length}</Badge>
@@ -1177,7 +1266,10 @@ export default function App() {
               >
                 <span>
                   {seatLabels.Me}{" "}
-                  <span className="text-xs text-muted-foreground">({displayTricksWon.Me})</span>
+                  <span className="text-xs text-muted-foreground">
+                    ({displayTricksWon.Me}
+                    {bidDisplay ? `/${bidDisplay.Me}` : ""})
+                  </span>
                 </span>
               </div>
               <Badge variant="outline">{displayHands.Me.length}</Badge>
@@ -1496,12 +1588,12 @@ export default function App() {
           <Switch checked={aiEnabled} onCheckedChange={setAiEnabled} />
         </div>
 
-        <div className={"grid grid-cols-[minmax(0,1fr)_auto] gap-2 " + (handInProgress ? "opacity-50" : "")}>
+        <div className={"grid grid-cols-[minmax(0,1fr)_auto] gap-2 " + (handInProgress || biddingActive ? "opacity-50" : "")}>
           <span className="text-sm">AI mode</span>
           <Select
             value={aiMode}
             onValueChange={(v) => setAiMode(v as "random" | "bidding")}
-            disabled={handInProgress}
+            disabled={handInProgress || biddingActive}
           >
             <SelectTrigger className="h-8">
               <SelectValue />
