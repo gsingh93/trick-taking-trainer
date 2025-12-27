@@ -72,6 +72,23 @@ describe("state", () => {
     expect(reset.turn).toBe(reset.trickStartTurn);
   });
 
+  it("resetTrick rolls back tricksWon and history when resetting a completed trick", () => {
+    const trump: TrumpConfig = { enabled: false, suit: "S", mustBreak: true };
+    const base = initGameState(1);
+    const trick: PlayT[] = [
+      { seat: "Me", card: { suit: "H", rank: 10, id: "H10" } },
+      { seat: "Left", card: { suit: "H", rank: 12, id: "H12" } },
+      { seat: "Across", card: { suit: "H", rank: 3, id: "H3" } },
+      { seat: "Right", card: { suit: "H", rank: 14, id: "H14" } },
+    ];
+    const resolved = resolveTrick({ ...base, trick }, trump);
+    expect(resolved.tricksWon.Right).toBe(1);
+    expect(resolved.trickHistory).toHaveLength(1);
+    const reset = resetTrick({ ...resolved }, trump);
+    expect(reset.tricksWon.Right).toBe(0);
+    expect(reset.trickHistory).toHaveLength(0);
+  });
+
   it("computeActualVoid flags off-suit plays", () => {
     const trick: PlayT[] = [
       { seat: "Left", card: { suit: "H", rank: 2, id: "H2" } },
@@ -115,6 +132,18 @@ describe("state", () => {
     expect(end.tricksWon.Right).toBe(1);
   });
 
+  it("buildHistorySnapshot advances turn during a partial trick", () => {
+    const trump: TrumpConfig = { enabled: false, suit: "S", mustBreak: true };
+    const history: PlayT[][] = [
+      [
+        { seat: "Me", card: { suit: "H", rank: 10, id: "H10" } },
+        { seat: "Left", card: { suit: "H", rank: 12, id: "H12" } },
+      ],
+    ];
+    const snapshot = buildHistorySnapshot(history, 0, 1, 1, trump);
+    expect(snapshot.turn).toBe("Left");
+  });
+
   it("computeLegalBySeat and isPlayLegal agree on legality", () => {
     const trump: TrumpConfig = { enabled: false, suit: "S", mustBreak: true };
     const base = initGameState(1);
@@ -122,6 +151,27 @@ describe("state", () => {
     const legal = computeLegalBySeat(base, trump);
     expect(legal.Me.has(card.id)).toBe(true);
     expect(isPlayLegal({ state: base, seat: "Me", card, trump })).toBe(true);
+  });
+
+  it("computeLegalBySeat blocks leading trump before break when non-trump exists", () => {
+    const trump: TrumpConfig = { enabled: true, suit: "S", mustBreak: true };
+    const base = initGameState(1);
+    const state = {
+      ...base,
+      hands: {
+        ...base.hands,
+        Me: [
+          { suit: "S", rank: 2, id: "S2" },
+          { suit: "H", rank: 3, id: "H3" },
+        ],
+      },
+      leader: "Me",
+      turn: "Me",
+      trick: [],
+      trumpBroken: false,
+    };
+    const legal = computeLegalBySeat(state, trump);
+    expect(legal.Me.has("S2")).toBe(false);
   });
 
   it("isPlayLegal rejects off-suit when following is possible", () => {

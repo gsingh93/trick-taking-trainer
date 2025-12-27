@@ -79,4 +79,33 @@ describe("rules", () => {
       })
     ).toBe(true);
   });
+
+  it("picks trump over lead suit when mixed", () => {
+    const trump: TrumpConfig = { enabled: true, suit: "S", mustBreak: true };
+    const trick: PlayT[] = [
+      { seat: "Me", card: { suit: "H", rank: 14, id: "H14" } },
+      { seat: "Left", card: { suit: "S", rank: 2, id: "S2" } },
+      { seat: "Across", card: { suit: "H", rank: 2, id: "H2" } },
+      { seat: "Right", card: { suit: "S", rank: 3, id: "S3" } },
+    ];
+    expect(determineTrickWinner(trick, trump)).toBe("Right");
+  });
+
+  it("allows leading trump when hand is all trump", () => {
+    const trump: TrumpConfig = { enabled: true, suit: "S", mustBreak: true };
+    const hand: CardT[] = [
+      { suit: "S", rank: 2, id: "S2" },
+      { suit: "S", rank: 5, id: "S5" },
+    ];
+    expect(
+      isLegalPlay({
+        hand,
+        card: { suit: "S", rank: 2, id: "S2" },
+        trick: [],
+        isLeader: true,
+        trump,
+        trumpBroken: false,
+      })
+    ).toBe(true);
+  });
 });
