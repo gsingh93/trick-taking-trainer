@@ -61,4 +61,22 @@ describe("rules", () => {
       })
     ).toBe(false);
   });
+
+  it("allows leading trump after trump is broken", () => {
+    const trump: TrumpConfig = { enabled: true, suit: "S", mustBreak: true };
+    const hand: CardT[] = [
+      { suit: "S", rank: 2, id: "S2" },
+      { suit: "H", rank: 5, id: "H5" },
+    ];
+    expect(
+      isLegalPlay({
+        hand,
+        card: { suit: "S", rank: 2, id: "S2" },
+        trick: [],
+        isLeader: true,
+        trump,
+        trumpBroken: true,
+      })
+    ).toBe(true);
+  });
 });
