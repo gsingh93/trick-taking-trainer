@@ -16,6 +16,7 @@ import { shouldRunAi } from "@/engine/ai/logic";
 import { canAdvanceTrick, canPlayCard } from "@/engine/flow";
 import { chooseCardToPlayForBid } from "@/engine/ai/bidFocus";
 import { estimateBid } from "@/engine/ai/bidHeuristic";
+import { canBeBeatenByHonor, remainingHonorsInSuit } from "@/engine/training";
 import {
   sortHand,
   trickLeadSuit,
@@ -52,6 +53,7 @@ import {
   type Suit,
   type Opp,
   type Seat,
+  type Rank,
   type CardT,
   type PlayT,
   type TrumpConfig,
@@ -106,6 +108,8 @@ type Settings = {
   pauseBeforeNextTrick: boolean;
   aiPlayMe: boolean;
   seatLabelMode: "relative" | "compass";
+  winIntentPromptEnabled: boolean;
+  winIntentWarnTrump: boolean;
   trump: TrumpConfig;
 };
 
@@ -142,6 +146,12 @@ function loadSettings(): Partial<Settings> {
     if (typeof data.aiPlayMe === "boolean") next.aiPlayMe = data.aiPlayMe;
     if (data.seatLabelMode === "relative" || data.seatLabelMode === "compass") {
       next.seatLabelMode = data.seatLabelMode;
+    }
+    if (typeof data.winIntentPromptEnabled === "boolean") {
+      next.winIntentPromptEnabled = data.winIntentPromptEnabled;
+    }
+    if (typeof data.winIntentWarnTrump === "boolean") {
+      next.winIntentWarnTrump = data.winIntentWarnTrump;
     }
     if (typeof data.trump === "object" && data.trump) {
       const t = data.trump as Record<string, unknown>;
@@ -391,6 +401,12 @@ export default function App() {
   );
   const [bidState, setBidState] = useState<BidState | null>(null);
   const [bidInput, setBidInput] = useState("0");
+  const [winIntentPromptEnabled, setWinIntentPromptEnabled] = useState(
+    () => initialSettings.winIntentPromptEnabled ?? false
+  );
+  const [winIntentWarnTrump, setWinIntentWarnTrump] = useState(
+    () => initialSettings.winIntentWarnTrump ?? true
+  );
   const [seatLabelMode, setSeatLabelMode] = useState<"relative" | "compass">(
     () => initialSettings.seatLabelMode ?? "relative"
   );
@@ -421,6 +437,8 @@ export default function App() {
   const [leadWarning, setLeadWarning] = useState<string | null>(null);
   const [leadCountAnswer, setLeadCountAnswer] = useState("0");
   const [leadCountMismatch, setLeadCountMismatch] = useState(false);
+  const [pendingIntentCard, setPendingIntentCard] = useState<CardT | null>(null);
+  const [intentWarning, setIntentWarning] = useState<string | null>(null);
 
   const [reveal, setReveal] = useState<Record<Seat, boolean>>({
     Left: false,
@@ -451,6 +469,14 @@ export default function App() {
     if (!bidState || !biddingComplete) return null;
     return evaluateExactBids(bidState.bids, tricksWon);
   }, [bidState, biddingComplete, tricksWon]);
+
+  const honorRemainingBySuit = useMemo(() => {
+    const out: Record<Suit, Rank[]> = { S: [], H: [], D: [], C: [] };
+    for (const suit of SUITS) {
+      out[suit] = remainingHonorsInSuit(trickHistory, trick, suit);
+    }
+    return out;
+  }, [trickHistory, trick]);
 
   const shownHands = useMemo(() => {
     const visible: Record<Seat, boolean> = { ...reveal };
@@ -506,17 +532,19 @@ export default function App() {
       darkMode,
       leadCountPromptEnabled,
       checkErrorsEnabled,
-      voidPromptScope,
-      suitOrderMode,
-      sortAscending,
-      aiEnabled,
-      aiMode,
-      aiDelayMs,
-      pauseBeforeNextTrick,
-      aiPlayMe,
-      seatLabelMode,
-      trump,
-    };
+    voidPromptScope,
+    suitOrderMode,
+    sortAscending,
+    aiEnabled,
+    aiMode,
+    aiDelayMs,
+    pauseBeforeNextTrick,
+    aiPlayMe,
+    seatLabelMode,
+    winIntentPromptEnabled,
+    winIntentWarnTrump,
+    trump,
+  };
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
     } catch {
@@ -539,6 +567,8 @@ export default function App() {
     pauseBeforeNextTrick,
     aiPlayMe,
     seatLabelMode,
+    winIntentPromptEnabled,
+    winIntentWarnTrump,
     trump,
   ]);
 
@@ -571,7 +601,7 @@ export default function App() {
     isViewingHistory,
     biddingActive,
     biddingComplete: !!biddingComplete,
-  });
+  }) && !pendingIntentCard;
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
@@ -678,6 +708,8 @@ export default function App() {
     setHistoryPlaying(false);
     setBidState(aiMode === "bidding" ? initBidState("Me") : null);
     setBidInput("0");
+    setPendingIntentCard(null);
+    setIntentWarning(null);
     setLeadPromptActive(false);
     setLeadPromptSuit(null);
     setLeadPromptLeader(null);
@@ -758,6 +790,82 @@ export default function App() {
     setLeadCountMismatch(false);
   }
 
+  function remainingPlayersVoidInSuit(suit: Suit, currentSeat: Seat): boolean {
+    const playedSeats = new Set(trick.map((t) => t.seat));
+    const remaining = SEATS.filter((s) => s !== currentSeat && !playedSeats.has(s));
+    if (!remaining.length) return true;
+    for (const seat of remaining) {
+      if (seat === "Me") return false;
+      if (!actualVoid[seat][suit]) return false;
+    }
+    return true;
+  }
+
+  function shouldPromptWinIntent(card: CardT, seat: Seat): boolean {
+    if (!winIntentPromptEnabled) return false;
+    if (seat !== "Me") return false;
+    if (aiPlayMe) return false;
+    if (trick.length >= 3) return false;
+    if (card.rank < 10) return false;
+    const leadSuit = trickLeadSuit(trick) ?? card.suit;
+    if (remainingPlayersVoidInSuit(leadSuit, seat)) return false;
+    return true;
+  }
+
+  function evaluateWinIntent(card: CardT): string | null {
+    const leadSuit = trickLeadSuit(trick) ?? card.suit;
+    const honors = honorRemainingBySuit[leadSuit];
+    const honorWarning = canBeBeatenByHonor(card, honors);
+    let trumpWarning = false;
+    if (
+      winIntentWarnTrump &&
+      trump.enabled &&
+      leadSuit !== trump.suit &&
+      !remainingPlayersVoidInSuit(leadSuit, "Me")
+    ) {
+      const playedSeats = new Set(trick.map((t) => t.seat));
+      const remaining = SEATS.filter((s) => s !== "Me" && !playedSeats.has(s));
+      trumpWarning = remaining.some((seat) => seat !== "Me" && actualVoid[seat][leadSuit] && !actualVoid[seat][trump.suit]);
+    }
+    if (honorWarning && trumpWarning) return "This card can be beaten by a higher honor or trump";
+    if (honorWarning) return "This card can be beaten by a higher honor";
+    if (trumpWarning) return "This card can be trumped";
+    return null;
+  }
+
+  function handleWinIntentDecision(intentToWin: boolean) {
+    if (!pendingIntentCard) return;
+    if (!intentToWin) {
+      const card = pendingIntentCard;
+      setPendingIntentCard(null);
+      setIntentWarning(null);
+      tryPlay("Me", card, "human", { skipIntentPrompt: true });
+      return;
+    }
+    const warning = evaluateWinIntent(pendingIntentCard);
+    if (!warning) {
+      const card = pendingIntentCard;
+      setPendingIntentCard(null);
+      setIntentWarning(null);
+      tryPlay("Me", card, "human", { skipIntentPrompt: true });
+      return;
+    }
+    setIntentWarning(warning);
+  }
+
+  function confirmIntentPlay() {
+    if (!pendingIntentCard) return;
+    const card = pendingIntentCard;
+    setPendingIntentCard(null);
+    setIntentWarning(null);
+    tryPlay("Me", card, "human", { skipIntentPrompt: true });
+  }
+
+  function cancelIntentPrompt() {
+    setPendingIntentCard(null);
+    setIntentWarning(null);
+  }
+
   function submitBidForSeat(seat: Seat, bid: number) {
     setBidState((prev) => (prev ? submitBid(prev, seat, bid) : prev));
   }
@@ -802,12 +910,18 @@ export default function App() {
     }, aiDelayMs);
   }
 
-  function tryPlay(seat: Seat, card: CardT, source: "human" | "ai" = "human") {
+  function tryPlay(
+    seat: Seat,
+    card: CardT,
+    source: "human" | "ai" = "human",
+    opts?: { skipIntentPrompt?: boolean }
+  ) {
     if (isResolving) return;
     if (isViewingHistory) return;
     if (awaitContinue) return;
     if (handComplete) return;
     if (biddingActive && !biddingComplete) return;
+    if (pendingIntentCard && source === "human" && !opts?.skipIntentPrompt) return;
 
     // Only the leader may lead a new trick.
     if (trick.length === 0 && seat !== leader) return;
@@ -819,6 +933,18 @@ export default function App() {
 
     // If a human is trying to play an opponent hand, require it to be revealed.
     if (source === "human" && seat !== "Me" && !shownHands[seat]) return;
+
+    if (
+      source === "human" &&
+      seat === "Me" &&
+      !pendingIntentCard &&
+      !opts?.skipIntentPrompt &&
+      shouldPromptWinIntent(card, seat)
+    ) {
+      setPendingIntentCard(card);
+      setIntentWarning(null);
+      return;
+    }
 
     if (
       !isPlayLegal({
@@ -855,6 +981,8 @@ export default function App() {
     setLeadSelections(createVoidSelections());
     setLeadMismatch(createVoidSelections());
     setLeadWarning(null);
+    setPendingIntentCard(null);
+    setIntentWarning(null);
     setGame((g) => resetTrick(g, trump));
   }
 
@@ -886,6 +1014,8 @@ export default function App() {
     setLeadWarning(null);
     setLeadCountAnswer("0");
     setLeadCountMismatch(false);
+    setPendingIntentCard(null);
+    setIntentWarning(null);
     setViewedTrickIndex(null);
     setViewedTrickStep(0);
     setHistoryPlaying(false);
@@ -1252,6 +1382,44 @@ export default function App() {
                       Bid
                     </Button>
                   </div>
+                </div>
+              </div>
+            ) : null}
+
+            {pendingIntentCard ? (
+              <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40">
+                <div className="w-[200px] space-y-3 rounded-lg border bg-card px-3 py-3 text-sm shadow-lg">
+                  {!intentWarning ? (
+                    <>
+                      <div className="text-sm font-medium">Do you intend to win this trick?</div>
+                      <div className="flex gap-2">
+                        <Button
+                          className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
+                          onClick={() => handleWinIntentDecision(true)}
+                        >
+                          Yes
+                        </Button>
+                        <Button variant="outline" className="flex-1" onClick={() => handleWinIntentDecision(false)}>
+                          No
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-sm font-medium text-destructive">{intentWarning}</div>
+                      <div className="flex gap-2">
+                        <Button
+                          className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
+                          onClick={confirmIntentPlay}
+                        >
+                          Play
+                        </Button>
+                        <Button variant="outline" className="flex-1" onClick={cancelIntentPrompt}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             ) : null}
@@ -1629,6 +1797,20 @@ export default function App() {
         <div className="flex justify-between">
           <span className="text-sm">Lead count tracking</span>
           <Switch checked={leadCountPromptEnabled} onCheckedChange={setLeadCountPromptEnabled} />
+        </div>
+
+        <div className="flex justify-between">
+          <span className="text-sm">Win intent prompt</span>
+          <Switch checked={winIntentPromptEnabled} onCheckedChange={setWinIntentPromptEnabled} />
+        </div>
+
+        <div className={"flex justify-between " + (!winIntentPromptEnabled ? "opacity-50" : "")}>
+          <span className="text-sm">Warn about trump voids</span>
+          <Switch
+            checked={winIntentWarnTrump}
+            onCheckedChange={setWinIntentWarnTrump}
+            disabled={!winIntentPromptEnabled}
+          />
         </div>
 
         <Separator />
