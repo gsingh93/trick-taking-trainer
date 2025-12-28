@@ -464,6 +464,15 @@ export default function App() {
   });
 
   const resolveTimerRef = useRef<number | null>(null);
+  const aiDelayInputRef = useRef<HTMLInputElement | null>(null);
+  const commitAiDelayInput = (rawValue: string) => {
+    const parsed = Number(rawValue);
+    const normalized = Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : 0;
+    if (aiDelayInputRef.current) {
+      aiDelayInputRef.current.value = String(normalized);
+    }
+    setAiDelayMs(normalized);
+  };
   const [isResolving, setIsResolving] = useState(false);
 
   const {
@@ -626,6 +635,12 @@ export default function App() {
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
+
+  useEffect(() => {
+    if (aiDelayInputRef.current) {
+      aiDelayInputRef.current.value = String(aiDelayMs);
+    }
+  }, [aiDelayMs]);
 
   useEffect(() => {
     if (!handInProgress) {
@@ -1190,7 +1205,7 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const TableCard = () => (
+  const renderTableCard = () => (
     <Card className="lg:col-span-2">
       <CardHeader className="pb-1">
         <CardTitle className="flex items-center justify-between">
@@ -1581,7 +1596,7 @@ export default function App() {
     </Card>
   );
 
-  const VoidTrackingCard = () => (
+  const renderVoidTrackingCard = () => (
     <Card className="flex flex-col">
       <CardHeader>
         <CardTitle>Void tracking</CardTitle>
@@ -1681,7 +1696,7 @@ export default function App() {
     </Card>
   );
 
-  const TrickHistoryCard = () => (
+  const renderTrickHistoryCard = () => (
     <Card className="flex flex-col">
       <CardHeader>
         <CardTitle>Trick history</CardTitle>
@@ -1812,7 +1827,7 @@ export default function App() {
     </Card>
   );
 
-  const SettingsCard = () => (
+  const renderSettingsCard = () => (
     <Card>
       <CardHeader>
         <CardTitle>Training Settings</CardTitle>
@@ -1934,7 +1949,7 @@ export default function App() {
         <CardTitle>Gameplay &amp; UI Settings</CardTitle>
 
         <div className="flex justify-between">
-          <span className="text-sm">AI Opponents</span>
+          <span className="text-sm">AI opponents</span>
           <Switch checked={aiEnabled} onCheckedChange={setAiEnabled} />
         </div>
 
@@ -1966,9 +1981,19 @@ export default function App() {
             type="number"
             min={0}
             step={250}
-            value={aiDelayMs}
+            defaultValue={aiDelayMs}
+            ref={aiDelayInputRef}
             disabled={!aiEnabled}
-            onChange={(e) => setAiDelayMs(Number(e.target.value) || 0)}
+            onBlur={() => {
+              const raw = aiDelayInputRef.current?.value ?? "0";
+              commitAiDelayInput(raw);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                const raw = aiDelayInputRef.current?.value ?? "0";
+                commitAiDelayInput(raw);
+              }
+            }}
             className="h-8 w-20 rounded-md border bg-background px-2 text-sm"
           />
         </div>
@@ -2131,23 +2156,23 @@ export default function App() {
         {isShortViewport ? (
           <div className="space-y-6">
             <div className="grid grid-cols-1 gap-1 md:grid-cols-[minmax(0,1fr)_auto]">
-              <TableCard />
+              {renderTableCard()}
               <div className="w-full md:max-w-[330px] md:justify-self-end md:self-center">
-                <VoidTrackingCard />
+                {renderVoidTrackingCard()}
               </div>
             </div>
             <div className="space-y-6 md:max-w-[330px] md:justify-self-end">
-              <TrickHistoryCard />
-              <SettingsCard />
+              {renderTrickHistoryCard()}
+              {renderSettingsCard()}
             </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_auto] md:gap-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-            <TableCard />
+            {renderTableCard()}
             <div className="space-y-6 w-full md:max-w-[330px] md:justify-self-end">
-              <VoidTrackingCard />
-              <TrickHistoryCard />
-              <SettingsCard />
+              {renderVoidTrackingCard()}
+              {renderTrickHistoryCard()}
+              {renderSettingsCard()}
             </div>
           </div>
         )}
