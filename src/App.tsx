@@ -396,7 +396,7 @@ export default function App() {
     () => initialSettings.voidPromptScope ?? "per-suit"
   );
   const [suitOrderMode, setSuitOrderMode] = useState<"bridge" | "poker">(
-    () => initialSettings.suitOrderMode ?? "bridge"
+    () => initialSettings.suitOrderMode ?? "poker"
   );
   const [sortAscending, setSortAscending] = useState(() => initialSettings.sortAscending ?? true);
 
