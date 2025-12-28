@@ -112,6 +112,7 @@ type Settings = {
   winIntentPromptEnabled: boolean;
   winIntentWarnTrump: boolean;
   winIntentMinRank: Rank;
+  voidPromptOnlyWhenLeading: boolean;
   trump: TrumpConfig;
 };
 
@@ -158,6 +159,9 @@ function loadSettings(): Partial<Settings> {
     if (typeof data.winIntentMinRank === "number") {
       const value = Math.floor(data.winIntentMinRank) as Rank;
       if (value >= 2 && value <= 14) next.winIntentMinRank = value;
+    }
+    if (typeof data.voidPromptOnlyWhenLeading === "boolean") {
+      next.voidPromptOnlyWhenLeading = data.voidPromptOnlyWhenLeading;
     }
     if (typeof data.trump === "object" && data.trump) {
       const t = data.trump as Record<string, unknown>;
@@ -416,6 +420,9 @@ export default function App() {
   const [winIntentMinRank, setWinIntentMinRank] = useState<Rank>(
     () => initialSettings.winIntentMinRank ?? 10
   );
+  const [voidPromptOnlyWhenLeading, setVoidPromptOnlyWhenLeading] = useState(
+    () => initialSettings.voidPromptOnlyWhenLeading ?? true
+  );
   const [seatLabelMode, setSeatLabelMode] = useState<"relative" | "compass">(
     () => initialSettings.seatLabelMode ?? "relative"
   );
@@ -553,6 +560,7 @@ export default function App() {
     winIntentPromptEnabled,
     winIntentWarnTrump,
     winIntentMinRank,
+    voidPromptOnlyWhenLeading,
     trump,
   };
     try {
@@ -580,6 +588,7 @@ export default function App() {
     winIntentPromptEnabled,
     winIntentWarnTrump,
     winIntentMinRank,
+    voidPromptOnlyWhenLeading,
     trump,
   ]);
 
@@ -687,6 +696,7 @@ export default function App() {
     if (trickNo === 1) return;
     const leadSeat = trick[0].seat;
     const leadSuit = trick[0].card.suit;
+    if (voidPromptOnlyWhenLeading && leadSeat !== "Me") return;
     const shouldPrompt =
       voidPromptScope === "global"
         ? anyVoidObserved
@@ -1845,6 +1855,15 @@ export default function App() {
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        <div className={"flex justify-between " + (!voidTrackingEnabled ? "opacity-50" : "")}>
+          <span className="text-sm">Void prompts only when leading</span>
+          <Switch
+            checked={voidPromptOnlyWhenLeading}
+            onCheckedChange={setVoidPromptOnlyWhenLeading}
+            disabled={!voidTrackingEnabled}
+          />
         </div>
 
         <Separator />
