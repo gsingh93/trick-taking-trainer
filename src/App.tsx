@@ -381,7 +381,7 @@ export default function App() {
     () => initialSettings.checkErrorsEnabled ?? true
   );
   const [voidPromptScope, setVoidPromptScope] = useState<"global" | "per-suit">(
-    () => initialSettings.voidPromptScope ?? "global"
+    () => initialSettings.voidPromptScope ?? "per-suit"
   );
   const [suitOrderMode, setSuitOrderMode] = useState<"bridge" | "poker">(
     () => initialSettings.suitOrderMode ?? "bridge"
