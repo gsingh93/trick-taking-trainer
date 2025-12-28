@@ -11,6 +11,7 @@ export type AiGate = {
   turn: Seat;
   aiPlayMe: boolean;
   leadPromptActive: boolean;
+  suitCountPromptActive: boolean;
   trickLength: number;
   leader: Seat;
 };
@@ -24,6 +25,7 @@ export function shouldRunAi(args: AiGate): boolean {
   if (args.isViewingHistory) return false;
   if (args.turn === "Me" && !args.aiPlayMe) return false;
   if (args.leadPromptActive) return false;
+  if (args.suitCountPromptActive) return false;
   if (args.trickLength === 0 && args.turn !== args.leader) return false;
   return true;
 }

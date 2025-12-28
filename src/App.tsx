@@ -33,7 +33,6 @@ import {
   buildHistorySnapshot,
   computeLegalBySeat,
   computeActualVoid,
-  trickLeadCount,
   isPlayLegal,
   isHandInProgress,
   type GameState,
@@ -98,7 +97,7 @@ type Settings = {
   modeOpenHandVerify: boolean;
   voidTrackingEnabled: boolean;
   darkMode: boolean;
-  leadCountPromptEnabled: boolean;
+  suitCountPromptEnabled: boolean;
   checkErrorsEnabled: boolean;
   voidPromptScope: "global" | "per-suit";
   suitOrderMode: "bridge" | "poker";
@@ -129,7 +128,10 @@ function loadSettings(): Partial<Settings> {
     if (typeof data.modeOpenHandVerify === "boolean") next.modeOpenHandVerify = data.modeOpenHandVerify;
     if (typeof data.voidTrackingEnabled === "boolean") next.voidTrackingEnabled = data.voidTrackingEnabled;
     if (typeof data.darkMode === "boolean") next.darkMode = data.darkMode;
-    if (typeof data.leadCountPromptEnabled === "boolean") next.leadCountPromptEnabled = data.leadCountPromptEnabled;
+    if (typeof data.suitCountPromptEnabled === "boolean") next.suitCountPromptEnabled = data.suitCountPromptEnabled;
+    if (typeof data.leadCountPromptEnabled === "boolean" && typeof next.suitCountPromptEnabled !== "boolean") {
+      next.suitCountPromptEnabled = data.leadCountPromptEnabled;
+    }
     if (typeof data.checkErrorsEnabled === "boolean") next.checkErrorsEnabled = data.checkErrorsEnabled;
     if (data.voidPromptScope === "global" || data.voidPromptScope === "per-suit") {
       next.voidPromptScope = data.voidPromptScope;
@@ -201,6 +203,7 @@ function rankGlyph(n: Rank) {
 function createVoidSelections(): VoidSelections {
   return { Left: false, Across: false, Right: false };
 }
+
 
 function useMediaQuery(query: string) {
   const getMatch = () => (typeof window !== "undefined" ? window.matchMedia(query).matches : false);
@@ -383,8 +386,8 @@ export default function App() {
     () => initialSettings.voidTrackingEnabled ?? true
   );
   const [darkMode, setDarkMode] = useState(() => initialSettings.darkMode ?? false);
-  const [leadCountPromptEnabled, setLeadCountPromptEnabled] = useState(
-    () => initialSettings.leadCountPromptEnabled ?? false
+  const [suitCountPromptEnabled, setSuitCountPromptEnabled] = useState(
+    () => initialSettings.suitCountPromptEnabled ?? false
   );
   const [checkErrorsEnabled, setCheckErrorsEnabled] = useState(
     () => initialSettings.checkErrorsEnabled ?? true
@@ -451,8 +454,10 @@ export default function App() {
   const [leadSelections, setLeadSelections] = useState<VoidSelections>(() => createVoidSelections());
   const [leadMismatch, setLeadMismatch] = useState<VoidSelections>(() => createVoidSelections());
   const [leadWarning, setLeadWarning] = useState<string | null>(null);
-  const [leadCountAnswer, setLeadCountAnswer] = useState("0");
-  const [leadCountMismatch, setLeadCountMismatch] = useState(false);
+  const [suitCountPromptActive, setSuitCountPromptActive] = useState(false);
+  const [suitCountPromptSuit, setSuitCountPromptSuit] = useState<Suit | null>(null);
+  const [suitCountAnswer, setSuitCountAnswer] = useState("0");
+  const [suitCountMismatch, setSuitCountMismatch] = useState(false);
   const [pendingIntentCard, setPendingIntentCard] = useState<CardT | null>(null);
   const [intentWarning, setIntentWarning] = useState<string | null>(null);
 
@@ -543,11 +548,6 @@ export default function App() {
     return OPPONENTS.some((o) => SUITS.some((s) => actualVoid[o][s]));
   }, [actualVoid]);
 
-  const leadSuitCount = useMemo(() => {
-    if (!leadPromptSuit) return 0;
-    return trickLeadCount(trickHistory, leadPromptSuit);
-  }, [leadPromptSuit, trickHistory]);
-
   useEffect(() => {
     const settings: Settings = {
       dealSeed,
@@ -555,23 +555,23 @@ export default function App() {
       modeOpenHandVerify,
       voidTrackingEnabled,
       darkMode,
-      leadCountPromptEnabled,
+      suitCountPromptEnabled,
       checkErrorsEnabled,
-    voidPromptScope,
-    suitOrderMode,
-    sortAscending,
-    aiEnabled,
-    aiMode,
-    aiDelayMs,
-    pauseBeforeNextTrick,
-    aiPlayMe,
-    seatLabelMode,
-    winIntentPromptEnabled,
-    winIntentWarnTrump,
-    winIntentMinRank,
-    voidPromptOnlyWhenLeading,
-    trump,
-  };
+      voidPromptScope,
+      suitOrderMode,
+      sortAscending,
+      aiEnabled,
+      aiMode,
+      aiDelayMs,
+      pauseBeforeNextTrick,
+      aiPlayMe,
+      seatLabelMode,
+      winIntentPromptEnabled,
+      winIntentWarnTrump,
+      winIntentMinRank,
+      voidPromptOnlyWhenLeading,
+      trump,
+    };
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
     } catch {
@@ -583,7 +583,7 @@ export default function App() {
     modeOpenHandVerify,
     voidTrackingEnabled,
     darkMode,
-    leadCountPromptEnabled,
+    suitCountPromptEnabled,
     checkErrorsEnabled,
     voidPromptScope,
     suitOrderMode,
@@ -625,6 +625,7 @@ export default function App() {
 
   const canPlay = canPlayCard({
     leadPromptActive,
+    suitCountPromptActive,
     awaitContinue,
     handComplete,
     isViewingHistory,
@@ -690,8 +691,6 @@ export default function App() {
       setLeadPromptLeader(null);
       setLeadWarning(null);
       setLeadMismatch(createVoidSelections());
-      setLeadCountAnswer("0");
-      setLeadCountMismatch(false);
       return;
     }
     if (trick.length === 0) {
@@ -700,10 +699,17 @@ export default function App() {
       setLeadPromptLeader(null);
       setLeadWarning(null);
       setLeadMismatch(createVoidSelections());
-      setLeadCountAnswer("0");
-      setLeadCountMismatch(false);
     }
   }, [voidTrackingEnabled, trick.length]);
+
+  useEffect(() => {
+    if (!suitCountPromptEnabled) {
+      setSuitCountPromptActive(false);
+      setSuitCountPromptSuit(null);
+      setSuitCountAnswer("0");
+      setSuitCountMismatch(false);
+    }
+  }, [suitCountPromptEnabled]);
 
   useEffect(() => {
     if (!voidTrackingEnabled) return;
@@ -723,8 +729,6 @@ export default function App() {
     setLeadSelections(createVoidSelections());
     setLeadMismatch(createVoidSelections());
     setLeadWarning(null);
-    setLeadCountAnswer("0");
-    setLeadCountMismatch(false);
   }, [voidTrackingEnabled, trick, trickNo, actualVoid, anyVoidObserved, voidPromptScope]);
 
   function cancelResolveTimer() {
@@ -752,8 +756,10 @@ export default function App() {
     setLeadSelections(createVoidSelections());
     setLeadMismatch(createVoidSelections());
     setLeadWarning(null);
-    setLeadCountAnswer("0");
-    setLeadCountMismatch(false);
+    setSuitCountPromptActive(false);
+    setSuitCountPromptSuit(null);
+    setSuitCountAnswer("0");
+    setSuitCountMismatch(false);
     setReveal({ Left: false, Across: false, Right: false, Me: true });
     setIsResolving(false);
     setAwaitContinue(false);
@@ -809,21 +815,55 @@ export default function App() {
       setLeadWarning("Selections do not match void status");
       return;
     }
-    if (leadCountPromptEnabled) {
-      const answer = Number(leadCountAnswer);
-      if (!Number.isFinite(answer) || answer !== leadSuitCount) {
-        setLeadCountMismatch(true);
-        return;
-      }
-      setLeadCountMismatch(false);
-    }
     setLeadPromptActive(false);
     setLeadPromptSuit(null);
     setLeadPromptLeader(null);
     setLeadWarning(null);
     setLeadMismatch(createVoidSelections());
-    setLeadCountAnswer("0");
-    setLeadCountMismatch(false);
+  }
+
+  function trickHasOffSuit(trickPlays: PlayT[]): boolean {
+    const lead = trickLeadSuit(trickPlays);
+    if (!lead) return false;
+    return trickPlays.some((play, idx) => idx > 0 && play.card.suit !== lead);
+  }
+
+  function historyHasOffSuitForSuit(history: PlayT[][], suit: Suit): boolean {
+    return history.some((t) => {
+      const lead = trickLeadSuit(t);
+      if (lead !== suit) return false;
+      return t.some((play, idx) => idx > 0 && play.card.suit !== lead);
+    });
+  }
+
+  function remainingSuitCountNotInHand(suit: Suit, state?: GameState): number {
+    const hand = state ? state.hands.Me : hands.Me;
+    const history = state ? state.trickHistory : trickHistory;
+    const inHand = hand.reduce((acc, card) => acc + (card.suit === suit ? 1 : 0), 0);
+    const played = history.reduce(
+      (acc, t) => acc + t.reduce((inner, play) => inner + (play.card.suit === suit ? 1 : 0), 0),
+      0
+    );
+    return Math.max(0, 13 - inHand - played);
+  }
+
+  function resumeAfterSuitCountPrompt() {
+    if (isViewingHistory) return;
+    if (!suitCountPromptActive || !suitCountPromptSuit) return;
+    const expected = remainingSuitCountNotInHand(suitCountPromptSuit);
+    const answer = Number(suitCountAnswer);
+    if (!Number.isFinite(answer) || answer !== expected) {
+      setSuitCountMismatch(true);
+      return;
+    }
+    setSuitCountPromptActive(false);
+    setSuitCountPromptSuit(null);
+    setSuitCountAnswer("0");
+    setSuitCountMismatch(false);
+    setAwaitContinue(false);
+    if (!handComplete) {
+      setGame((g) => advanceToNextTrick(g));
+    }
   }
 
   function remainingPlayersVoidInSuit(suit: Suit, currentSeat: Seat): boolean {
@@ -957,6 +997,16 @@ export default function App() {
   function resolveTrickAfterDelay() {
     setIsResolving(true);
     cancelResolveTimer();
+    const promptSuit =
+      suitCountPromptEnabled && !isViewingHistory
+        ? (() => {
+            const lead = trickLeadSuit(trick);
+            if (!lead) return null;
+            if (!trickHasOffSuit(trick)) return null;
+            if (historyHasOffSuitForSuit(trickHistory, lead)) return null;
+            return lead;
+          })()
+        : null;
 
     resolveTimerRef.current = window.setTimeout(() => {
       let resolvedState: GameState | null = null;
@@ -967,6 +1017,16 @@ export default function App() {
       });
 
       if (!resolvedState) return;
+      if (promptSuit) {
+        setSuitCountPromptActive(true);
+        setSuitCountPromptSuit(promptSuit);
+        setSuitCountAnswer("0");
+        setSuitCountMismatch(false);
+        setIsResolving(false);
+        setAwaitContinue(false);
+        resolveTimerRef.current = null;
+        return;
+      }
       if (resolvedState.handComplete) {
         setIsResolving(false);
         setAwaitContinue(false);
@@ -1008,6 +1068,7 @@ export default function App() {
 
     // Require void tracking prompt to be resolved before any play.
     if (voidTrackingEnabled && leadPromptActive) return;
+    if (suitCountPromptActive) return;
 
     if (seat !== turn) return;
 
@@ -1061,6 +1122,10 @@ export default function App() {
     setLeadSelections(createVoidSelections());
     setLeadMismatch(createVoidSelections());
     setLeadWarning(null);
+    setSuitCountPromptActive(false);
+    setSuitCountPromptSuit(null);
+    setSuitCountAnswer("0");
+    setSuitCountMismatch(false);
     setPendingIntentCard(null);
     setIntentWarning(null);
     setGame((g) => resetTrick(g, trump));
@@ -1092,8 +1157,10 @@ export default function App() {
     setLeadSelections(createVoidSelections());
     setLeadMismatch(createVoidSelections());
     setLeadWarning(null);
-    setLeadCountAnswer("0");
-    setLeadCountMismatch(false);
+    setSuitCountPromptActive(false);
+    setSuitCountPromptSuit(null);
+    setSuitCountAnswer("0");
+    setSuitCountMismatch(false);
     setPendingIntentCard(null);
     setIntentWarning(null);
     setViewedTrickIndex(null);
@@ -1115,6 +1182,7 @@ export default function App() {
         turn,
         aiPlayMe,
         leadPromptActive: voidTrackingEnabled && leadPromptActive,
+        suitCountPromptActive,
         trickLength: trick.length,
         leader,
       })
@@ -1604,20 +1672,23 @@ export default function App() {
       <CardContent className="flex flex-col gap-4">
         <div className="space-y-2">
           <div className="text-xs text-muted-foreground">
-            After a lead, confirm which opponents are void in the lead suit.
+            After a lead, confirm which opponents are void in the lead suit. After the first off-suit in a
+            suit, estimate how many remain outside your hand.
           </div>
           <div className="text-sm font-medium">
-            {!voidTrackingEnabled
+            {!voidTrackingEnabled && !suitCountPromptActive
               ? "Void tracking is disabled"
               : isViewingHistory
                 ? "Viewing trick history"
-                : leadPromptActive
-                  ? "Which opponents are void in the lead suit?"
-                  : trick.length === 0
-                    ? "Waiting for a card to be led..."
-                    : anyVoidObserved
-                      ? "Trick in progress..."
-                      : "Waiting for first off-suit..."}
+                : suitCountPromptActive
+                  ? "Enter the remaining count for the lead suit"
+                  : leadPromptActive
+                    ? "Which opponents are void in the lead suit?"
+                    : trick.length === 0
+                      ? "Waiting for a card to be led..."
+                      : anyVoidObserved
+                        ? "Trick in progress..."
+                        : "Waiting for first off-suit..."}
           </div>
           {leadPromptSuit ? (
             <div className={"text-sm " + suitColorClass(leadPromptSuit)}>
@@ -1652,40 +1723,53 @@ export default function App() {
           </div>
         </div>
 
-        {leadCountPromptEnabled ? (
+        {suitCountPromptEnabled && suitCountPromptActive ? (
           <div className="space-y-2">
             <div className="text-sm font-medium">
-              How many times has this suit been led before this trick?
+              How many {suitCountPromptSuit ? suitGlyph(suitCountPromptSuit) : "cards"} remain outside your hand?
             </div>
             <Select
-              value={leadCountAnswer}
+              value={suitCountAnswer}
               onValueChange={(v) => {
-                setLeadCountAnswer(v);
-                setLeadCountMismatch(false);
+                setSuitCountAnswer(v);
+                setSuitCountMismatch(false);
               }}
-              disabled={!leadPromptActive || !voidTrackingEnabled}
             >
               <SelectTrigger className="h-8">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Array.from({ length: 13 }, (_, i) => String(i)).map((n) => (
+                {Array.from({ length: 14 }, (_, i) => String(i)).map((n) => (
                   <SelectItem key={n} value={n}>
                     {n}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {leadCountMismatch ? <div className="text-xs text-destructive">Lead count is incorrect</div> : null}
+            {suitCountMismatch ? (
+              <div className="text-xs text-destructive">Suit count is incorrect</div>
+            ) : null}
           </div>
         ) : null}
 
         <div className="space-y-2">
           {leadWarning ? <div className="text-xs text-destructive">{leadWarning}</div> : null}
           <Button
-            onClick={resumeAfterLeadPrompt}
+            onClick={() => {
+              if (leadPromptActive) {
+                resumeAfterLeadPrompt();
+                return;
+              }
+              if (suitCountPromptActive) {
+                resumeAfterSuitCountPrompt();
+              }
+            }}
             disabled={
-              !voidTrackingEnabled || isViewingHistory || !leadPromptActive || isResolving || awaitContinue
+              isViewingHistory ||
+              (!leadPromptActive && !suitCountPromptActive) ||
+              isResolving ||
+              awaitContinue ||
+              (leadPromptActive && !voidTrackingEnabled)
             }
             className="bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-600/50"
           >
@@ -1884,8 +1968,8 @@ export default function App() {
         <Separator />
 
         <div className="flex justify-between">
-          <span className="text-sm">Lead count tracking</span>
-          <Switch checked={leadCountPromptEnabled} onCheckedChange={setLeadCountPromptEnabled} />
+          <span className="text-sm">Suit count prompt</span>
+          <Switch checked={suitCountPromptEnabled} onCheckedChange={setSuitCountPromptEnabled} />
         </div>
 
         <Separator />

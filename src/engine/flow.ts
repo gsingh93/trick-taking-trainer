@@ -1,5 +1,6 @@
 export type PlayGate = {
   leadPromptActive: boolean;
+  suitCountPromptActive: boolean;
   awaitContinue: boolean;
   handComplete: boolean;
   isViewingHistory: boolean;
@@ -10,6 +11,7 @@ export type PlayGate = {
 export function canPlayCard(args: PlayGate): boolean {
   return (
     !args.leadPromptActive &&
+    !args.suitCountPromptActive &&
     !args.awaitContinue &&
     !args.handComplete &&
     !args.isViewingHistory &&

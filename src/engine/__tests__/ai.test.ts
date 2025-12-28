@@ -31,6 +31,7 @@ describe("ai", () => {
       turn: "Left",
       aiPlayMe: false,
       leadPromptActive: false,
+      suitCountPromptActive: false,
       trickLength: 0,
       leader: "Left",
     });
@@ -49,6 +50,7 @@ describe("ai", () => {
       turn: "Left",
       aiPlayMe: false,
       leadPromptActive: false,
+      suitCountPromptActive: false,
       trickLength: 0,
       leader: "Left",
     });
@@ -67,6 +69,7 @@ describe("ai", () => {
       turn: "Me",
       aiPlayMe: false,
       leadPromptActive: false,
+      suitCountPromptActive: false,
       trickLength: 1,
       leader: "Me",
     });
@@ -77,6 +80,7 @@ describe("ai", () => {
     expect(
       canPlayCard({
         leadPromptActive: false,
+        suitCountPromptActive: false,
         awaitContinue: true,
         handComplete: false,
         isViewingHistory: false,
@@ -87,6 +91,7 @@ describe("ai", () => {
     expect(
       canPlayCard({
         leadPromptActive: false,
+        suitCountPromptActive: false,
         awaitContinue: false,
         handComplete: false,
         isViewingHistory: false,
