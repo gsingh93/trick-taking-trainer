@@ -399,15 +399,15 @@ export default function App() {
 
   const [aiEnabled, setAiEnabled] = useState(() => initialSettings.aiEnabled ?? true);
   const [aiMode, setAiMode] = useState<"random" | "bidding">(
-    () => initialSettings.aiMode ?? "random"
+    () => initialSettings.aiMode ?? "bidding"
   );
-  const [aiDelayMs, setAiDelayMs] = useState(() => initialSettings.aiDelayMs ?? 1000);
+  const [aiDelayMs, setAiDelayMs] = useState(() => initialSettings.aiDelayMs ?? 500);
   const [pauseBeforeNextTrick, setPauseBeforeNextTrick] = useState(
     () => initialSettings.pauseBeforeNextTrick ?? true
   );
   const [aiPlayMe, setAiPlayMe] = useState(() => initialSettings.aiPlayMe ?? false);
   const [aiModeLocked, setAiModeLocked] = useState<"random" | "bidding">(
-    () => initialSettings.aiMode ?? "random"
+    () => initialSettings.aiMode ?? "bidding"
   );
   const [bidState, setBidState] = useState<BidState | null>(null);
   const [bidInput, setBidInput] = useState("0");
@@ -424,7 +424,7 @@ export default function App() {
     () => initialSettings.voidPromptOnlyWhenLeading ?? true
   );
   const [seatLabelMode, setSeatLabelMode] = useState<"relative" | "compass">(
-    () => initialSettings.seatLabelMode ?? "relative"
+    () => initialSettings.seatLabelMode ?? "compass"
   );
   const [awaitContinue, setAwaitContinue] = useState(false);
 
@@ -1873,6 +1873,8 @@ export default function App() {
           <Switch checked={leadCountPromptEnabled} onCheckedChange={setLeadCountPromptEnabled} />
         </div>
 
+        <Separator />
+
         <div className="flex justify-between">
           <span className="text-sm">Win intent prompt</span>
           <Switch checked={winIntentPromptEnabled} onCheckedChange={setWinIntentPromptEnabled} />
@@ -1932,7 +1934,7 @@ export default function App() {
         <CardTitle>Gameplay &amp; UI Settings</CardTitle>
 
         <div className="flex justify-between">
-          <span className="text-sm">Basic AI (opponents)</span>
+          <span className="text-sm">AI Opponents</span>
           <Switch checked={aiEnabled} onCheckedChange={setAiEnabled} />
         </div>
 
@@ -2061,11 +2063,11 @@ export default function App() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="relative">Left / Across / Right / Me</SelectItem>
-              <SelectItem value="compass">West / North / East / South</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+          <SelectItem value="relative">Left / Across / Right / Me</SelectItem>
+          <SelectItem value="compass">North / South / East / West</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
       </CardContent>
     </Card>
   );
