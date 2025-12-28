@@ -111,6 +111,7 @@ type Settings = {
   seatLabelMode: "relative" | "compass";
   winIntentPromptEnabled: boolean;
   winIntentWarnTrump: boolean;
+  winIntentMinRank: Rank;
   trump: TrumpConfig;
 };
 
@@ -153,6 +154,10 @@ function loadSettings(): Partial<Settings> {
     }
     if (typeof data.winIntentWarnTrump === "boolean") {
       next.winIntentWarnTrump = data.winIntentWarnTrump;
+    }
+    if (typeof data.winIntentMinRank === "number") {
+      const value = Math.floor(data.winIntentMinRank) as Rank;
+      if (value >= 2 && value <= 14) next.winIntentMinRank = value;
     }
     if (typeof data.trump === "object" && data.trump) {
       const t = data.trump as Record<string, unknown>;
@@ -408,6 +413,9 @@ export default function App() {
   const [winIntentWarnTrump, setWinIntentWarnTrump] = useState(
     () => initialSettings.winIntentWarnTrump ?? true
   );
+  const [winIntentMinRank, setWinIntentMinRank] = useState<Rank>(
+    () => initialSettings.winIntentMinRank ?? 10
+  );
   const [seatLabelMode, setSeatLabelMode] = useState<"relative" | "compass">(
     () => initialSettings.seatLabelMode ?? "relative"
   );
@@ -544,6 +552,7 @@ export default function App() {
     seatLabelMode,
     winIntentPromptEnabled,
     winIntentWarnTrump,
+    winIntentMinRank,
     trump,
   };
     try {
@@ -570,6 +579,7 @@ export default function App() {
     seatLabelMode,
     winIntentPromptEnabled,
     winIntentWarnTrump,
+    winIntentMinRank,
     trump,
   ]);
 
@@ -847,7 +857,7 @@ export default function App() {
     if (aiPlayMe) return false;
     if (trick.length >= 3) return false;
     if (trickNo === 1) return false;
-    if (card.rank < 10) return false;
+    if (card.rank < winIntentMinRank) return false;
     const leadSuit = trickLeadSuit(trick) ?? card.suit;
     if (card.rank === 14 && !anyRemainingVoidInSuit(leadSuit, seat)) return false;
     if (currentTrickHasAllHigherHonors(card, leadSuit)) return false;
@@ -1847,6 +1857,40 @@ export default function App() {
         <div className="flex justify-between">
           <span className="text-sm">Win intent prompt</span>
           <Switch checked={winIntentPromptEnabled} onCheckedChange={setWinIntentPromptEnabled} />
+        </div>
+
+        <div className={"grid grid-cols-[minmax(0,1fr)_auto] gap-2 " + (!winIntentPromptEnabled ? "opacity-50" : "")}>
+          <span className="text-sm">Win intent minimum rank</span>
+          <Select
+            value={String(winIntentMinRank)}
+            onValueChange={(v) => setWinIntentMinRank(Number(v) as Rank)}
+            disabled={!winIntentPromptEnabled}
+          >
+            <SelectTrigger className="h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[
+                { label: "2", value: 2 },
+                { label: "3", value: 3 },
+                { label: "4", value: 4 },
+                { label: "5", value: 5 },
+                { label: "6", value: 6 },
+                { label: "7", value: 7 },
+                { label: "8", value: 8 },
+                { label: "9", value: 9 },
+                { label: "10", value: 10 },
+                { label: "J", value: 11 },
+                { label: "Q", value: 12 },
+                { label: "K", value: 13 },
+                { label: "A", value: 14 },
+              ].map((opt) => (
+                <SelectItem key={opt.value} value={String(opt.value)}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className={"flex justify-between " + (!winIntentPromptEnabled ? "opacity-50" : "")}>
