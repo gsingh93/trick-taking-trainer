@@ -14,6 +14,8 @@ import {
 import { chooseCardToPlay } from "@/engine/ai/random";
 import { shouldRunAi } from "@/engine/ai/logic";
 import { canAdvanceTrick, canPlayCard } from "@/engine/flow";
+import { chooseCardToPlayForBid } from "@/engine/ai/bidFocus";
+import { estimateBid } from "@/engine/ai/bidHeuristic";
 import {
   sortHand,
   trickLeadSuit,
@@ -913,7 +915,19 @@ export default function App() {
     const legal = legalBySeat[turn];
     if (!legal || legal.size === 0) return;
 
-    const decision = chooseCardToPlay(hands[turn], legal);
+    const decision =
+      activeAiMode === "bidding"
+        ? chooseCardToPlayForBid({
+            seat: turn,
+            hand: hands[turn],
+            legalIds: legal,
+            trick,
+            leader,
+            trump,
+            tricksWon,
+            bid: bidState?.bids[turn] ?? null,
+          })
+        : chooseCardToPlay(hands[turn], legal);
     if (!decision) return;
     const card = hands[turn].find((c) => c.id === decision.cardId);
     if (!card) return;
@@ -949,12 +963,12 @@ export default function App() {
     if (!seat || seat === "Me") return;
 
     const timer = window.setTimeout(() => {
-      const bid = Math.floor(Math.random() * 14);
+      const bid = estimateBid(hands[seat], trump);
       submitBidForSeat(seat, bid);
     }, aiDelayMs);
 
     return () => clearTimeout(timer);
-  }, [biddingActive, bidState, aiDelayMs]);
+  }, [biddingActive, bidState, aiDelayMs, hands, trump]);
 
   // If paused after a completed trick, advance on any key.
   useEffect(() => {

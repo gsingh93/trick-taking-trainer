@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { chooseCardToPlay } from "../ai/random";
 import { shouldRunAi } from "../ai/logic";
 import { canAdvanceTrick, canPlayCard } from "../flow";
+import { chooseCardToPlayForBid } from "../ai/bidFocus";
+import { estimateBid } from "../ai/bidHeuristic";
 
 describe("ai", () => {
   it("returns null when no legal cards exist", () => {
@@ -109,5 +111,66 @@ describe("ai", () => {
         isViewingHistory: false,
       })
     ).toBe(false);
+  });
+
+  it("chooses trump when it needs tricks and is leading", () => {
+    const decision = chooseCardToPlayForBid(
+      {
+        seat: "Left",
+        hand: [
+          { suit: "S", rank: 2, id: "S2" },
+          { suit: "H", rank: 14, id: "H14" },
+        ],
+        legalIds: new Set(["S2", "H14"]),
+        trick: [],
+        leader: "Left",
+        trump: { enabled: true, suit: "S", mustBreak: true },
+        tricksWon: { Left: 0, Across: 0, Right: 0, Me: 0 },
+        bid: 2,
+      },
+      () => 0
+    );
+    expect(decision?.cardId).toBe("S2");
+  });
+
+  it("avoids trump when it has already met the bid", () => {
+    const decision = chooseCardToPlayForBid(
+      {
+        seat: "Left",
+        hand: [
+          { suit: "S", rank: 2, id: "S2" },
+          { suit: "H", rank: 3, id: "H3" },
+        ],
+        legalIds: new Set(["S2", "H3"]),
+        trick: [],
+        leader: "Left",
+        trump: { enabled: true, suit: "S", mustBreak: true },
+        tricksWon: { Left: 1, Across: 0, Right: 0, Me: 0 },
+        bid: 1,
+      },
+      () => 0
+    );
+    expect(decision?.cardId).toBe("H3");
+  });
+
+  it("estimates higher bids for stronger hands", () => {
+    const strong = [
+      { suit: "S", rank: 14, id: "S14" },
+      { suit: "H", rank: 13, id: "H13" },
+      { suit: "D", rank: 12, id: "D12" },
+      { suit: "C", rank: 11, id: "C11" },
+      { suit: "S", rank: 10, id: "S10" },
+      { suit: "S", rank: 9, id: "S9" },
+    ];
+    const weak = [
+      { suit: "S", rank: 2, id: "S2" },
+      { suit: "H", rank: 3, id: "H3" },
+      { suit: "D", rank: 4, id: "D4" },
+      { suit: "C", rank: 5, id: "C5" },
+      { suit: "S", rank: 6, id: "S6" },
+      { suit: "H", rank: 7, id: "H7" },
+    ];
+    const trump = { enabled: true, suit: "S", mustBreak: true };
+    expect(estimateBid(strong, trump)).toBeGreaterThanOrEqual(estimateBid(weak, trump));
   });
 });
