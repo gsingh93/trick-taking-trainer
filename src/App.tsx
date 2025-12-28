@@ -19,6 +19,7 @@ import { estimateBid } from "@/engine/ai/bidHeuristic";
 import { canBeBeatenByHonor, remainingHonorsInSuit } from "@/engine/training";
 import {
   sortHand,
+  compareCardsInTrick,
   trickLeadSuit,
   determineTrickWinner,
 } from "@/engine/rules";
@@ -801,13 +802,57 @@ export default function App() {
     return true;
   }
 
+  function anyRemainingVoidInSuit(suit: Suit, currentSeat: Seat): boolean {
+    const playedSeats = new Set(trick.map((t) => t.seat));
+    const remaining = SEATS.filter((s) => s !== currentSeat && !playedSeats.has(s));
+    for (const seat of remaining) {
+      if (seat === "Me") continue;
+      if (actualVoid[seat][suit]) return true;
+    }
+    return false;
+  }
+
+  function currentTrickHasAllHigherHonors(card: CardT, suit: Suit): boolean {
+    if (card.rank >= 14) return false;
+    const ranksInTrick = new Set(
+      trick.filter((t) => t.card.suit === suit).map((t) => t.card.rank)
+    );
+    const higherHonors = [11, 12, 13, 14].filter((r) => r > card.rank);
+    return higherHonors.every((r) => ranksInTrick.has(r));
+  }
+
+  function higherHonorsAllInHand(card: CardT, suit: Suit): boolean {
+    if (card.rank >= 14) return false;
+    const remaining = honorRemainingBySuit[suit].filter((r) => r > card.rank);
+    if (!remaining.length) return false;
+    const handRanks = new Set(hands.Me.filter((c) => c.suit === suit).map((c) => c.rank));
+    return remaining.every((r) => handRanks.has(r));
+  }
+
+  function alreadyLosingTrick(card: CardT, suit: Suit): boolean {
+    if (!trick.length) return false;
+    let currentBest = trick[0].card;
+    for (let i = 1; i < trick.length; i++) {
+      const challenger = trick[i].card;
+      if (compareCardsInTrick(challenger, currentBest, suit, trump) === 1) {
+        currentBest = challenger;
+      }
+    }
+    return compareCardsInTrick(card, currentBest, suit, trump) === -1;
+  }
+
   function shouldPromptWinIntent(card: CardT, seat: Seat): boolean {
     if (!winIntentPromptEnabled) return false;
     if (seat !== "Me") return false;
     if (aiPlayMe) return false;
     if (trick.length >= 3) return false;
+    if (trickNo === 1) return false;
     if (card.rank < 10) return false;
     const leadSuit = trickLeadSuit(trick) ?? card.suit;
+    if (card.rank === 14 && !anyRemainingVoidInSuit(leadSuit, seat)) return false;
+    if (currentTrickHasAllHigherHonors(card, leadSuit)) return false;
+    if (higherHonorsAllInHand(card, leadSuit)) return false;
+    if (alreadyLosingTrick(card, leadSuit)) return false;
     if (remainingPlayersVoidInSuit(leadSuit, seat)) return false;
     return true;
   }
