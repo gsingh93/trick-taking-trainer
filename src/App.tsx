@@ -499,6 +499,19 @@ export default function App() {
     if (!bidState || !biddingComplete) return null;
     return evaluateExactBids(bidState.bids, tricksWon);
   }, [bidState, biddingComplete, tricksWon]);
+  const bidResultDisplay = useMemo(() => {
+    if (!handComplete || !biddingActive || !bidResults) return null;
+    return SEATS.reduce(
+      (acc, seat) => {
+        const result = bidResults[seat];
+        const label = result.bid == null ? "No bid" : result.made ? "Made" : "Missed";
+        const className = result.made ? "text-emerald-700 dark:text-emerald-300" : "text-destructive";
+        acc[seat] = { label, className };
+        return acc;
+      },
+      {} as Record<Seat, { label: string; className: string }>
+    );
+  }, [handComplete, biddingActive, bidResults]);
 
   const honorRemainingBySuit = useMemo(() => {
     const out: Record<Suit, Rank[]> = { S: [], H: [], D: [], C: [] };
@@ -1296,27 +1309,6 @@ export default function App() {
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-1 pb-3 px-3 sm:pt-3 sm:pb-6 sm:px-6">
-        {handComplete && biddingActive && bidResults ? (
-          <div className="mb-3 rounded-lg border bg-card/70 px-3 py-2 text-xs">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Bid Results
-            </div>
-            <div className="mt-2 space-y-1">
-              {SEATS.map((seat) => {
-                const result = bidResults[seat];
-                const statusClass = result.made ? "text-emerald-700" : "text-destructive";
-                return (
-                  <div key={seat} className="flex items-center justify-between">
-                    <span>{seatLabels[seat]}</span>
-                    <span className={statusClass}>
-                      {result.bid == null ? "No bid" : result.made ? "Made" : "Missed"}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ) : null}
         <div className="grid grid-cols-[minmax(0,0.25fr)_minmax(0,0.5fr)_minmax(0,0.25fr)] grid-rows-[auto_1fr_auto] gap-x-0.5 gap-y-2 sm:grid-cols-[minmax(0,0.25fr)_minmax(0,0.5fr)_minmax(0,0.25fr)] sm:gap-3">
           {/* Across spans full width */}
           <div className="col-span-3 rounded-xl border p-2 sm:p-3">
@@ -1335,6 +1327,11 @@ export default function App() {
                     ({displayTricksWon.Across}
                     {bidDisplay ? `/${bidDisplay.Across}` : ""})
                   </span>
+                  {bidResultDisplay ? (
+                    <span className={"ml-2 text-xs font-medium " + bidResultDisplay.Across.className}>
+                      {bidResultDisplay.Across.label}
+                    </span>
+                  ) : null}
                 </span>
               </div>
               <Badge variant="outline">{displayHands.Across.length}</Badge>
@@ -1387,6 +1384,11 @@ export default function App() {
                     ({displayTricksWon.Left}
                     {bidDisplay ? `/${bidDisplay.Left}` : ""})
                   </span>
+                  {bidResultDisplay ? (
+                    <span className={"ml-2 text-xs font-medium " + bidResultDisplay.Left.className}>
+                      {bidResultDisplay.Left.label}
+                    </span>
+                  ) : null}
                 </span>
               </div>
               <Badge variant="outline">{displayHands.Left.length}</Badge>
@@ -1635,6 +1637,11 @@ export default function App() {
                     ({displayTricksWon.Right}
                     {bidDisplay ? `/${bidDisplay.Right}` : ""})
                   </span>
+                  {bidResultDisplay ? (
+                    <span className={"ml-2 text-xs font-medium " + bidResultDisplay.Right.className}>
+                      {bidResultDisplay.Right.label}
+                    </span>
+                  ) : null}
                 </span>
               </div>
               <Badge variant="outline">{displayHands.Right.length}</Badge>
@@ -1685,6 +1692,11 @@ export default function App() {
                     ({displayTricksWon.Me}
                     {bidDisplay ? `/${bidDisplay.Me}` : ""})
                   </span>
+                  {bidResultDisplay ? (
+                    <span className={"ml-2 text-xs font-medium " + bidResultDisplay.Me.className}>
+                      {bidResultDisplay.Me.label}
+                    </span>
+                  ) : null}
                 </span>
               </div>
               <Badge variant="outline">{displayHands.Me.length}</Badge>
