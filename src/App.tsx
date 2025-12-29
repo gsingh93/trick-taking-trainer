@@ -405,6 +405,9 @@ export default function App() {
     () => initialSettings.aiMode ?? "bidding"
   );
   const [aiDelayMs, setAiDelayMs] = useState(() => initialSettings.aiDelayMs ?? 500);
+  const [aiDelayInput, setAiDelayInput] = useState(() =>
+    String(initialSettings.aiDelayMs ?? 500)
+  );
   const [pauseBeforeNextTrick, setPauseBeforeNextTrick] = useState(
     () => initialSettings.pauseBeforeNextTrick ?? true
   );
@@ -469,14 +472,11 @@ export default function App() {
   });
 
   const resolveTimerRef = useRef<number | null>(null);
-  const aiDelayInputRef = useRef<HTMLInputElement | null>(null);
   const commitAiDelayInput = (rawValue: string) => {
     const parsed = Number(rawValue);
     const normalized = Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : 0;
-    if (aiDelayInputRef.current) {
-      aiDelayInputRef.current.value = String(normalized);
-    }
     setAiDelayMs(normalized);
+    setAiDelayInput(String(normalized));
   };
   const [isResolving, setIsResolving] = useState(false);
 
@@ -651,9 +651,7 @@ export default function App() {
   }, [darkMode]);
 
   useEffect(() => {
-    if (aiDelayInputRef.current) {
-      aiDelayInputRef.current.value = String(aiDelayMs);
-    }
+    setAiDelayInput(String(aiDelayMs));
   }, [aiDelayMs]);
 
   useEffect(() => {
@@ -2078,17 +2076,23 @@ export default function App() {
             type="number"
             min={0}
             step={250}
-            defaultValue={aiDelayMs}
-            ref={aiDelayInputRef}
+            value={aiDelayInput}
             disabled={!aiEnabled}
+            onChange={(e) => {
+              const raw = e.target.value;
+              setAiDelayInput(raw);
+              if (raw.trim() === "") return;
+              const n = Number(raw);
+              if (Number.isFinite(n) && n >= 0) {
+                setAiDelayMs(Math.floor(n));
+              }
+            }}
             onBlur={() => {
-              const raw = aiDelayInputRef.current?.value ?? "0";
-              commitAiDelayInput(raw);
+              commitAiDelayInput(aiDelayInput);
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                const raw = aiDelayInputRef.current?.value ?? "0";
-                commitAiDelayInput(raw);
+                commitAiDelayInput(aiDelayInput);
               }
             }}
             className="h-8 w-20 rounded-md border bg-background px-2 text-sm"
