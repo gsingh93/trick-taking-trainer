@@ -102,6 +102,7 @@ type Settings = {
   voidPromptScope: "global" | "per-suit";
   suitOrderMode: "bridge" | "poker";
   sortAscending: boolean;
+  suitStyleMode: "classic" | "distinct";
   aiEnabled: boolean;
   aiMode: "random" | "bidding";
   aiDelayMs: number;
@@ -138,6 +139,9 @@ function loadSettings(): Partial<Settings> {
     }
     if (data.suitOrderMode === "bridge" || data.suitOrderMode === "poker") {
       next.suitOrderMode = data.suitOrderMode;
+    }
+    if (data.suitStyleMode === "classic" || data.suitStyleMode === "distinct") {
+      next.suitStyleMode = data.suitStyleMode;
     }
     if (typeof data.sortAscending === "boolean") next.sortAscending = data.sortAscending;
     if (typeof data.aiEnabled === "boolean") next.aiEnabled = data.aiEnabled;
@@ -186,7 +190,13 @@ function suitGlyph(s: Suit) {
   return s === "S" ? "♠" : s === "H" ? "♥" : s === "D" ? "♦" : "♣";
 }
 
-function suitColorClass(s: Suit) {
+function suitColorClass(s: Suit, mode: "classic" | "distinct") {
+  if (mode === "distinct") {
+    if (s === "S") return "text-slate-900 dark:text-slate-100";
+    if (s === "C") return "text-emerald-700 dark:text-emerald-300";
+    if (s === "H") return "text-red-600 dark:text-red-400";
+    return "text-blue-600 dark:text-blue-400";
+  }
   return s === "H" || s === "D" ? "text-red-600" : "text-foreground";
 }
 
@@ -240,6 +250,7 @@ function PlayingCard({
   selected,
   highlight,
   title,
+  suitStyleMode,
 }: {
   c: CardT;
   rotateClass?: string;
@@ -248,6 +259,7 @@ function PlayingCard({
   selected?: boolean;
   highlight?: boolean;
   title?: string;
+  suitStyleMode: "classic" | "distinct";
 }) {
   const base =
     "flex h-14 w-10 items-center justify-center rounded-xl border bg-card text-sm shadow-sm";
@@ -265,7 +277,7 @@ function PlayingCard({
       onClick={disabled ? undefined : onClick}
       className={base + inter + sel + win + (rotateClass ? " " + rotateClass : "")}
     >
-      <span className={`font-semibold ${suitColorClass(c.suit)}`}>
+      <span className={`font-semibold ${suitColorClass(c.suit, suitStyleMode)}`}>
         {rankGlyph(c.rank)}
         {suitGlyph(c.suit)}
       </span>
@@ -283,6 +295,7 @@ function HandRow({
   suitOrder,
   sortAscending,
   canPlay,
+  suitStyleMode,
 }: {
   seat: Seat;
   hand: CardT[];
@@ -293,6 +306,7 @@ function HandRow({
   suitOrder: Suit[];
   sortAscending: boolean;
   canPlay: boolean;
+  suitStyleMode: "classic" | "distinct";
 }) {
   const isTurn = seat === currentTurn;
   return (
@@ -302,6 +316,7 @@ function HandRow({
           <PlayingCard
             key={c.id}
             c={c}
+            suitStyleMode={suitStyleMode}
             disabled={!canPlay || !isTurn || !legal.has(c.id)}
             onClick={() => onPlay(seat, c)}
             title={
@@ -331,6 +346,7 @@ function HandCol({
   suitOrder,
   sortAscending,
   canPlay,
+  suitStyleMode,
 }: {
   seat: Seat;
   hand: CardT[];
@@ -342,6 +358,7 @@ function HandCol({
   suitOrder: Suit[];
   sortAscending: boolean;
   canPlay: boolean;
+  suitStyleMode: "classic" | "distinct";
 }) {
   const isTurn = seat === currentTurn;
   const gridAlign = align === "end" ? "justify-items-end" : "justify-items-start";
@@ -354,6 +371,7 @@ function HandCol({
               <PlayingCard
                 c={c}
                 rotateClass={cardRotateClass}
+                suitStyleMode={suitStyleMode}
                 disabled={!canPlay || !isTurn || !legal.has(c.id)}
                 onClick={() => onPlay(seat, c)}
                 title={
@@ -399,7 +417,9 @@ export default function App() {
     () => initialSettings.suitOrderMode ?? "poker"
   );
   const [sortAscending, setSortAscending] = useState(() => initialSettings.sortAscending ?? true);
-
+  const [suitStyleMode, setSuitStyleMode] = useState<"classic" | "distinct">(
+    () => initialSettings.suitStyleMode ?? "classic"
+  );
   const [aiEnabled, setAiEnabled] = useState(() => initialSettings.aiEnabled ?? true);
   const [aiMode, setAiMode] = useState<"random" | "bidding">(
     () => initialSettings.aiMode ?? "bidding"
@@ -572,6 +592,7 @@ export default function App() {
       checkErrorsEnabled,
       voidPromptScope,
       suitOrderMode,
+      suitStyleMode,
       sortAscending,
       aiEnabled,
       aiMode,
@@ -600,6 +621,7 @@ export default function App() {
     checkErrorsEnabled,
     voidPromptScope,
     suitOrderMode,
+    suitStyleMode,
     sortAscending,
     aiEnabled,
     aiMode,
@@ -1360,6 +1382,7 @@ export default function App() {
                 suitOrder={suitOrder}
                 sortAscending={sortAscending}
                 canPlay={canPlay}
+                suitStyleMode={suitStyleMode}
               />
             ) : null}
           </div>
@@ -1422,6 +1445,7 @@ export default function App() {
                 suitOrder={suitOrder}
                 sortAscending={sortAscending}
                 canPlay={canPlay}
+                suitStyleMode={suitStyleMode}
               />
             ) : null}
           </div>
@@ -1451,7 +1475,7 @@ export default function App() {
                 {(() => {
                   const p = displayTrick.find((t) => t.seat === "Across");
                   return p ? (
-                    <PlayingCard c={p.card} highlight={displayTrickWinner === "Across"} />
+                    <PlayingCard c={p.card} highlight={displayTrickWinner === "Across"} suitStyleMode={suitStyleMode} />
                   ) : (
                     <div className="h-14 w-10 opacity-20" />
                   );
@@ -1467,6 +1491,7 @@ export default function App() {
                       c={p.card}
                       rotateClass="rotate-90"
                       highlight={displayTrickWinner === "Left"}
+                      suitStyleMode={suitStyleMode}
                     />
                   ) : (
                     <div className="h-10 w-14 opacity-20" />
@@ -1483,6 +1508,7 @@ export default function App() {
                       c={p.card}
                       rotateClass="-rotate-90"
                       highlight={displayTrickWinner === "Right"}
+                      suitStyleMode={suitStyleMode}
                     />
                   ) : (
                     <div className="h-10 w-14 opacity-20" />
@@ -1495,7 +1521,7 @@ export default function App() {
                 {(() => {
                   const p = displayTrick.find((t) => t.seat === "Me");
                   return p ? (
-                    <PlayingCard c={p.card} highlight={displayTrickWinner === "Me"} />
+                    <PlayingCard c={p.card} highlight={displayTrickWinner === "Me"} suitStyleMode={suitStyleMode} />
                   ) : (
                     <div className="h-14 w-10 opacity-20" />
                   );
@@ -1545,7 +1571,7 @@ export default function App() {
                 <div className="w-[220px] space-y-3 rounded-lg border bg-card px-3 py-3 text-sm shadow-lg">
                   <div className="text-sm font-medium">
                     How many{" "}
-                    <span className={suitCountPromptSuit ? suitColorClass(suitCountPromptSuit) : undefined}>
+                    <span className={suitCountPromptSuit ? suitColorClass(suitCountPromptSuit, suitStyleMode) : undefined}>
                       {suitCountPromptSuit ? suitGlyph(suitCountPromptSuit) : "cards"}
                     </span>{" "}
                     remain outside your hand?
@@ -1678,6 +1704,7 @@ export default function App() {
                 suitOrder={suitOrder}
                 sortAscending={sortAscending}
                 canPlay={canPlay}
+                suitStyleMode={suitStyleMode}
               />
             ) : null}
           </div>
@@ -1720,6 +1747,7 @@ export default function App() {
               suitOrder={suitOrder}
               sortAscending={sortAscending}
               canPlay={canPlay}
+              suitStyleMode={suitStyleMode}
             />
           </div>
         </div>
@@ -1751,7 +1779,7 @@ export default function App() {
                       : "Waiting for first off-suit..."}
           </div>
           {leadPromptSuit ? (
-            <div className={"text-sm " + suitColorClass(leadPromptSuit)}>
+            <div className={"text-sm " + suitColorClass(leadPromptSuit, suitStyleMode)}>
               Lead suit: {suitGlyph(leadPromptSuit)}
             </div>
           ) : null}
@@ -1836,7 +1864,7 @@ export default function App() {
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium">Trick {idx + 1}</span>
-                    {leadSuit ? <span className={suitColorClass(leadSuit)}>{suitGlyph(leadSuit)}</span> : null}
+                    {leadSuit ? <span className={suitColorClass(leadSuit, suitStyleMode)}>{suitGlyph(leadSuit)}</span> : null}
                   </div>
                   <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
                     <span>Lead: {leadSeat}</span>
@@ -2132,7 +2160,7 @@ export default function App() {
             <SelectContent>
               {SUITS.map((s) => (
                 <SelectItem key={s} value={s}>
-                  <span className={suitColorClass(s)}>{suitGlyph(s)}</span>
+                  <span className={suitColorClass(s, suitStyleMode)}>{suitGlyph(s)}</span>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -2165,7 +2193,7 @@ export default function App() {
                 Bridge (
                 <span className="inline-flex gap-1">
                   {["S", "H", "D", "C"].map((s) => (
-                    <span key={s} className={suitColorClass(s as Suit)}>
+                    <span key={s} className={suitColorClass(s as Suit, suitStyleMode)}>
                       {suitGlyph(s as Suit)}
                     </span>
                   ))}
@@ -2176,7 +2204,45 @@ export default function App() {
                 Poker (
                 <span className="inline-flex gap-1">
                   {["C", "D", "H", "S"].map((s) => (
-                    <span key={s} className={suitColorClass(s as Suit)}>
+                    <span key={s} className={suitColorClass(s as Suit, suitStyleMode)}>
+                      {suitGlyph(s as Suit)}
+                    </span>
+                  ))}
+                </span>
+                )
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+          <span className="text-sm">Suit colors</span>
+          <Select value={suitStyleMode} onValueChange={(v) => setSuitStyleMode(v as "classic" | "distinct")}>
+            <SelectTrigger className="h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="classic">
+                Classic (
+                <span className="inline-flex gap-1">
+                  {["S", "C"].map((s) => (
+                    <span key={s} className={suitColorClass(s as Suit, "classic")}>
+                      {suitGlyph(s as Suit)}
+                    </span>
+                  ))}
+                  {["H", "D"].map((s) => (
+                    <span key={s} className={suitColorClass(s as Suit, "classic")}>
+                      {suitGlyph(s as Suit)}
+                    </span>
+                  ))}
+                </span>
+                )
+              </SelectItem>
+              <SelectItem value="distinct">
+                Distinct (
+                <span className="inline-flex gap-1">
+                  {["S", "C", "H", "D"].map((s) => (
+                    <span key={s} className={suitColorClass(s as Suit, "distinct")}>
                       {suitGlyph(s as Suit)}
                     </span>
                   ))}
