@@ -855,6 +855,16 @@ export default function App() {
     setLeadMismatch(createVoidSelections());
   }
 
+  function skipLeadPrompt() {
+    if (isViewingHistory) return;
+    if (!leadPromptActive) return;
+    setLeadPromptActive(false);
+    setLeadPromptSuit(null);
+    setLeadPromptLeader(null);
+    setLeadWarning(null);
+    setLeadMismatch(createVoidSelections());
+  }
+
   function trickHasOffSuit(trickPlays: PlayT[]): boolean {
     const lead = trickLeadSuit(trickPlays);
     if (!lead) return false;
@@ -889,6 +899,19 @@ export default function App() {
       setSuitCountMismatch(true);
       return;
     }
+    setSuitCountPromptActive(false);
+    setSuitCountPromptSuit(null);
+    setSuitCountAnswer("0");
+    setSuitCountMismatch(false);
+    setAwaitContinue(false);
+    if (!handComplete) {
+      setGame((g) => advanceToNextTrick(g));
+    }
+  }
+
+  function skipSuitCountPrompt() {
+    if (isViewingHistory) return;
+    if (!suitCountPromptActive) return;
     setSuitCountPromptActive(false);
     setSuitCountPromptSuit(null);
     setSuitCountAnswer("0");
@@ -1597,12 +1620,17 @@ export default function App() {
                   {suitCountMismatch ? (
                     <div className="text-xs text-destructive">Suit count is incorrect</div>
                   ) : null}
-                  <Button
-                    className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
-                    onClick={resumeAfterSuitCountPrompt}
-                  >
-                    Resume
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
+                      onClick={resumeAfterSuitCountPrompt}
+                    >
+                      Resume
+                    </Button>
+                    <Button variant="outline" className="flex-1" onClick={skipSuitCountPrompt}>
+                      Skip
+                    </Button>
+                  </div>
                 </div>
               </div>
             ) : null}
@@ -1813,19 +1841,29 @@ export default function App() {
 
         <div className="space-y-2">
           {leadWarning ? <div className="text-xs text-destructive">{leadWarning}</div> : null}
-          <Button
-            onClick={resumeAfterLeadPrompt}
-            disabled={
-              isViewingHistory ||
-              !leadPromptActive ||
-              isResolving ||
-              awaitContinue ||
-              (leadPromptActive && !voidTrackingEnabled)
-            }
-            className="bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-600/50"
-          >
-            Resume
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={resumeAfterLeadPrompt}
+              disabled={
+                isViewingHistory ||
+                !leadPromptActive ||
+                isResolving ||
+                awaitContinue ||
+                (leadPromptActive && !voidTrackingEnabled)
+              }
+              className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-600/50"
+            >
+              Resume
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={skipLeadPrompt}
+              disabled={isViewingHistory || !leadPromptActive || isResolving || awaitContinue}
+            >
+              Skip
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
