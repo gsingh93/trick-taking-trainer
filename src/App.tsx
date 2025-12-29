@@ -16,7 +16,7 @@ import { shouldRunAi } from "@/engine/ai/logic";
 import { canAdvanceTrick, canPlayCard } from "@/engine/flow";
 import { chooseCardToPlayForBid } from "@/engine/ai/bidFocus";
 import { estimateBid } from "@/engine/ai/bidHeuristic";
-import { canBeBeatenByHonor, remainingHonorsInSuit } from "@/engine/training";
+import { remainingHonorsInSuit } from "@/engine/training";
 import {
   sortHand,
   compareCardsInTrick,
@@ -483,6 +483,7 @@ export default function App() {
   const [suitCountMismatch, setSuitCountMismatch] = useState(false);
   const [pendingIntentCard, setPendingIntentCard] = useState<CardT | null>(null);
   const [intentWarning, setIntentWarning] = useState<string | null>(null);
+  const [intentDetails, setIntentDetails] = useState<string[]>([]);
 
   const [reveal, setReveal] = useState<Record<Seat, boolean>>({
     Left: false,
@@ -783,6 +784,7 @@ export default function App() {
     setBidInput("0");
     setPendingIntentCard(null);
     setIntentWarning(null);
+    setIntentDetails([]);
     setLeadPromptActive(false);
     setLeadPromptSuit(null);
     setLeadPromptLeader(null);
@@ -988,10 +990,11 @@ export default function App() {
     return true;
   }
 
-  function evaluateWinIntent(card: CardT): string | null {
+  function evaluateWinIntent(card: CardT): { warning: string | null; details: string[] } {
     const leadSuit = trickLeadSuit(trick) ?? card.suit;
-    const honors = honorRemainingBySuit[leadSuit];
-    const honorWarning = canBeBeatenByHonor(card, honors);
+    const honors = honorRemainingBySuit[leadSuit].filter((r) => r > card.rank);
+    const honorWarning = honors.length > 0;
+    const details: string[] = [];
     let trumpWarning = false;
     if (
       winIntentWarnTrump &&
@@ -1003,10 +1006,18 @@ export default function App() {
       const remaining = SEATS.filter((s) => s !== "Me" && !playedSeats.has(s));
       trumpWarning = remaining.some((seat) => seat !== "Me" && actualVoid[seat][leadSuit] && !actualVoid[seat][trump.suit]);
     }
-    if (honorWarning && trumpWarning) return "This card can be beaten by a higher honor or trump";
-    if (honorWarning) return "This card can be beaten by a higher honor";
-    if (trumpWarning) return "This card can be trumped";
-    return null;
+    if (honorWarning) {
+      details.push(`Higher honors remaining: ${honors.map(rankGlyph).join(", ")}`);
+    }
+    if (trumpWarning) {
+      details.push(`Trump threat: an opponent may trump with ${suitGlyph(trump.suit)}`);
+    }
+    if (honorWarning && trumpWarning) {
+      return { warning: "This card can be beaten by a higher honor or trump", details };
+    }
+    if (honorWarning) return { warning: "This card can be beaten by a higher honor", details };
+    if (trumpWarning) return { warning: "This card can be trumped", details };
+    return { warning: null, details: [] };
   }
 
   function handleWinIntentDecision(intentToWin: boolean) {
@@ -1015,18 +1026,21 @@ export default function App() {
       const card = pendingIntentCard;
       setPendingIntentCard(null);
       setIntentWarning(null);
+      setIntentDetails([]);
       tryPlay("Me", card, "human", { skipIntentPrompt: true });
       return;
     }
-    const warning = evaluateWinIntent(pendingIntentCard);
-    if (!warning) {
+    const assessment = evaluateWinIntent(pendingIntentCard);
+    if (!assessment.warning) {
       const card = pendingIntentCard;
       setPendingIntentCard(null);
       setIntentWarning(null);
+      setIntentDetails([]);
       tryPlay("Me", card, "human", { skipIntentPrompt: true });
       return;
     }
-    setIntentWarning(warning);
+    setIntentWarning(assessment.warning);
+    setIntentDetails(assessment.details);
   }
 
   function confirmIntentPlay() {
@@ -1034,12 +1048,14 @@ export default function App() {
     const card = pendingIntentCard;
     setPendingIntentCard(null);
     setIntentWarning(null);
+    setIntentDetails([]);
     tryPlay("Me", card, "human", { skipIntentPrompt: true });
   }
 
   function cancelIntentPrompt() {
     setPendingIntentCard(null);
     setIntentWarning(null);
+    setIntentDetails([]);
   }
 
   function submitBidForSeat(seat: Seat, bid: number) {
@@ -1140,6 +1156,7 @@ export default function App() {
     ) {
       setPendingIntentCard(card);
       setIntentWarning(null);
+      setIntentDetails([]);
       return;
     }
 
@@ -1184,6 +1201,7 @@ export default function App() {
     setSuitCountMismatch(false);
     setPendingIntentCard(null);
     setIntentWarning(null);
+    setIntentDetails([]);
     setGame((g) => resetTrick(g, trump));
   }
 
@@ -1219,6 +1237,7 @@ export default function App() {
     setSuitCountMismatch(false);
     setPendingIntentCard(null);
     setIntentWarning(null);
+    setIntentDetails([]);
     setViewedTrickIndex(null);
     setViewedTrickStep(0);
     setHistoryPlaying(false);
@@ -1656,6 +1675,16 @@ export default function App() {
                   ) : (
                     <>
                       <div className="text-sm font-medium text-destructive">{intentWarning}</div>
+                      {intentDetails.length ? (
+                        <details className="text-xs text-muted-foreground">
+                          <summary className="cursor-pointer select-none">Details</summary>
+                          <div className="mt-1 space-y-1">
+                            {intentDetails.map((line) => (
+                              <div key={line}>{line}</div>
+                            ))}
+                          </div>
+                        </details>
+                      ) : null}
                       <div className="flex gap-2">
                         <Button
                           className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
