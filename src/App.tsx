@@ -2219,7 +2219,15 @@ export default function App() {
         <Separator />
 
         <div className="flex justify-between">
-          <span className="text-sm">Check errors</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm">Show errors</span>
+            <span
+              className="inline-flex h-4 w-4 cursor-pointer select-none items-center justify-center rounded-full border text-[10px] font-semibold text-muted-foreground"
+              title="When enabled, highlight incorrect selections in red"
+            >
+              ?
+            </span>
+          </div>
           <Switch checked={checkErrorsEnabled} onCheckedChange={setCheckErrorsEnabled} />
         </div>
 
