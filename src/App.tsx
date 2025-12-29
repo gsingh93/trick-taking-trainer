@@ -111,6 +111,7 @@ type Settings = {
   seatLabelMode: "relative" | "compass";
   winIntentPromptEnabled: boolean;
   winIntentWarnTrump: boolean;
+  winIntentWarnAnyHigher: boolean;
   winIntentMinRank: Rank;
   voidPromptOnlyWhenLeading: boolean;
   trump: TrumpConfig;
@@ -161,6 +162,9 @@ function loadSettings(): Partial<Settings> {
     }
     if (typeof data.winIntentWarnTrump === "boolean") {
       next.winIntentWarnTrump = data.winIntentWarnTrump;
+    }
+    if (typeof data.winIntentWarnAnyHigher === "boolean") {
+      next.winIntentWarnAnyHigher = data.winIntentWarnAnyHigher;
     }
     if (typeof data.winIntentMinRank === "number") {
       const value = Math.floor(data.winIntentMinRank) as Rank;
@@ -443,6 +447,9 @@ export default function App() {
   const [winIntentWarnTrump, setWinIntentWarnTrump] = useState(
     () => initialSettings.winIntentWarnTrump ?? true
   );
+  const [winIntentWarnAnyHigher, setWinIntentWarnAnyHigher] = useState(
+    () => initialSettings.winIntentWarnAnyHigher ?? false
+  );
   const [winIntentMinRank, setWinIntentMinRank] = useState<Rank>(
     () => initialSettings.winIntentMinRank ?? 10
   );
@@ -603,6 +610,7 @@ export default function App() {
       seatLabelMode,
       winIntentPromptEnabled,
       winIntentWarnTrump,
+      winIntentWarnAnyHigher,
       winIntentMinRank,
       voidPromptOnlyWhenLeading,
       trump,
@@ -632,6 +640,7 @@ export default function App() {
     seatLabelMode,
     winIntentPromptEnabled,
     winIntentWarnTrump,
+    winIntentWarnAnyHigher,
     winIntentMinRank,
     voidPromptOnlyWhenLeading,
     trump,
@@ -974,6 +983,26 @@ export default function App() {
     return compareCardsInTrick(card, currentBest, suit, trump) === -1;
   }
 
+  function remainingHigherRanksInSuit(card: CardT, suit: Suit): Rank[] {
+    const played = new Set<Rank>();
+    for (const t of trickHistory) {
+      for (const play of t) {
+        if (play.card.suit === suit) played.add(play.card.rank);
+      }
+    }
+    for (const play of trick) {
+      if (play.card.suit === suit) played.add(play.card.rank);
+    }
+    for (const c of hands.Me) {
+      if (c.suit === suit) played.add(c.rank);
+    }
+    const ranks: Rank[] = [];
+    for (let r = card.rank + 1; r <= 14; r += 1) {
+      if (!played.has(r as Rank)) ranks.push(r as Rank);
+    }
+    return ranks;
+  }
+
   function shouldPromptWinIntent(card: CardT, seat: Seat): boolean {
     if (!winIntentPromptEnabled) return false;
     if (seat !== "Me") return false;
@@ -993,7 +1022,10 @@ export default function App() {
   function evaluateWinIntent(card: CardT): { warning: string | null; details: string[] } {
     const leadSuit = trickLeadSuit(trick) ?? card.suit;
     const honors = honorRemainingBySuit[leadSuit].filter((r) => r > card.rank);
-    const honorWarning = honors.length > 0;
+    const higherRanks = winIntentWarnAnyHigher
+      ? remainingHigherRanksInSuit(card, leadSuit)
+      : honors;
+    const honorWarning = higherRanks.length > 0;
     const details: string[] = [];
     let trumpWarning = false;
     const trumpThreats: string[] = [];
@@ -1016,16 +1048,17 @@ export default function App() {
       }
     }
     if (honorWarning) {
-      details.push(`Higher honors remaining: ${honors.map(rankGlyph).join(", ")}`);
+      const label = winIntentWarnAnyHigher ? "Higher cards remaining" : "Higher honors remaining";
+      details.push(`${label}: ${higherRanks.map(rankGlyph).join(", ")}`);
     }
     if (trumpWarning) {
       const who = trumpThreats.length ? ` (${trumpThreats.join(", ")})` : "";
       details.push(`Trump threat: an opponent may trump with ${suitGlyph(trump.suit)}${who}`);
     }
     if (honorWarning && trumpWarning) {
-      return { warning: "This card can be beaten by a higher honor or trump", details };
+      return { warning: "This card can be beaten by a higher card or trump", details };
     }
-    if (honorWarning) return { warning: "This card can be beaten by a higher honor", details };
+    if (honorWarning) return { warning: "This card can be beaten by a higher card", details };
     if (trumpWarning) return { warning: "This card can be trumped", details };
     return { warning: null, details: [] };
   }
@@ -2163,6 +2196,15 @@ export default function App() {
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        <div className={"flex justify-between " + (!winIntentPromptEnabled ? "opacity-50" : "")}>
+          <span className="text-sm">Warn about any higher card</span>
+          <Switch
+            checked={winIntentWarnAnyHigher}
+            onCheckedChange={setWinIntentWarnAnyHigher}
+            disabled={!winIntentPromptEnabled}
+          />
         </div>
 
         <div className={"flex justify-between " + (!winIntentPromptEnabled ? "opacity-50" : "")}>
