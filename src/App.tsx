@@ -1534,6 +1534,47 @@ export default function App() {
               </div>
             ) : null}
 
+            {suitCountPromptEnabled && suitCountPromptActive ? (
+              <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40">
+                <div className="w-[220px] space-y-3 rounded-lg border bg-card px-3 py-3 text-sm shadow-lg">
+                  <div className="text-sm font-medium">
+                    How many{" "}
+                    <span className={suitCountPromptSuit ? suitColorClass(suitCountPromptSuit) : undefined}>
+                      {suitCountPromptSuit ? suitGlyph(suitCountPromptSuit) : "cards"}
+                    </span>{" "}
+                    remain outside your hand?
+                  </div>
+                  <Select
+                    value={suitCountAnswer}
+                    onValueChange={(v) => {
+                      setSuitCountAnswer(v);
+                      setSuitCountMismatch(false);
+                    }}
+                  >
+                    <SelectTrigger className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 14 }, (_, i) => String(i)).map((n) => (
+                        <SelectItem key={n} value={n}>
+                          {n}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {suitCountMismatch ? (
+                    <div className="text-xs text-destructive">Suit count is incorrect</div>
+                  ) : null}
+                  <Button
+                    className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
+                    onClick={resumeAfterSuitCountPrompt}
+                  >
+                    Resume
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+
             {pendingIntentCard ? (
               <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40">
                 <div className="w-[200px] space-y-3 rounded-lg border bg-card px-3 py-3 text-sm shadow-lg">
@@ -1672,23 +1713,20 @@ export default function App() {
       <CardContent className="flex flex-col gap-4">
         <div className="space-y-2">
           <div className="text-xs text-muted-foreground">
-            After a lead, confirm which opponents are void in the lead suit. After the first off-suit in a
-            suit, estimate how many remain outside your hand.
+            After a lead, confirm which opponents are void in the lead suit.
           </div>
           <div className="text-sm font-medium">
-            {!voidTrackingEnabled && !suitCountPromptActive
+            {!voidTrackingEnabled
               ? "Void tracking is disabled"
               : isViewingHistory
                 ? "Viewing trick history"
-                : suitCountPromptActive
-                  ? "Enter the remaining count for the lead suit"
-                  : leadPromptActive
-                    ? "Which opponents are void in the lead suit?"
-                    : trick.length === 0
-                      ? "Waiting for a card to be led..."
-                      : anyVoidObserved
-                        ? "Trick in progress..."
-                        : "Waiting for first off-suit..."}
+                : leadPromptActive
+                  ? "Which opponents are void in the lead suit?"
+                  : trick.length === 0
+                    ? "Waiting for a card to be led..."
+                    : anyVoidObserved
+                      ? "Trick in progress..."
+                      : "Waiting for first off-suit..."}
           </div>
           {leadPromptSuit ? (
             <div className={"text-sm " + suitColorClass(leadPromptSuit)}>
@@ -1723,50 +1761,13 @@ export default function App() {
           </div>
         </div>
 
-        {suitCountPromptEnabled && suitCountPromptActive ? (
-          <div className="space-y-2">
-            <div className="text-sm font-medium">
-              How many {suitCountPromptSuit ? suitGlyph(suitCountPromptSuit) : "cards"} remain outside your hand?
-            </div>
-            <Select
-              value={suitCountAnswer}
-              onValueChange={(v) => {
-                setSuitCountAnswer(v);
-                setSuitCountMismatch(false);
-              }}
-            >
-              <SelectTrigger className="h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: 14 }, (_, i) => String(i)).map((n) => (
-                  <SelectItem key={n} value={n}>
-                    {n}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {suitCountMismatch ? (
-              <div className="text-xs text-destructive">Suit count is incorrect</div>
-            ) : null}
-          </div>
-        ) : null}
-
         <div className="space-y-2">
           {leadWarning ? <div className="text-xs text-destructive">{leadWarning}</div> : null}
           <Button
-            onClick={() => {
-              if (leadPromptActive) {
-                resumeAfterLeadPrompt();
-                return;
-              }
-              if (suitCountPromptActive) {
-                resumeAfterSuitCountPrompt();
-              }
-            }}
+            onClick={resumeAfterLeadPrompt}
             disabled={
               isViewingHistory ||
-              (!leadPromptActive && !suitCountPromptActive) ||
+              !leadPromptActive ||
               isResolving ||
               awaitContinue ||
               (leadPromptActive && !voidTrackingEnabled)
