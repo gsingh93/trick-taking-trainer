@@ -111,7 +111,7 @@ type Settings = {
   seatLabelMode: "relative" | "compass";
   winIntentPromptEnabled: boolean;
   winIntentWarnTrump: boolean;
-  winIntentWarnAnyHigher: boolean;
+  winIntentWarnHonorsOnly: boolean;
   winIntentMinRank: Rank;
   voidPromptOnlyWhenLeading: boolean;
   trump: TrumpConfig;
@@ -163,8 +163,11 @@ function loadSettings(): Partial<Settings> {
     if (typeof data.winIntentWarnTrump === "boolean") {
       next.winIntentWarnTrump = data.winIntentWarnTrump;
     }
-    if (typeof data.winIntentWarnAnyHigher === "boolean") {
-      next.winIntentWarnAnyHigher = data.winIntentWarnAnyHigher;
+    if (typeof data.winIntentWarnHonorsOnly === "boolean") {
+      next.winIntentWarnHonorsOnly = data.winIntentWarnHonorsOnly;
+    }
+    if (typeof data.winIntentWarnAnyHigher === "boolean" && typeof next.winIntentWarnHonorsOnly !== "boolean") {
+      next.winIntentWarnHonorsOnly = !data.winIntentWarnAnyHigher;
     }
     if (typeof data.winIntentMinRank === "number") {
       const value = Math.floor(data.winIntentMinRank) as Rank;
@@ -447,8 +450,8 @@ export default function App() {
   const [winIntentWarnTrump, setWinIntentWarnTrump] = useState(
     () => initialSettings.winIntentWarnTrump ?? true
   );
-  const [winIntentWarnAnyHigher, setWinIntentWarnAnyHigher] = useState(
-    () => initialSettings.winIntentWarnAnyHigher ?? false
+  const [winIntentWarnHonorsOnly, setWinIntentWarnHonorsOnly] = useState(
+    () => initialSettings.winIntentWarnHonorsOnly ?? true
   );
   const [winIntentMinRank, setWinIntentMinRank] = useState<Rank>(
     () => initialSettings.winIntentMinRank ?? 10
@@ -610,7 +613,7 @@ export default function App() {
       seatLabelMode,
       winIntentPromptEnabled,
       winIntentWarnTrump,
-      winIntentWarnAnyHigher,
+      winIntentWarnHonorsOnly,
       winIntentMinRank,
       voidPromptOnlyWhenLeading,
       trump,
@@ -640,7 +643,7 @@ export default function App() {
     seatLabelMode,
     winIntentPromptEnabled,
     winIntentWarnTrump,
-    winIntentWarnAnyHigher,
+    winIntentWarnHonorsOnly,
     winIntentMinRank,
     voidPromptOnlyWhenLeading,
     trump,
@@ -1022,9 +1025,7 @@ export default function App() {
   function evaluateWinIntent(card: CardT): { warning: string | null; details: string[] } {
     const leadSuit = trickLeadSuit(trick) ?? card.suit;
     const honors = honorRemainingBySuit[leadSuit].filter((r) => r > card.rank);
-    const higherRanks = winIntentWarnAnyHigher
-      ? remainingHigherRanksInSuit(card, leadSuit)
-      : honors;
+    const higherRanks = winIntentWarnHonorsOnly ? honors : remainingHigherRanksInSuit(card, leadSuit);
     const honorWarning = higherRanks.length > 0;
     const details: string[] = [];
     let trumpWarning = false;
@@ -1048,7 +1049,7 @@ export default function App() {
       }
     }
     if (honorWarning) {
-      const label = winIntentWarnAnyHigher ? "Higher cards remaining" : "Higher honors remaining";
+      const label = winIntentWarnHonorsOnly ? "Higher honors remaining" : "Higher cards remaining";
       details.push(`${label}: ${higherRanks.map(rankGlyph).join(", ")}`);
     }
     if (trumpWarning) {
@@ -2087,7 +2088,15 @@ export default function App() {
 
         <div className="space-y-3">
           <div className="flex justify-between">
-            <span className="text-sm">Void tracking</span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm">Void tracking</span>
+              <span
+                className="inline-flex h-4 w-4 cursor-pointer select-none items-center justify-center rounded-full border text-[10px] font-semibold text-muted-foreground"
+                title="Require confirming which opponents are void in the lead suit"
+              >
+                ?
+              </span>
+            </div>
             <Switch checked={voidTrackingEnabled} onCheckedChange={setVoidTrackingEnabled} />
           </div>
 
@@ -2199,16 +2208,32 @@ export default function App() {
         </div>
 
         <div className={"flex justify-between " + (!winIntentPromptEnabled ? "opacity-50" : "")}>
-          <span className="text-sm">Warn about any higher card</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm">Warn about higher honors only</span>
+            <span
+              className="inline-flex h-4 w-4 cursor-pointer select-none items-center justify-center rounded-full border text-[10px] font-semibold text-muted-foreground"
+              title="When enabled, only warn if higher honors remain instead of any higher card"
+            >
+              ?
+            </span>
+          </div>
           <Switch
-            checked={winIntentWarnAnyHigher}
-            onCheckedChange={setWinIntentWarnAnyHigher}
+            checked={winIntentWarnHonorsOnly}
+            onCheckedChange={setWinIntentWarnHonorsOnly}
             disabled={!winIntentPromptEnabled}
           />
         </div>
 
         <div className={"flex justify-between " + (!winIntentPromptEnabled ? "opacity-50" : "")}>
-          <span className="text-sm">Warn about trump voids</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm">Warn about trump voids</span>
+            <span
+              className="inline-flex h-4 w-4 cursor-pointer select-none items-center justify-center rounded-full border text-[10px] font-semibold text-muted-foreground"
+              title="Warn if an opponent may be void in the lead suit and able to trump"
+            >
+              ?
+            </span>
+          </div>
           <Switch
             checked={winIntentWarnTrump}
             onCheckedChange={setWinIntentWarnTrump}
