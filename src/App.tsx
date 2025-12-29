@@ -2096,19 +2096,43 @@ export default function App() {
         <Separator />
 
         <div className="flex justify-between">
-          <span className="text-sm">Suit count prompt</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm">Suit count prompt</span>
+            <span
+              className="inline-flex h-4 w-4 cursor-pointer select-none items-center justify-center rounded-full border text-[10px] font-semibold text-muted-foreground"
+              title="After the first off-suit in a suit, ask how many of that suit remain outside your hand"
+            >
+              ?
+            </span>
+          </div>
           <Switch checked={suitCountPromptEnabled} onCheckedChange={setSuitCountPromptEnabled} />
         </div>
 
         <Separator />
 
         <div className="flex justify-between">
-          <span className="text-sm">Win intent prompt</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm">Win intent prompt</span>
+            <span
+              className="inline-flex h-4 w-4 cursor-pointer select-none items-center justify-center rounded-full border text-[10px] font-semibold text-muted-foreground"
+              title="When you play a card at or above the win intent minimum rank, ask if you intend to win the trick and warn if it can be beaten"
+            >
+              ?
+            </span>
+          </div>
           <Switch checked={winIntentPromptEnabled} onCheckedChange={setWinIntentPromptEnabled} />
         </div>
 
         <div className={"grid grid-cols-[minmax(0,1fr)_auto] gap-2 " + (!winIntentPromptEnabled ? "opacity-50" : "")}>
-          <span className="text-sm">Win intent minimum rank</span>
+          <div className="flex items-center gap-2 text-sm">
+            <span>Win intent minimum rank</span>
+            <span
+              className="inline-flex h-4 w-4 cursor-pointer select-none items-center justify-center rounded-full border text-[10px] font-semibold text-muted-foreground"
+              title="Only prompt when playing this rank or higher"
+            >
+              ?
+            </span>
+          </div>
           <Select
             value={String(winIntentMinRank)}
             onValueChange={(v) => setWinIntentMinRank(Number(v) as Rank)}
