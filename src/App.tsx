@@ -1322,7 +1322,10 @@ export default function App() {
                 <span>
                   {seatLabels.Across}{" "}
                   <span className="text-xs text-muted-foreground">
-                    ({displayTricksWon.Across}
+                    (
+                    <span className={bidResultDisplay ? bidResultDisplay.Across.className : ""}>
+                      {displayTricksWon.Across}
+                    </span>
                     {bidDisplay ? `/${bidDisplay.Across}` : ""})
                   </span>
                   {bidResultDisplay ? (
@@ -1379,7 +1382,10 @@ export default function App() {
                 <span>
                   {seatLabels.Left}{" "}
                   <span className="text-xs text-muted-foreground">
-                    ({displayTricksWon.Left}
+                    (
+                    <span className={bidResultDisplay ? bidResultDisplay.Left.className : ""}>
+                      {displayTricksWon.Left}
+                    </span>
                     {bidDisplay ? `/${bidDisplay.Left}` : ""})
                   </span>
                   {bidResultDisplay ? (
@@ -1632,7 +1638,10 @@ export default function App() {
                 <span>
                   {seatLabels.Right}{" "}
                   <span className="text-xs text-muted-foreground">
-                    ({displayTricksWon.Right}
+                    (
+                    <span className={bidResultDisplay ? bidResultDisplay.Right.className : ""}>
+                      {displayTricksWon.Right}
+                    </span>
                     {bidDisplay ? `/${bidDisplay.Right}` : ""})
                   </span>
                   {bidResultDisplay ? (
@@ -1687,7 +1696,10 @@ export default function App() {
                 <span>
                   {seatLabels.Me}{" "}
                   <span className="text-xs text-muted-foreground">
-                    ({displayTricksWon.Me}
+                    (
+                    <span className={bidResultDisplay ? bidResultDisplay.Me.className : ""}>
+                      {displayTricksWon.Me}
+                    </span>
                     {bidDisplay ? `/${bidDisplay.Me}` : ""})
                   </span>
                   {bidResultDisplay ? (
