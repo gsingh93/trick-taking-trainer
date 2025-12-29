@@ -996,6 +996,7 @@ export default function App() {
     const honorWarning = honors.length > 0;
     const details: string[] = [];
     let trumpWarning = false;
+    const trumpThreats: string[] = [];
     if (
       winIntentWarnTrump &&
       trump.enabled &&
@@ -1004,13 +1005,22 @@ export default function App() {
     ) {
       const playedSeats = new Set(trick.map((t) => t.seat));
       const remaining = SEATS.filter((s) => s !== "Me" && !playedSeats.has(s));
-      trumpWarning = remaining.some((seat) => seat !== "Me" && actualVoid[seat][leadSuit] && !actualVoid[seat][trump.suit]);
+      trumpWarning = remaining.some(
+        (seat) => seat !== "Me" && actualVoid[seat][leadSuit] && !actualVoid[seat][trump.suit]
+      );
+      for (const seat of remaining) {
+        if (seat === "Me") continue;
+        if (actualVoid[seat][leadSuit] && !actualVoid[seat][trump.suit]) {
+          trumpThreats.push(seatLabels[seat]);
+        }
+      }
     }
     if (honorWarning) {
       details.push(`Higher honors remaining: ${honors.map(rankGlyph).join(", ")}`);
     }
     if (trumpWarning) {
-      details.push(`Trump threat: an opponent may trump with ${suitGlyph(trump.suit)}`);
+      const who = trumpThreats.length ? ` (${trumpThreats.join(", ")})` : "";
+      details.push(`Trump threat: an opponent may trump with ${suitGlyph(trump.suit)}${who}`);
     }
     if (honorWarning && trumpWarning) {
       return { warning: "This card can be beaten by a higher honor or trump", details };
