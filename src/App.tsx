@@ -1479,6 +1479,13 @@ export default function App() {
             <div className="space-y-2 rounded-lg border bg-card/50 p-3">
               <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Deal</div>
               <div className="flex flex-wrap items-start gap-2">
+                <Button className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={resetHand}>
+                  Reset hand
+                </Button>
+                <Button className="gap-2 bg-emerald-600 text-white hover:bg-emerald-700" onClick={newSeed}>
+                  <RefreshCw className="h-4 w-4" />
+                  New hand
+                </Button>
                 <div className="flex flex-col">
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">Seed</span>
@@ -1502,13 +1509,6 @@ export default function App() {
                   </div>
                   {seedError ? <div className="mt-1 text-xs text-destructive">{seedError}</div> : null}
                 </div>
-                <Button className="gap-2 bg-emerald-600 text-white hover:bg-emerald-700" onClick={newSeed}>
-                  <RefreshCw className="h-4 w-4" />
-                  New hand
-                </Button>
-                <Button className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={resetHand}>
-                  Reset hand
-                </Button>
               </div>
             </div>
           </div>
