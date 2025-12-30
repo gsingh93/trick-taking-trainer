@@ -228,6 +228,46 @@ function HelpTooltip({ text }: { text: string }) {
   );
 }
 
+function formatSeatStatus(args: {
+  label: string;
+  tricksWon: number;
+  bid: string | null;
+  resultLabel: string | null;
+  resultClass: string;
+}) {
+  const { label, tricksWon, bid, resultLabel, resultClass } = args;
+  return (
+    <span>
+      {label}{" "}
+      <span className="text-xs text-muted-foreground">
+        (
+        <span className={resultLabel ? resultClass : ""}>{tricksWon}</span>
+        {bid ? `/${bid}` : ""})
+      </span>
+      {resultLabel ? <span className={"ml-2 text-xs font-medium " + resultClass}>{resultLabel}</span> : null}
+    </span>
+  );
+}
+
+function formatWinIntentDetails(args: {
+  higherRanks: Rank[];
+  warnHonorsOnly: boolean;
+  trumpSuit: Suit;
+  trumpThreatLabels: string[];
+}): string[] {
+  const { higherRanks, warnHonorsOnly, trumpSuit, trumpThreatLabels } = args;
+  const details: string[] = [];
+  if (higherRanks.length) {
+    const label = warnHonorsOnly ? "Higher honors remaining" : "Higher cards remaining";
+    details.push(`${label}: ${higherRanks.map(rankGlyph).join(", ")}`);
+  }
+  if (trumpThreatLabels.length) {
+    const who = trumpThreatLabels.length ? ` (${trumpThreatLabels.join(", ")})` : "";
+    details.push(`Trump threat: an opponent may trump with ${suitGlyph(trumpSuit)}${who}`);
+  }
+  return details;
+}
+
  
 
 function createVoidSelections(): VoidSelections {
@@ -1012,17 +1052,12 @@ export default function App() {
       tryPlay("Me", card, "human", { skipIntentPrompt: true });
       return;
     }
-    const details: string[] = [];
-    if (assessment.higherRanks.length) {
-      const label = winIntentWarnHonorsOnly ? "Higher honors remaining" : "Higher cards remaining";
-      details.push(`${label}: ${assessment.higherRanks.map(rankGlyph).join(", ")}`);
-    }
-    if (assessment.warning.includes("trump")) {
-      const who = assessment.trumpThreats.length
-        ? ` (${assessment.trumpThreats.map((s) => seatLabels[s]).join(", ")})`
-        : "";
-      details.push(`Trump threat: an opponent may trump with ${suitGlyph(trump.suit)}${who}`);
-    }
+    const details = formatWinIntentDetails({
+      higherRanks: assessment.higherRanks,
+      warnHonorsOnly: winIntentWarnHonorsOnly,
+      trumpSuit: trump.suit,
+      trumpThreatLabels: assessment.trumpThreats.map((s) => seatLabels[s]),
+    });
     setIntentWarning(assessment.warning);
     setIntentDetails(details);
   }
@@ -1335,21 +1370,13 @@ export default function App() {
                     : "")
                 }
               >
-                <span>
-                  {seatLabels.Across}{" "}
-                  <span className="text-xs text-muted-foreground">
-                    (
-                    <span className={bidResultDisplay ? bidResultDisplay.Across.className : ""}>
-                      {displayTricksWon.Across}
-                    </span>
-                    {bidDisplay ? `/${bidDisplay.Across}` : ""})
-                  </span>
-                  {bidResultDisplay ? (
-                    <span className={"ml-2 text-xs font-medium " + bidResultDisplay.Across.className}>
-                      {bidResultDisplay.Across.label}
-                    </span>
-                  ) : null}
-                </span>
+                {formatSeatStatus({
+                  label: seatLabels.Across,
+                  tricksWon: displayTricksWon.Across,
+                  bid: bidDisplay ? bidDisplay.Across : null,
+                  resultLabel: bidResultDisplay ? bidResultDisplay.Across.label : null,
+                  resultClass: bidResultDisplay ? bidResultDisplay.Across.className : "",
+                })}
               </div>
               <Badge variant="outline">{displayHands.Across.length}</Badge>
             </div>
@@ -1396,21 +1423,13 @@ export default function App() {
                     : "")
                 }
               >
-                <span>
-                  {seatLabels.Left}{" "}
-                  <span className="text-xs text-muted-foreground">
-                    (
-                    <span className={bidResultDisplay ? bidResultDisplay.Left.className : ""}>
-                      {displayTricksWon.Left}
-                    </span>
-                    {bidDisplay ? `/${bidDisplay.Left}` : ""})
-                  </span>
-                  {bidResultDisplay ? (
-                    <span className={"ml-2 text-xs font-medium " + bidResultDisplay.Left.className}>
-                      {bidResultDisplay.Left.label}
-                    </span>
-                  ) : null}
-                </span>
+                {formatSeatStatus({
+                  label: seatLabels.Left,
+                  tricksWon: displayTricksWon.Left,
+                  bid: bidDisplay ? bidDisplay.Left : null,
+                  resultLabel: bidResultDisplay ? bidResultDisplay.Left.label : null,
+                  resultClass: bidResultDisplay ? bidResultDisplay.Left.className : "",
+                })}
               </div>
               <Badge variant="outline">{displayHands.Left.length}</Badge>
             </div>
@@ -1670,21 +1689,13 @@ export default function App() {
                     : "")
                 }
               >
-                <span>
-                  {seatLabels.Right}{" "}
-                  <span className="text-xs text-muted-foreground">
-                    (
-                    <span className={bidResultDisplay ? bidResultDisplay.Right.className : ""}>
-                      {displayTricksWon.Right}
-                    </span>
-                    {bidDisplay ? `/${bidDisplay.Right}` : ""})
-                  </span>
-                  {bidResultDisplay ? (
-                    <span className={"ml-2 text-xs font-medium " + bidResultDisplay.Right.className}>
-                      {bidResultDisplay.Right.label}
-                    </span>
-                  ) : null}
-                </span>
+                {formatSeatStatus({
+                  label: seatLabels.Right,
+                  tricksWon: displayTricksWon.Right,
+                  bid: bidDisplay ? bidDisplay.Right : null,
+                  resultLabel: bidResultDisplay ? bidResultDisplay.Right.label : null,
+                  resultClass: bidResultDisplay ? bidResultDisplay.Right.className : "",
+                })}
               </div>
               <Badge variant="outline">{displayHands.Right.length}</Badge>
             </div>
@@ -1729,21 +1740,13 @@ export default function App() {
                     : "")
                 }
               >
-                <span>
-                  {seatLabels.Me}{" "}
-                  <span className="text-xs text-muted-foreground">
-                    (
-                    <span className={bidResultDisplay ? bidResultDisplay.Me.className : ""}>
-                      {displayTricksWon.Me}
-                    </span>
-                    {bidDisplay ? `/${bidDisplay.Me}` : ""})
-                  </span>
-                  {bidResultDisplay ? (
-                    <span className={"ml-2 text-xs font-medium " + bidResultDisplay.Me.className}>
-                      {bidResultDisplay.Me.label}
-                    </span>
-                  ) : null}
-                </span>
+                {formatSeatStatus({
+                  label: seatLabels.Me,
+                  tricksWon: displayTricksWon.Me,
+                  bid: bidDisplay ? bidDisplay.Me : null,
+                  resultLabel: bidResultDisplay ? bidResultDisplay.Me.label : null,
+                  resultClass: bidResultDisplay ? bidResultDisplay.Me.className : "",
+                })}
               </div>
               <Badge variant="outline">{displayHands.Me.length}</Badge>
             </div>
