@@ -215,6 +215,17 @@ function rankGlyph(n: Rank) {
   return String(n);
 }
 
+function HelpTooltip({ text }: { text: string }) {
+  return (
+    <span
+      className="inline-flex h-4 w-4 cursor-pointer select-none items-center justify-center rounded-full border text-[10px] font-semibold text-muted-foreground"
+      title={text}
+    >
+      ?
+    </span>
+  );
+}
+
  
 
 function createVoidSelections(): VoidSelections {
@@ -2049,12 +2060,7 @@ export default function App() {
           <div className="flex justify-between">
             <div className="flex items-center gap-2">
               <span className="text-sm">Void tracking</span>
-              <span
-                className="inline-flex h-4 w-4 cursor-pointer select-none items-center justify-center rounded-full border text-[10px] font-semibold text-muted-foreground"
-                title="Require confirming which opponents are void in the lead suit"
-              >
-                ?
-              </span>
+              <HelpTooltip text="Require confirming which opponents are void in the lead suit" />
             </div>
             <Switch checked={voidTrackingEnabled} onCheckedChange={setVoidTrackingEnabled} />
           </div>
@@ -2062,12 +2068,7 @@ export default function App() {
           <div className={"flex items-center justify-between gap-2 " + (!voidTrackingEnabled ? "opacity-50" : "")}>
             <div className="flex items-center gap-2 text-sm">
               <span>Prompt after first void</span>
-              <span
-                className="inline-flex h-4 w-4 cursor-pointer select-none items-center justify-center rounded-full border text-[10px] font-semibold text-muted-foreground"
-                title={"Global: after any off-suit, prompt on every lead\nPer suit: only prompt after off-suit in that suit"}
-              >
-                ?
-              </span>
+              <HelpTooltip text={"Global: after any off-suit, prompt on every lead\nPer suit: only prompt after off-suit in that suit"} />
             </div>
             <Select
               value={voidPromptScope}
@@ -2099,12 +2100,7 @@ export default function App() {
         <div className="flex justify-between">
           <div className="flex items-center gap-2">
             <span className="text-sm">Suit count prompt</span>
-            <span
-              className="inline-flex h-4 w-4 cursor-pointer select-none items-center justify-center rounded-full border text-[10px] font-semibold text-muted-foreground"
-              title="After the first off-suit in a suit, ask how many of that suit remain outside your hand"
-            >
-              ?
-            </span>
+            <HelpTooltip text="After the first off-suit in a suit, ask how many of that suit remain outside your hand" />
           </div>
           <Switch checked={suitCountPromptEnabled} onCheckedChange={setSuitCountPromptEnabled} />
         </div>
@@ -2114,12 +2110,7 @@ export default function App() {
         <div className="flex justify-between">
           <div className="flex items-center gap-2">
             <span className="text-sm">Win intent prompt</span>
-            <span
-              className="inline-flex h-4 w-4 cursor-pointer select-none items-center justify-center rounded-full border text-[10px] font-semibold text-muted-foreground"
-              title="When you play a card at or above the win intent minimum rank, ask if you intend to win the trick and warn if it can be beaten"
-            >
-              ?
-            </span>
+            <HelpTooltip text="When you play a card at or above the win intent minimum rank, ask if you intend to win the trick and warn if it can be beaten" />
           </div>
           <Switch checked={winIntentPromptEnabled} onCheckedChange={setWinIntentPromptEnabled} />
         </div>
@@ -2127,12 +2118,7 @@ export default function App() {
         <div className={"grid grid-cols-[minmax(0,1fr)_auto] gap-2 " + (!winIntentPromptEnabled ? "opacity-50" : "")}>
           <div className="flex items-center gap-2 text-sm">
             <span>Win intent minimum rank</span>
-            <span
-              className="inline-flex h-4 w-4 cursor-pointer select-none items-center justify-center rounded-full border text-[10px] font-semibold text-muted-foreground"
-              title="Only prompt when playing this rank or higher"
-            >
-              ?
-            </span>
+            <HelpTooltip text="Only prompt when playing this rank or higher" />
           </div>
           <Select
             value={String(winIntentMinRank)}
@@ -2169,12 +2155,7 @@ export default function App() {
         <div className={"flex justify-between " + (!winIntentPromptEnabled ? "opacity-50" : "")}>
           <div className="flex items-center gap-2">
             <span className="text-sm">Warn about higher honors only</span>
-            <span
-              className="inline-flex h-4 w-4 cursor-pointer select-none items-center justify-center rounded-full border text-[10px] font-semibold text-muted-foreground"
-              title="When enabled, only warn if higher honors remain instead of any higher card"
-            >
-              ?
-            </span>
+            <HelpTooltip text="When enabled, only warn if higher honors remain instead of any higher card" />
           </div>
           <Switch
             checked={winIntentWarnHonorsOnly}
@@ -2186,12 +2167,7 @@ export default function App() {
         <div className={"flex justify-between " + (!winIntentPromptEnabled ? "opacity-50" : "")}>
           <div className="flex items-center gap-2">
             <span className="text-sm">Warn about trump voids</span>
-            <span
-              className="inline-flex h-4 w-4 cursor-pointer select-none items-center justify-center rounded-full border text-[10px] font-semibold text-muted-foreground"
-              title="Warn if an opponent may be void in the lead suit and able to trump"
-            >
-              ?
-            </span>
+            <HelpTooltip text="Warn if an opponent may be void in the lead suit and able to trump" />
           </div>
           <Switch
             checked={winIntentWarnTrump}
@@ -2205,12 +2181,7 @@ export default function App() {
         <div className="flex justify-between">
           <div className="flex items-center gap-2">
             <span className="text-sm">Show errors</span>
-            <span
-              className="inline-flex h-4 w-4 cursor-pointer select-none items-center justify-center rounded-full border text-[10px] font-semibold text-muted-foreground"
-              title="When enabled, highlight incorrect selections in red"
-            >
-              ?
-            </span>
+            <HelpTooltip text="When enabled, highlight incorrect selections in red" />
           </div>
           <Switch checked={checkErrorsEnabled} onCheckedChange={setCheckErrorsEnabled} />
         </div>
@@ -2305,12 +2276,7 @@ export default function App() {
         <div className={"flex justify-between " + (!trump.enabled ? "opacity-50" : "")}>
           <div className="flex items-center gap-2">
             <span className="text-sm">Must break</span>
-            <span
-              className="inline-flex h-4 w-4 cursor-pointer select-none items-center justify-center rounded-full border text-[10px] font-semibold text-muted-foreground"
-              title="Prevents leading trump until trump has been played (unless you only have trump)"
-            >
-              ?
-            </span>
+            <HelpTooltip text="Prevents leading trump until trump has been played (unless you only have trump)" />
           </div>
           <Switch checked={trump.mustBreak} onCheckedChange={(v) => setTrump((t) => ({ ...t, mustBreak: v }))} disabled={!trump.enabled} />
         </div>
