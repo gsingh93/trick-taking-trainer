@@ -36,6 +36,7 @@ function getCardTitle(args: { canPlay: boolean; isTurn: boolean; isLegal: boolea
 }
 
 function renderPlayingCard(args: {
+  key: string;
   card: CardT;
   seat: Seat;
   currentTurn: Seat;
@@ -45,11 +46,12 @@ function renderPlayingCard(args: {
   onPlay: (seat: Seat, card: CardT) => void;
   rotateClass?: string;
 }) {
-  const { card, seat, currentTurn, legal, canPlay, suitStyleMode, onPlay, rotateClass } = args;
+  const { key, card, seat, currentTurn, legal, canPlay, suitStyleMode, onPlay, rotateClass } = args;
   const isTurn = seat === currentTurn;
   const isLegal = legal.has(card.id);
   return (
     <PlayingCard
+      key={key}
       c={card}
       rotateClass={rotateClass}
       suitStyleMode={suitStyleMode}
@@ -151,17 +153,16 @@ function HandRow({
     <div className={"mt-3 " + (rotateClass ?? "")}>
       <div className="flex flex-wrap gap-px">
         {sortHand(hand, suitOrder, sortAscending).map((c) => (
-          <div key={c.id}>
-            {renderPlayingCard({
-              card: c,
-              seat,
-              currentTurn,
-              legal,
-              canPlay,
-              suitStyleMode,
-              onPlay,
-            })}
-          </div>
+          {renderPlayingCard({
+            key: c.id,
+            card: c,
+            seat,
+            currentTurn,
+            legal,
+            canPlay,
+            suitStyleMode,
+            onPlay,
+          })}
         ))}
       </div>
     </div>
@@ -201,6 +202,7 @@ function HandCol({
           <div key={c.id} className="relative h-10 w-14 overflow-visible">
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
               {renderPlayingCard({
+                key: c.id,
                 card: c,
                 seat,
                 currentTurn,
@@ -310,7 +312,7 @@ export function TableCard(props: TableCardProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-1 pb-1.5 px-1.5 sm:pt-2 sm:pb-3 sm:px-3">
-        <div className="grid grid-cols-[minmax(0,0.25fr)_minmax(0,0.5fr)_minmax(0,0.25fr)] grid-rows-[auto_1fr_auto] gap-x-0.5 gap-y-2 sm:grid-cols-[minmax(0,0.25fr)_minmax(0,0.5fr)_minmax(0,0.25fr)] sm:gap-3">
+        <div className="grid grid-cols-[minmax(0,0.25fr)_minmax(0,0.5fr)_minmax(0,0.25fr)] grid-rows-[auto_1fr_auto] gap-x-0.5 gap-y-2 sm:gap-3">
           <div className="col-span-3 rounded-xl border p-1 sm:p-2">
             <SeatPanel
               label={seatLabels.Across}
@@ -375,7 +377,7 @@ export function TableCard(props: TableCardProps) {
             </SeatPanel>
           </div>
 
-          <div className="flex w-full items-center justify-center self-center px-[0px] sm:px-[2px]">
+          <div className="flex w-full items-center justify-center self-center px-0 sm:px-[2px]">
             <div
               className="relative flex aspect-square w-full min-w-[180px] items-center justify-center rounded-xl border bg-emerald-600/80 p-2 shadow-inner sm:p-3"
               onClick={canAdvance ? onAdvanceTrick : undefined}
