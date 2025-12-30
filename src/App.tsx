@@ -1574,6 +1574,78 @@ export default function App() {
 
   const helpCard = <HelpCard />;
 
+  const debugCard = import.meta.env.DEV ? (
+    <div className="rounded-lg border bg-card p-3 text-sm shadow-sm">
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Debug</div>
+      <div className="mt-2 space-y-2">
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setLeadPromptSuit("S");
+              setLeadPromptLeader("Left");
+              setLeadSelections(createVoidSelections());
+              setLeadMismatch(createVoidSelections());
+              setLeadWarning(null);
+              setLeadPromptActive(true);
+              setPeekPrompt(null);
+            }}
+          >
+            Void prompt
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setSuitCountPromptSuit("H");
+              setSuitCountAnswer("0");
+              setSuitCountMismatch(false);
+              setSuitCountPromptActive(true);
+              setPeekPrompt(null);
+            }}
+          >
+            Suit count prompt
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setPendingIntentCard({ suit: "D", rank: 11, id: "D11" });
+              setIntentWarning(null);
+              setIntentDetails([]);
+              setPeekPrompt(null);
+            }}
+          >
+            Win intent
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setPendingIntentCard({ suit: "D", rank: 11, id: "D11" });
+              setIntentWarning("This card can be beaten by a higher card");
+              setIntentDetails(["Higher diamond(s): Q, K, A", "Trump possible: West, North"]);
+              setPeekPrompt(null);
+            }}
+          >
+            Win intent warn
+          </Button>
+        </div>
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={() => {
+            setLeadPromptActive(false);
+            setSuitCountPromptActive(false);
+            setPendingIntentCard(null);
+            setIntentWarning(null);
+            setIntentDetails([]);
+            setPeekPrompt(null);
+          }}
+        >
+          Clear prompts
+        </Button>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <div className="min-h-screen bg-background p-3 sm:p-6">
       <div className="mx-auto max-w-6xl space-y-4 sm:space-y-6">
@@ -1639,7 +1711,12 @@ export default function App() {
           </div>
           <div className="grid grid-cols-1 items-start gap-6 min-[750px]:grid-cols-[minmax(0,1fr)_auto] min-[750px]:gap-1">
             <div className="w-full">{helpCard}</div>
-            <div className="w-full min-[750px]:w-[330px] min-[750px]:justify-self-end">{settingsCard}</div>
+            <div className="w-full min-[750px]:w-[330px] min-[750px]:justify-self-end">
+              <div className="space-y-4">
+                {settingsCard}
+                {debugCard}
+              </div>
+            </div>
           </div>
         </div>
       </div>
