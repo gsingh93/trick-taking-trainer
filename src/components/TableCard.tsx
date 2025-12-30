@@ -28,6 +28,77 @@ function formatSeatStatus(args: {
   );
 }
 
+function getCardTitle(args: { canPlay: boolean; isTurn: boolean; isLegal: boolean }) {
+  if (!args.canPlay) return "Start trick first";
+  if (!args.isTurn) return "Not your turn";
+  if (!args.isLegal) return "Illegal (must-follow / must-break)";
+  return "Play";
+}
+
+function SeatPanel({
+  label,
+  tricksWon,
+  bid,
+  resultLabel,
+  resultClass,
+  isTurn,
+  displayHandComplete,
+  cardCount,
+  showReveal = false,
+  isRevealed = false,
+  onToggleReveal,
+  disableReveal,
+  children,
+}: {
+  label: string;
+  tricksWon: number;
+  bid: string | null;
+  resultLabel: string | null;
+  resultClass: string;
+  isTurn: boolean;
+  displayHandComplete: boolean;
+  cardCount: number;
+  showReveal?: boolean;
+  isRevealed?: boolean;
+  onToggleReveal?: () => void;
+  disableReveal?: boolean;
+  children?: ReactNode;
+}) {
+  return (
+    <>
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <div
+          className={
+            "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
+            (isTurn && !displayHandComplete
+              ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
+              : "")
+          }
+        >
+          {formatSeatStatus({ label, tricksWon, bid, resultLabel, resultClass })}
+        </div>
+        <Badge variant="outline">{cardCount}</Badge>
+      </div>
+      {showReveal ? (
+        <div className="mt-3 flex items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="gap-2 text-emerald-600 border-emerald-600 md:text-foreground md:border-border"
+            onClick={onToggleReveal}
+            disabled={disableReveal}
+          >
+            {isRevealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            <span className="hidden md:inline">{isRevealed ? "Hide" : "Reveal"}</span>
+          </Button>
+        </div>
+      ) : null}
+      {children}
+    </>
+  );
+}
+
 function HandRow({
   seat,
   hand,
@@ -62,15 +133,7 @@ function HandRow({
             suitStyleMode={suitStyleMode}
             disabled={!canPlay || !isTurn || !legal.has(c.id)}
             onClick={() => onPlay(seat, c)}
-            title={
-              !canPlay
-                ? "Start trick first"
-                : !isTurn
-                ? "Not your turn"
-                : !legal.has(c.id)
-                  ? "Illegal (must-follow / must-break)"
-                  : "Play"
-            }
+            title={getCardTitle({ canPlay, isTurn, isLegal: legal.has(c.id) })}
           />
         ))}
       </div>
@@ -117,15 +180,7 @@ function HandCol({
                 suitStyleMode={suitStyleMode}
                 disabled={!canPlay || !isTurn || !legal.has(c.id)}
                 onClick={() => onPlay(seat, c)}
-                title={
-                  !canPlay
-                    ? "Start trick first"
-                    : !isTurn
-                    ? "Not your turn"
-                    : !legal.has(c.id)
-                      ? "Illegal (must-follow / must-break)"
-                      : "Play"
-                }
+                title={getCardTitle({ canPlay, isTurn, isLegal: legal.has(c.id) })}
               />
             </div>
           </div>
@@ -225,101 +280,67 @@ export function TableCard(props: TableCardProps) {
       <CardContent className="pt-1 pb-3 px-3 sm:pt-3 sm:pb-6 sm:px-6">
         <div className="grid grid-cols-[minmax(0,0.25fr)_minmax(0,0.5fr)_minmax(0,0.25fr)] grid-rows-[auto_1fr_auto] gap-x-0.5 gap-y-2 sm:grid-cols-[minmax(0,0.25fr)_minmax(0,0.5fr)_minmax(0,0.25fr)] sm:gap-3">
           <div className="col-span-3 rounded-xl border p-2 sm:p-3">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <div
-                className={
-                  "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
-                  (displayTurn === "Across" && !displayHandComplete
-                    ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
-                    : "")
-                }
-              >
-                {formatSeatStatus({
-                  label: seatLabels.Across,
-                  tricksWon: displayTricksWon.Across,
-                  bid: bidDisplay ? bidDisplay.Across : null,
-                  resultLabel: bidResultDisplay ? bidResultDisplay.Across.label : null,
-                  resultClass: bidResultDisplay ? bidResultDisplay.Across.className : "",
-                })}
-              </div>
-              <Badge variant="outline">{displayHands.Across.length}</Badge>
-            </div>
-            <div className="mt-3 flex items-center gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="gap-2 text-emerald-600 border-emerald-600 md:text-foreground md:border-border"
-                onClick={() => toggleRevealSeat("Across")}
-                disabled={modeOpenHandVerify || isViewingHistory}
-              >
-                {shownHands.Across ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                <span className="hidden md:inline">{shownHands.Across ? "Hide" : "Reveal"}</span>
-              </Button>
-            </div>
-            {shownHands.Across ? (
-              <HandRow
-                seat="Across"
-                hand={displayHands.Across}
-                legal={legalBySeat.Across}
-                onPlay={onPlayCard}
-                currentTurn={displayTurn}
-                suitOrder={suitOrder}
-                sortAscending={sortAscending}
-                canPlay={canPlay}
-                suitStyleMode={suitStyleMode}
-              />
-            ) : null}
+            <SeatPanel
+              label={seatLabels.Across}
+              tricksWon={displayTricksWon.Across}
+              bid={bidDisplay ? bidDisplay.Across : null}
+              resultLabel={bidResultDisplay ? bidResultDisplay.Across.label : null}
+              resultClass={bidResultDisplay ? bidResultDisplay.Across.className : ""}
+              isTurn={displayTurn === "Across"}
+              displayHandComplete={displayHandComplete}
+              cardCount={displayHands.Across.length}
+              showReveal
+              isRevealed={shownHands.Across}
+              onToggleReveal={() => toggleRevealSeat("Across")}
+              disableReveal={modeOpenHandVerify || isViewingHistory}
+            >
+              {shownHands.Across ? (
+                <HandRow
+                  seat="Across"
+                  hand={displayHands.Across}
+                  legal={legalBySeat.Across}
+                  onPlay={onPlayCard}
+                  currentTurn={displayTurn}
+                  suitOrder={suitOrder}
+                  sortAscending={sortAscending}
+                  canPlay={canPlay}
+                  suitStyleMode={suitStyleMode}
+                />
+              ) : null}
+            </SeatPanel>
           </div>
 
           <div className={"row-span-2 rounded-xl border p-2 sm:p-3 " + (shownHands.Left ? "min-h-[400px]" : "")}>
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <div
-                className={
-                  "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
-                  (displayTurn === "Left" && !displayHandComplete
-                    ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
-                    : "")
-                }
-              >
-                {formatSeatStatus({
-                  label: seatLabels.Left,
-                  tricksWon: displayTricksWon.Left,
-                  bid: bidDisplay ? bidDisplay.Left : null,
-                  resultLabel: bidResultDisplay ? bidResultDisplay.Left.label : null,
-                  resultClass: bidResultDisplay ? bidResultDisplay.Left.className : "",
-                })}
-              </div>
-              <Badge variant="outline">{displayHands.Left.length}</Badge>
-            </div>
-            <div className="mt-3 flex items-center gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="gap-2 text-emerald-600 border-emerald-600 md:text-foreground md:border-border"
-                onClick={() => toggleRevealSeat("Left")}
-                disabled={modeOpenHandVerify || isViewingHistory}
-              >
-                {shownHands.Left ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                <span className="hidden md:inline">{shownHands.Left ? "Hide" : "Reveal"}</span>
-              </Button>
-            </div>
-            {shownHands.Left ? (
-              <HandCol
-                seat="Left"
-                hand={displayHands.Left}
-                cardRotateClass="rotate-90 origin-center"
-                align="start"
-                legal={legalBySeat.Left}
-                onPlay={onPlayCard}
-                currentTurn={displayTurn}
-                suitOrder={suitOrder}
-                sortAscending={sortAscending}
-                canPlay={canPlay}
-                suitStyleMode={suitStyleMode}
-              />
-            ) : null}
+            <SeatPanel
+              label={seatLabels.Left}
+              tricksWon={displayTricksWon.Left}
+              bid={bidDisplay ? bidDisplay.Left : null}
+              resultLabel={bidResultDisplay ? bidResultDisplay.Left.label : null}
+              resultClass={bidResultDisplay ? bidResultDisplay.Left.className : ""}
+              isTurn={displayTurn === "Left"}
+              displayHandComplete={displayHandComplete}
+              cardCount={displayHands.Left.length}
+              showReveal
+              isRevealed={shownHands.Left}
+              onToggleReveal={() => toggleRevealSeat("Left")}
+              disableReveal={modeOpenHandVerify || isViewingHistory}
+            >
+              {shownHands.Left ? (
+                <HandCol
+                  seat="Left"
+                  hand={displayHands.Left}
+                  cardRotateClass="rotate-90 origin-center"
+                  align="start"
+                  legal={legalBySeat.Left}
+                  onPlay={onPlayCard}
+                  currentTurn={displayTurn}
+                  suitOrder={suitOrder}
+                  sortAscending={sortAscending}
+                  canPlay={canPlay}
+                  suitStyleMode={suitStyleMode}
+                />
+              ) : null}
+            </SeatPanel>
           </div>
 
           <div
@@ -403,45 +424,53 @@ export function TableCard(props: TableCardProps) {
           </div>
 
           <div className={"row-span-2 rounded-xl border p-2 sm:p-3 " + (shownHands.Right ? "min-h-[400px]" : "")}>
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <div
-                className={
-                  "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
-                  (displayTurn === "Right" && !displayHandComplete
-                    ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
-                    : "")
-                }
-              >
-                {formatSeatStatus({
-                  label: seatLabels.Right,
-                  tricksWon: displayTricksWon.Right,
-                  bid: bidDisplay ? bidDisplay.Right : null,
-                  resultLabel: bidResultDisplay ? bidResultDisplay.Right.label : null,
-                  resultClass: bidResultDisplay ? bidResultDisplay.Right.className : "",
-                })}
-              </div>
-              <Badge variant="outline">{displayHands.Right.length}</Badge>
-            </div>
-            <div className="mt-3 flex items-center gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="gap-2 text-emerald-600 border-emerald-600 md:text-foreground md:border-border"
-                onClick={() => toggleRevealSeat("Right")}
-                disabled={modeOpenHandVerify || isViewingHistory}
-              >
-                {shownHands.Right ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                <span className="hidden md:inline">{shownHands.Right ? "Hide" : "Reveal"}</span>
-              </Button>
-            </div>
-            {shownHands.Right ? (
-              <HandCol
-                seat="Right"
-                hand={displayHands.Right}
-                cardRotateClass="-rotate-90 origin-center"
-                align="end"
-                legal={legalBySeat.Right}
+            <SeatPanel
+              label={seatLabels.Right}
+              tricksWon={displayTricksWon.Right}
+              bid={bidDisplay ? bidDisplay.Right : null}
+              resultLabel={bidResultDisplay ? bidResultDisplay.Right.label : null}
+              resultClass={bidResultDisplay ? bidResultDisplay.Right.className : ""}
+              isTurn={displayTurn === "Right"}
+              displayHandComplete={displayHandComplete}
+              cardCount={displayHands.Right.length}
+              showReveal
+              isRevealed={shownHands.Right}
+              onToggleReveal={() => toggleRevealSeat("Right")}
+              disableReveal={modeOpenHandVerify || isViewingHistory}
+            >
+              {shownHands.Right ? (
+                <HandCol
+                  seat="Right"
+                  hand={displayHands.Right}
+                  cardRotateClass="-rotate-90 origin-center"
+                  align="end"
+                  legal={legalBySeat.Right}
+                  onPlay={onPlayCard}
+                  currentTurn={displayTurn}
+                  suitOrder={suitOrder}
+                  sortAscending={sortAscending}
+                  canPlay={canPlay}
+                  suitStyleMode={suitStyleMode}
+                />
+              ) : null}
+            </SeatPanel>
+          </div>
+
+          <div className="col-span-3 rounded-xl border p-2 sm:p-3">
+            <SeatPanel
+              label={seatLabels.Me}
+              tricksWon={displayTricksWon.Me}
+              bid={bidDisplay ? bidDisplay.Me : null}
+              resultLabel={bidResultDisplay ? bidResultDisplay.Me.label : null}
+              resultClass={bidResultDisplay ? bidResultDisplay.Me.className : ""}
+              isTurn={displayTurn === "Me"}
+              displayHandComplete={displayHandComplete}
+              cardCount={displayHands.Me.length}
+            >
+              <HandRow
+                seat="Me"
+                hand={displayHands.Me}
+                legal={legalBySeat.Me}
                 onPlay={onPlayCard}
                 currentTurn={displayTurn}
                 suitOrder={suitOrder}
@@ -449,40 +478,7 @@ export function TableCard(props: TableCardProps) {
                 canPlay={canPlay}
                 suitStyleMode={suitStyleMode}
               />
-            ) : null}
-          </div>
-
-          <div className="col-span-3 rounded-xl border p-2 sm:p-3">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <div
-                className={
-                  "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
-                  (displayTurn === "Me" && !displayHandComplete
-                    ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
-                    : "")
-                }
-              >
-                {formatSeatStatus({
-                  label: seatLabels.Me,
-                  tricksWon: displayTricksWon.Me,
-                  bid: bidDisplay ? bidDisplay.Me : null,
-                  resultLabel: bidResultDisplay ? bidResultDisplay.Me.label : null,
-                  resultClass: bidResultDisplay ? bidResultDisplay.Me.className : "",
-                })}
-              </div>
-              <Badge variant="outline">{displayHands.Me.length}</Badge>
-            </div>
-            <HandRow
-              seat="Me"
-              hand={displayHands.Me}
-              legal={legalBySeat.Me}
-              onPlay={onPlayCard}
-              currentTurn={displayTurn}
-              suitOrder={suitOrder}
-              sortAscending={sortAscending}
-              canPlay={canPlay}
-              suitStyleMode={suitStyleMode}
-            />
+            </SeatPanel>
           </div>
         </div>
       </CardContent>
