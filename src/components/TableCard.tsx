@@ -104,7 +104,9 @@ function SeatPanel({
         >
           {formatSeatStatus({ label, tricksWon, bid, resultLabel, resultClass })}
         </div>
-        <Badge variant="outline">{cardCount}</Badge>
+        <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+          {cardCount}
+        </Badge>
       </div>
       {showReveal ? (
         <div className="mt-3 flex items-center gap-2">
