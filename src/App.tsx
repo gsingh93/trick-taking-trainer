@@ -363,7 +363,6 @@ export default function App() {
     trick,
     trickNo,
     handComplete,
-    trumpBroken,
     tricksWon,
   } = game;
   const handInProgress = isHandInProgress(game);
@@ -779,7 +778,7 @@ export default function App() {
     const ranksInTrick = new Set(
       trick.filter((t) => t.card.suit === suit).map((t) => t.card.rank)
     );
-    const higherHonors = [11, 12, 13, 14].filter((r) => r > card.rank);
+    const higherHonors = ([11, 12, 13, 14] as Rank[]).filter((r) => r > card.rank);
     return higherHonors.every((r) => ranksInTrick.has(r));
   }
 
@@ -886,7 +885,8 @@ export default function App() {
         return next;
       });
 
-      if (!resolvedState) return;
+      const nextState = resolvedState as GameState | null;
+      if (!nextState) return;
       if (promptSuit) {
         setSuitCountPromptActive(true);
         setSuitCountPromptSuit(promptSuit);
@@ -897,7 +897,7 @@ export default function App() {
         resolveTimerRef.current = null;
         return;
       }
-      if (resolvedState.handComplete) {
+      if (nextState.handComplete) {
         setIsResolving(false);
         setAwaitContinue(false);
         resolveTimerRef.current = null;
@@ -1530,7 +1530,7 @@ if (import.meta.env.DEV) {
   ];
   const _leadTrick: PlayT[] = [{ seat: "Me", card: { suit: "H", rank: 10, id: "H10" } }];
   const _base = initGameState(1);
-  const _state = {
+  const _state: GameState = {
     ..._base,
     hands: { ..._base.hands, Me: _handFollow },
     leader: "Left",

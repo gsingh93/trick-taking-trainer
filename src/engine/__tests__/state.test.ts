@@ -11,6 +11,7 @@ import {
   advanceToNextTrick,
   buildHistorySnapshot,
   isHandInProgress,
+  type GameState,
 } from "../state";
 import type { CardT, PlayT, TrumpConfig } from "../types";
 
@@ -194,7 +195,7 @@ describe("state", () => {
   it("computeLegalBySeat blocks leading trump before break when non-trump exists", () => {
     const trump: TrumpConfig = { enabled: true, suit: "S", mustBreak: true };
     const base = initGameState(1);
-    const state = {
+    const state: GameState = {
       ...base,
       hands: {
         ...base.hands,
@@ -220,7 +221,13 @@ describe("state", () => {
       { suit: "S", rank: 14, id: "S14" },
     ];
     const lead: PlayT[] = [{ seat: "Left", card: { suit: "H", rank: 10, id: "H10" } }];
-    const state = { ...base, hands: { ...base.hands, Me: hand }, leader: "Left", turn: "Me", trick: lead };
+    const state: GameState = {
+      ...base,
+      hands: { ...base.hands, Me: hand },
+      leader: "Left",
+      turn: "Me",
+      trick: lead,
+    };
     expect(isPlayLegal({ state, seat: "Me", card: hand[1], trump })).toBe(false);
   });
 });

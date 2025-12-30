@@ -6,12 +6,12 @@ const srcPath = decodeURIComponent(
   srcUrl.pathname.replace(/^\/([A-Za-z]:)/, "$1")
 );
 
-export default defineConfig({
-  base: process.env.BASE_PATH ?? "/",
+export default defineConfig(({ command }) => ({
+  base: command === "build" ? "/trick-taking-trainer/" : "/",
   plugins: [react()],
   resolve: {
     alias: {
       "@": srcPath,
     },
   },
-});
+}));

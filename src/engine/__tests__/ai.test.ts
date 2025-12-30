@@ -4,6 +4,7 @@ import { shouldRunAi } from "../ai/logic";
 import { canAdvanceTrick, canPlayCard } from "../flow";
 import { chooseCardToPlayForBid } from "../ai/bidFocus";
 import { estimateBid } from "../ai/bidHeuristic";
+import type { CardT, TrumpConfig } from "../types";
 
 describe("ai", () => {
   it("returns null when no legal cards exist", () => {
@@ -159,7 +160,7 @@ describe("ai", () => {
   });
 
   it("estimates higher bids for stronger hands", () => {
-    const strong = [
+    const strong: CardT[] = [
       { suit: "S", rank: 14, id: "S14" },
       { suit: "H", rank: 13, id: "H13" },
       { suit: "D", rank: 12, id: "D12" },
@@ -167,7 +168,7 @@ describe("ai", () => {
       { suit: "S", rank: 10, id: "S10" },
       { suit: "S", rank: 9, id: "S9" },
     ];
-    const weak = [
+    const weak: CardT[] = [
       { suit: "S", rank: 2, id: "S2" },
       { suit: "H", rank: 3, id: "H3" },
       { suit: "D", rank: 4, id: "D4" },
@@ -175,7 +176,7 @@ describe("ai", () => {
       { suit: "S", rank: 6, id: "S6" },
       { suit: "H", rank: 7, id: "H7" },
     ];
-    const trump = { enabled: true, suit: "S", mustBreak: true };
+    const trump: TrumpConfig = { enabled: true, suit: "S", mustBreak: true };
     expect(estimateBid(strong, trump)).toBeGreaterThanOrEqual(estimateBid(weak, trump));
   });
 });

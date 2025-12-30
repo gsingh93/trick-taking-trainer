@@ -147,7 +147,6 @@ function HandRow({
   canPlay: boolean;
   suitStyleMode: "classic" | "distinct";
 }) {
-  const isTurn = seat === currentTurn;
   return (
     <div className={"mt-3 " + (rotateClass ?? "")}>
       <div className="flex flex-wrap gap-px">
@@ -194,7 +193,6 @@ function HandCol({
   canPlay: boolean;
   suitStyleMode: "classic" | "distinct";
 }) {
-  const isTurn = seat === currentTurn;
   const gridAlign = align === "end" ? "justify-items-end" : "justify-items-start";
   return (
     <div className={"mt-3 flex " + (align === "end" ? "justify-end" : "justify-start")}>
