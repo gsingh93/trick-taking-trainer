@@ -2,6 +2,8 @@
 
 Browser-based training tool for trick-taking card games, focused on card counting and void tracking.
 
+Live site: https://gsingh93.github.io/trick-taking-trainer/
+
 ## Development
 Requirements: Node.js (LTS recommended).
 
