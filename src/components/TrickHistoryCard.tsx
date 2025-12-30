@@ -37,7 +37,7 @@ export function TrickHistoryCard(props: TrickHistoryCardProps) {
   } = props;
 
   return (
-    <Card className="flex flex-col">
+    <Card className="flex h-full flex-col">
       <CardHeader>
         <CardTitle>Trick History</CardTitle>
       </CardHeader>
