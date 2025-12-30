@@ -256,6 +256,28 @@ export function trickLeadCount(trickHistory: PlayT[][], suit: Suit): number {
   }, 0);
 }
 
+function hasOffSuit(trick: PlayT[]): boolean {
+  const lead = trickLeadSuit(trick);
+  if (!lead) return false;
+  return trick.some((play, idx) => idx > 0 && play.card.suit !== lead);
+}
+
+function historyHasOffSuitForSuit(trickHistory: PlayT[][], suit: Suit): boolean {
+  return trickHistory.some((t) => {
+    const lead = trickLeadSuit(t);
+    if (lead !== suit) return false;
+    return t.some((play, idx) => idx > 0 && play.card.suit !== lead);
+  });
+}
+
+export function shouldPromptSuitCount(trickHistory: PlayT[][], trick: PlayT[]): Suit | null {
+  const lead = trickLeadSuit(trick);
+  if (!lead) return null;
+  if (!hasOffSuit(trick)) return null;
+  if (historyHasOffSuitForSuit(trickHistory, lead)) return null;
+  return lead;
+}
+
 export function computeLegalBySeat(state: GameState, trump: TrumpConfig): Record<Seat, Set<string>> {
   const out: Record<Seat, Set<string>> = {
     Left: new Set(),

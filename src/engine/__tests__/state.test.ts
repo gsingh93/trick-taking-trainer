@@ -3,6 +3,7 @@ import {
   applyPlay,
   computeActualVoid,
   computeLegalBySeat,
+  shouldPromptSuitCount,
   initGameState,
   isPlayLegal,
   resetTrick,
@@ -121,6 +122,34 @@ describe("state", () => {
     const actual = computeActualVoid(history, []);
     expect(actual.Left.S).toBe(true);
     expect(actual.Right.D).toBe(true);
+  });
+
+  it("shouldPromptSuitCount returns the lead suit on first off-suit", () => {
+    const trick: PlayT[] = [
+      { seat: "Me", card: { suit: "H", rank: 10, id: "H10" } },
+      { seat: "Left", card: { suit: "S", rank: 2, id: "S2" } },
+      { seat: "Across", card: { suit: "H", rank: 3, id: "H3" } },
+      { seat: "Right", card: { suit: "H", rank: 4, id: "H4" } },
+    ];
+    expect(shouldPromptSuitCount([], trick)).toBe("H");
+  });
+
+  it("shouldPromptSuitCount skips if the suit already had an off-suit", () => {
+    const history: PlayT[][] = [
+      [
+        { seat: "Me", card: { suit: "H", rank: 10, id: "H10" } },
+        { seat: "Left", card: { suit: "S", rank: 2, id: "S2" } },
+        { seat: "Across", card: { suit: "H", rank: 3, id: "H3" } },
+        { seat: "Right", card: { suit: "H", rank: 4, id: "H4" } },
+      ],
+    ];
+    const trick: PlayT[] = [
+      { seat: "Me", card: { suit: "H", rank: 9, id: "H9" } },
+      { seat: "Left", card: { suit: "D", rank: 2, id: "D2" } },
+      { seat: "Across", card: { suit: "H", rank: 5, id: "H5" } },
+      { seat: "Right", card: { suit: "H", rank: 6, id: "H6" } },
+    ];
+    expect(shouldPromptSuitCount(history, trick)).toBeNull();
   });
 
   it("buildHistorySnapshot reflects step state and history slice", () => {

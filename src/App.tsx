@@ -36,6 +36,7 @@ import {
   computeActualVoid,
   isPlayLegal,
   isHandInProgress,
+  shouldPromptSuitCount,
   type GameState,
   type VoidGrid,
 } from "@/engine/state";
@@ -884,20 +885,6 @@ export default function App() {
     resetVoidPrompt();
   }
 
-  function trickHasOffSuit(trickPlays: PlayT[]): boolean {
-    const lead = trickLeadSuit(trickPlays);
-    if (!lead) return false;
-    return trickPlays.some((play, idx) => idx > 0 && play.card.suit !== lead);
-  }
-
-  function historyHasOffSuitForSuit(history: PlayT[][], suit: Suit): boolean {
-    return history.some((t) => {
-      const lead = trickLeadSuit(t);
-      if (lead !== suit) return false;
-      return t.some((play, idx) => idx > 0 && play.card.suit !== lead);
-    });
-  }
-
   function remainingSuitCountNotInHand(suit: Suit, state?: GameState): number {
     const hand = state ? state.hands.Me : hands.Me;
     const history = state ? state.trickHistory : trickHistory;
@@ -1063,15 +1050,7 @@ export default function App() {
     setIsResolving(true);
     cancelResolveTimer();
     const promptSuit =
-      suitCountPromptEnabled && !isViewingHistory
-        ? (() => {
-            const lead = trickLeadSuit(trick);
-            if (!lead) return null;
-            if (!trickHasOffSuit(trick)) return null;
-            if (historyHasOffSuitForSuit(trickHistory, lead)) return null;
-            return lead;
-          })()
-        : null;
+      suitCountPromptEnabled && !isViewingHistory ? shouldPromptSuitCount(trickHistory, trick) : null;
 
     resolveTimerRef.current = window.setTimeout(() => {
       let resolvedState: GameState | null = null;
