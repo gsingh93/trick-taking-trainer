@@ -191,6 +191,25 @@ function formatWinIntentDetails(args: {
   return details;
 }
 
+function formatOrdinal(value: number): string {
+  const abs = Math.abs(value);
+  const mod100 = abs % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${value}th`;
+  switch (abs % 10) {
+    case 1:
+      return `${value}st`;
+    case 2:
+      return `${value}nd`;
+    case 3:
+      return `${value}rd`;
+    default:
+      return `${value}th`;
+  }
+}
+
+function formatCardCount(value: number): string {
+  return `${value} ${value === 1 ? "card" : "cards"}`;
+}
 
 function createVoidSelections(): VoidSelections {
   return { Left: false, Across: false, Right: false };
@@ -1141,6 +1160,15 @@ export default function App() {
 
   const renderSuitCountPrompt = () => {
     if (!suitCountPromptEnabled || !suitCountPromptActive) return null;
+    const suitLeadCount = suitCountPromptSuit
+      ? trickHistory.filter((t) => trickLeadSuit(t) === suitCountPromptSuit).length
+      : 0;
+    const offSuitCount = trickHistory.reduce((sum, t) => {
+      const lead = trickLeadSuit(t);
+      if (!lead) return sum;
+      const offSuit = t.filter((play) => play.card.suit !== lead).length;
+      return sum + offSuit;
+    }, 0);
     return (
       <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40">
         <div className="w-[220px] space-y-3 rounded-lg border bg-card px-3 py-3 text-sm shadow-lg">
@@ -1170,6 +1198,13 @@ export default function App() {
             </SelectContent>
           </Select>
           {suitCountMismatch ? <div className="text-xs text-destructive">Suit count is incorrect</div> : null}
+          <details className="text-xs text-muted-foreground">
+            <summary className="cursor-pointer select-none">Hint</summary>
+            <div className="mt-1">
+              This is the {formatOrdinal(suitLeadCount)} time this suit has been led and this hand{" "}
+              {formatCardCount(offSuitCount)} {offSuitCount === 1 ? "was" : "were"} played off-suit
+            </div>
+          </details>
           <div className="flex gap-2">
             <Button
               className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
