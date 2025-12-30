@@ -94,7 +94,7 @@ function SeatPanel({
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div
           className={
-            "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
+            "flex items-center gap-2 rounded-md px-1.5 py-0.5 text-sm font-medium leading-none " +
             (isTurn && !displayHandComplete
               ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
               : "")
