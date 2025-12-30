@@ -287,7 +287,7 @@ export function TableCard(props: TableCardProps) {
 
   return (
     <Card>
-      <CardHeader className="pb-1">
+      <CardHeader className="pb-0">
         <CardTitle className="flex items-center justify-between">
           <div className="flex flex-col">
             <div className="flex items-center gap-3">
@@ -307,9 +307,9 @@ export function TableCard(props: TableCardProps) {
           </div>
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-1 pb-3 px-3 sm:pt-3 sm:pb-6 sm:px-6">
+      <CardContent className="pt-1 pb-1.5 px-1.5 sm:pt-2 sm:pb-3 sm:px-3">
         <div className="grid grid-cols-[minmax(0,0.25fr)_minmax(0,0.5fr)_minmax(0,0.25fr)] grid-rows-[auto_1fr_auto] gap-x-0.5 gap-y-2 sm:grid-cols-[minmax(0,0.25fr)_minmax(0,0.5fr)_minmax(0,0.25fr)] sm:gap-3">
-          <div className="col-span-3 rounded-xl border p-2 sm:p-3">
+          <div className="col-span-3 rounded-xl border p-1 sm:p-2">
             <SeatPanel
               label={seatLabels.Across}
               tricksWon={displayTricksWon.Across}
@@ -340,7 +340,7 @@ export function TableCard(props: TableCardProps) {
             </SeatPanel>
           </div>
 
-          <div className={"row-span-2 rounded-xl border p-2 sm:p-3 " + (shownHands.Left ? "min-h-[400px]" : "")}>
+          <div className={"row-span-2 rounded-xl border p-1 sm:p-2 " + (shownHands.Left ? "min-h-[400px]" : "")}>
             <SeatPanel
               label={seatLabels.Left}
               tricksWon={displayTricksWon.Left}
@@ -456,7 +456,7 @@ export function TableCard(props: TableCardProps) {
           </div>
           </div>
 
-          <div className={"row-span-2 rounded-xl border p-2 sm:p-3 " + (shownHands.Right ? "min-h-[400px]" : "")}>
+          <div className={"row-span-2 rounded-xl border p-1 sm:p-2 " + (shownHands.Right ? "min-h-[400px]" : "")}>
             <SeatPanel
               label={seatLabels.Right}
               tricksWon={displayTricksWon.Right}
@@ -489,7 +489,7 @@ export function TableCard(props: TableCardProps) {
             </SeatPanel>
           </div>
 
-          <div className="col-span-3 rounded-xl border p-2 sm:p-3">
+          <div className="col-span-3 rounded-xl border p-1 sm:p-2">
             <SeatPanel
               label={seatLabels.Me}
               tricksWon={displayTricksWon.Me}
