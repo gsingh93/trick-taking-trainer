@@ -373,17 +373,18 @@ export function TableCard(props: TableCardProps) {
             </SeatPanel>
           </div>
 
-          <div
-            className="relative flex h-[200px] w-[200px] items-center justify-center rounded-xl border bg-emerald-600/80 p-2 shadow-inner self-center justify-self-center sm:h-[240px] sm:w-[240px] sm:p-3"
-            onClick={canAdvance ? onAdvanceTrick : undefined}
-          >
-            <div className="absolute right-2 top-2 text-white">
-              <Badge className="bg-white/20 text-white hover:bg-white/20" variant="secondary">
-                {displayTrick.length}/4
-              </Badge>
-            </div>
+          <div className="flex w-full items-center justify-center self-center px-[0px] sm:px-[2px]">
+            <div
+              className="relative flex aspect-square w-full min-w-[180px] items-center justify-center rounded-xl border bg-emerald-600/80 p-2 shadow-inner sm:p-3"
+              onClick={canAdvance ? onAdvanceTrick : undefined}
+            >
+              <div className="absolute right-2 top-2 text-white">
+                <Badge className="bg-white/20 text-white hover:bg-white/20" variant="secondary">
+                  {displayTrick.length}/4
+                </Badge>
+              </div>
 
-            <div className="relative h-36 w-36 sm:h-40 sm:w-40">
+              <div className="relative h-[70%] w-[70%]">
               <div className="absolute left-1/2 top-0 -translate-x-1/2">
                 {(() => {
                   const p = displayTrick.find((t) => t.seat === "Across");
@@ -439,7 +440,7 @@ export function TableCard(props: TableCardProps) {
               </div>
             </div>
 
-            <div className="absolute bottom-2 left-1/2 w-[190px] -translate-x-1/2 text-center text-xs text-white/80 sm:w-[220px]">
+            <div className="absolute bottom-2 left-1/2 w-[85%] -translate-x-1/2 text-center text-xs text-white/80">
               {awaitContinue && !handComplete && !isViewingHistory ? (
                 <>
                   <span className="sm:hidden">Click to continue</span>
@@ -452,6 +453,7 @@ export function TableCard(props: TableCardProps) {
             {voidPrompt}
             {suitCountPrompt}
             {winIntentPrompt}
+          </div>
           </div>
 
           <div className={"row-span-2 rounded-xl border p-2 sm:p-3 " + (shownHands.Right ? "min-h-[400px]" : "")}>
