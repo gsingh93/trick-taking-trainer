@@ -1335,6 +1335,136 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const renderBidPrompt = () => {
+    if (!biddingActive || !bidState) return null;
+    if (currentBidder(bidState) !== "Me" || isBiddingComplete(bidState)) return null;
+    return (
+      <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40">
+        <div className="w-[170px] space-y-3 rounded-lg border bg-card px-3 py-3 text-sm shadow-lg">
+          <div className="text-sm font-medium">Enter your bid</div>
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+            <Select value={bidInput} onValueChange={(v) => setBidInput(v)}>
+              <SelectTrigger className="h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 14 }, (_, i) => String(i)).map((n) => (
+                  <SelectItem key={n} value={n}>
+                    {n}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
+              onClick={() => submitBidForSeat("Me", Number(bidInput))}
+            >
+              Bid
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderSuitCountPrompt = () => {
+    if (!suitCountPromptEnabled || !suitCountPromptActive) return null;
+    return (
+      <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40">
+        <div className="w-[220px] space-y-3 rounded-lg border bg-card px-3 py-3 text-sm shadow-lg">
+          <div className="text-sm font-medium">
+            How many{" "}
+            <span className={suitCountPromptSuit ? suitColorClass(suitCountPromptSuit, suitStyleMode) : undefined}>
+              {suitCountPromptSuit ? suitGlyph(suitCountPromptSuit) : "cards"}
+            </span>{" "}
+            remain outside your hand?
+          </div>
+          <Select
+            value={suitCountAnswer}
+            onValueChange={(v) => {
+              setSuitCountAnswer(v);
+              setSuitCountMismatch(false);
+            }}
+          >
+            <SelectTrigger className="h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 14 }, (_, i) => String(i)).map((n) => (
+                <SelectItem key={n} value={n}>
+                  {n}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {suitCountMismatch ? <div className="text-xs text-destructive">Suit count is incorrect</div> : null}
+          <div className="flex gap-2">
+            <Button
+              className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
+              onClick={resumeAfterSuitCountPrompt}
+            >
+              Resume
+            </Button>
+            <Button variant="outline" className="flex-1" onClick={skipSuitCountPrompt}>
+              Skip
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderWinIntentPrompt = () => {
+    if (!pendingIntentCard) return null;
+    return (
+      <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40">
+        <div className="w-[200px] space-y-3 rounded-lg border bg-card px-3 py-3 text-sm shadow-lg">
+          {!intentWarning ? (
+            <>
+              <div className="text-sm font-medium">Do you intend to win this trick?</div>
+              <div className="flex gap-2">
+                <Button
+                  className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
+                  onClick={() => handleWinIntentDecision(true)}
+                >
+                  Yes
+                </Button>
+                <Button variant="outline" className="flex-1" onClick={() => handleWinIntentDecision(false)}>
+                  No
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-sm font-medium text-destructive">{intentWarning}</div>
+              {intentDetails.length ? (
+                <details className="text-xs text-muted-foreground">
+                  <summary className="cursor-pointer select-none">Details</summary>
+                  <div className="mt-1 space-y-1">
+                    {intentDetails.map((line) => (
+                      <div key={line}>{line}</div>
+                    ))}
+                  </div>
+                </details>
+              ) : null}
+              <div className="flex gap-2">
+                <Button
+                  className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
+                  onClick={confirmIntentPlay}
+                >
+                  Play
+                </Button>
+                <Button variant="outline" className="flex-1" onClick={cancelIntentPrompt}>
+                  Cancel
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderTableCard = () => (
     <Card className="lg:col-span-2">
       <CardHeader className="pb-1">
@@ -1551,127 +1681,9 @@ export default function App() {
               ) : null}
             </div>
 
-            {biddingActive && bidState && currentBidder(bidState) === "Me" && !isBiddingComplete(bidState) ? (
-              <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40">
-                <div className="w-[170px] space-y-3 rounded-lg border bg-card px-3 py-3 text-sm shadow-lg">
-                  <div className="text-sm font-medium">Enter your bid</div>
-                  <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-                    <Select value={bidInput} onValueChange={(v) => setBidInput(v)}>
-                      <SelectTrigger className="h-8">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 14 }, (_, i) => String(i)).map((n) => (
-                          <SelectItem key={n} value={n}>
-                            {n}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      className="bg-emerald-600 text-white hover:bg-emerald-700"
-                      onClick={() => submitBidForSeat("Me", Number(bidInput))}
-                    >
-                      Bid
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-
-            {suitCountPromptEnabled && suitCountPromptActive ? (
-              <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40">
-                <div className="w-[220px] space-y-3 rounded-lg border bg-card px-3 py-3 text-sm shadow-lg">
-                  <div className="text-sm font-medium">
-                    How many{" "}
-                    <span className={suitCountPromptSuit ? suitColorClass(suitCountPromptSuit, suitStyleMode) : undefined}>
-                      {suitCountPromptSuit ? suitGlyph(suitCountPromptSuit) : "cards"}
-                    </span>{" "}
-                    remain outside your hand?
-                  </div>
-                  <Select
-                    value={suitCountAnswer}
-                    onValueChange={(v) => {
-                      setSuitCountAnswer(v);
-                      setSuitCountMismatch(false);
-                    }}
-                  >
-                    <SelectTrigger className="h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 14 }, (_, i) => String(i)).map((n) => (
-                        <SelectItem key={n} value={n}>
-                          {n}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {suitCountMismatch ? (
-                    <div className="text-xs text-destructive">Suit count is incorrect</div>
-                  ) : null}
-                  <div className="flex gap-2">
-                    <Button
-                      className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
-                      onClick={resumeAfterSuitCountPrompt}
-                    >
-                      Resume
-                    </Button>
-                    <Button variant="outline" className="flex-1" onClick={skipSuitCountPrompt}>
-                      Skip
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-
-            {pendingIntentCard ? (
-              <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40">
-                <div className="w-[200px] space-y-3 rounded-lg border bg-card px-3 py-3 text-sm shadow-lg">
-                  {!intentWarning ? (
-                    <>
-                      <div className="text-sm font-medium">Do you intend to win this trick?</div>
-                      <div className="flex gap-2">
-                        <Button
-                          className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
-                          onClick={() => handleWinIntentDecision(true)}
-                        >
-                          Yes
-                        </Button>
-                        <Button variant="outline" className="flex-1" onClick={() => handleWinIntentDecision(false)}>
-                          No
-                        </Button>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="text-sm font-medium text-destructive">{intentWarning}</div>
-                      {intentDetails.length ? (
-                        <details className="text-xs text-muted-foreground">
-                          <summary className="cursor-pointer select-none">Details</summary>
-                          <div className="mt-1 space-y-1">
-                            {intentDetails.map((line) => (
-                              <div key={line}>{line}</div>
-                            ))}
-                          </div>
-                        </details>
-                      ) : null}
-                      <div className="flex gap-2">
-                        <Button
-                          className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
-                          onClick={confirmIntentPlay}
-                        >
-                          Play
-                        </Button>
-                        <Button variant="outline" className="flex-1" onClick={cancelIntentPrompt}>
-                          Cancel
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            ) : null}
+            {renderBidPrompt()}
+            {renderSuitCountPrompt()}
+            {renderWinIntentPrompt()}
           </div>
 
           {/* Right spans rows */}
