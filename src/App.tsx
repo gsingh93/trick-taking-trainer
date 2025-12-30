@@ -56,6 +56,7 @@ import { rankGlyph, suitColorClass, suitGlyph } from "@/ui/cardUtils";
 import { SettingsCard } from "@/components/SettingsCard";
 import { TrickHistoryCard } from "@/components/TrickHistoryCard";
 import { TableCard } from "@/components/TableCard";
+import { HelpCard } from "@/components/HelpCard";
 
 /**
  * Generic trick engine (v1)
@@ -1483,6 +1484,7 @@ export default function App() {
     />
   );
 
+  const helpCard = <HelpCard />;
 
   return (
     <div className="min-h-screen bg-background p-3 sm:p-6">
@@ -1544,6 +1546,7 @@ export default function App() {
           <div className="space-y-6">
             {tableCard}
             <div className="space-y-6 md:max-w-[330px] md:justify-self-end">
+              {helpCard}
               {trickHistoryCard}
               {settingsCard}
             </div>
@@ -1552,6 +1555,7 @@ export default function App() {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_auto] md:gap-1">
             {tableCard}
             <div className="space-y-6 w-full md:max-w-[330px] md:justify-self-end">
+              {helpCard}
               {trickHistoryCard}
               {settingsCard}
             </div>
