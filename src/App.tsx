@@ -1198,8 +1198,8 @@ export default function App() {
             </SelectContent>
           </Select>
           {suitCountMismatch ? <div className="text-xs text-destructive">Suit count is incorrect</div> : null}
-          <details className="text-xs text-muted-foreground">
-            <summary className="cursor-pointer select-none">Hint</summary>
+          <details className="rounded-md border border-dashed px-2 py-1 text-xs text-muted-foreground">
+            <summary className="cursor-pointer select-none font-medium text-foreground">Hint</summary>
             <div className="mt-1">
               This is the {formatOrdinal(suitLeadCount)} time this suit has been led and this hand{" "}
               {formatCardCount(offSuitCount)} {offSuitCount === 1 ? "was" : "were"} played off-suit
@@ -1245,8 +1245,8 @@ export default function App() {
             <>
               <div className="text-sm font-medium text-destructive">{intentWarning}</div>
               {intentDetails.length ? (
-                <details className="text-xs text-muted-foreground">
-                  <summary className="cursor-pointer select-none">Details</summary>
+                <details className="rounded-md border border-dashed px-2 py-1 text-xs text-muted-foreground">
+                  <summary className="cursor-pointer select-none font-medium text-foreground">Details</summary>
                   <div className="mt-1 space-y-1">
                     {intentDetails.map((line) => (
                       <div key={line}>{line}</div>
