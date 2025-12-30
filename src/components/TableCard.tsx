@@ -152,8 +152,8 @@ function HandRow({
   return (
     <div className={"mt-3 " + (rotateClass ?? "")}>
       <div className="flex flex-wrap gap-px">
-        {sortHand(hand, suitOrder, sortAscending).map((c) => (
-          {renderPlayingCard({
+        {sortHand(hand, suitOrder, sortAscending).map((c) =>
+          renderPlayingCard({
             key: c.id,
             card: c,
             seat,
@@ -162,8 +162,8 @@ function HandRow({
             canPlay,
             suitStyleMode,
             onPlay,
-          })}
-        ))}
+          })
+        )}
       </div>
     </div>
   );
@@ -289,6 +289,25 @@ export function TableCard(props: TableCardProps) {
 
   const playCardBox = "h-[35%] aspect-[5/7]";
 
+  const renderPlayAreaCard = (
+    seat: Seat,
+    fallbackClass: string,
+    rotateClass?: string
+  ) => {
+    const p = displayTrick.find((t) => t.seat === seat);
+    return p ? (
+      <PlayingCard
+        c={p.card}
+        rotateClass={rotateClass}
+        highlight={displayTrickWinner === seat}
+        suitStyleMode={suitStyleMode}
+        sizeClass="h-full w-full"
+      />
+    ) : (
+      <div className={fallbackClass + " opacity-20"} />
+    );
+  };
+
   return (
     <Card>
       <CardHeader className="pb-0">
@@ -390,69 +409,19 @@ export function TableCard(props: TableCardProps) {
 
               <div className="relative h-[90%] w-[90%]">
               <div className={"absolute left-1/2 top-0 -translate-x-1/2 " + playCardBox}>
-                {(() => {
-                  const p = displayTrick.find((t) => t.seat === "Across");
-                  return p ? (
-                    <PlayingCard
-                      c={p.card}
-                      highlight={displayTrickWinner === "Across"}
-                      suitStyleMode={suitStyleMode}
-                      sizeClass="h-full w-full"
-                    />
-                  ) : (
-                    <div className={"h-full w-full opacity-20"} />
-                  );
-                })()}
+                {renderPlayAreaCard("Across", "h-full w-full")}
               </div>
 
               <div className={"absolute left-0 top-1/2 -translate-y-1/2 " + playCardBox}>
-                {(() => {
-                  const p = displayTrick.find((t) => t.seat === "Left");
-                  return p ? (
-                    <PlayingCard
-                      c={p.card}
-                      rotateClass="rotate-90"
-                      highlight={displayTrickWinner === "Left"}
-                      suitStyleMode={suitStyleMode}
-                      sizeClass="h-full w-full"
-                    />
-                  ) : (
-                    <div className={"h-full w-full opacity-20"} />
-                  );
-                })()}
+                {renderPlayAreaCard("Left", "h-full w-full", "rotate-90")}
               </div>
 
               <div className={"absolute right-0 top-1/2 -translate-y-1/2 " + playCardBox}>
-                {(() => {
-                  const p = displayTrick.find((t) => t.seat === "Right");
-                  return p ? (
-                    <PlayingCard
-                      c={p.card}
-                      rotateClass="-rotate-90"
-                      highlight={displayTrickWinner === "Right"}
-                      suitStyleMode={suitStyleMode}
-                      sizeClass="h-full w-full"
-                    />
-                  ) : (
-                    <div className={"h-full w-full opacity-20"} />
-                  );
-                })()}
+                {renderPlayAreaCard("Right", "h-full w-full", "-rotate-90")}
               </div>
 
               <div className={"absolute bottom-0 left-1/2 -translate-x-1/2 " + playCardBox}>
-                {(() => {
-                  const p = displayTrick.find((t) => t.seat === "Me");
-                  return p ? (
-                    <PlayingCard
-                      c={p.card}
-                      highlight={displayTrickWinner === "Me"}
-                      suitStyleMode={suitStyleMode}
-                      sizeClass="h-full w-full"
-                    />
-                  ) : (
-                    <div className={"h-full w-full opacity-20"} />
-                  );
-                })()}
+                {renderPlayAreaCard("Me", "h-full w-full")}
               </div>
             </div>
 
