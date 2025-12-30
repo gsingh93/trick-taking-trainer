@@ -1515,15 +1515,15 @@ export default function App() {
         </header>
 
         <div className="space-y-6">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-1">
+          <div className="grid grid-cols-1 gap-6 min-[750px]:grid-cols-[minmax(0,1fr)_auto] min-[750px]:gap-1">
             {tableCard}
-            <div className="w-full sm:w-[330px] sm:justify-self-end">
+            <div className="w-full min-[750px]:w-[330px] min-[750px]:justify-self-end">
               {trickHistoryCard}
             </div>
           </div>
-          <div className="grid grid-cols-1 items-start gap-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-1">
+          <div className="grid grid-cols-1 items-start gap-6 min-[750px]:grid-cols-[minmax(0,1fr)_auto] min-[750px]:gap-1">
             <div className="w-full">{helpCard}</div>
-            <div className="w-full sm:w-[330px] sm:justify-self-end">{settingsCard}</div>
+            <div className="w-full min-[750px]:w-[330px] min-[750px]:justify-self-end">{settingsCard}</div>
           </div>
         </div>
       </div>
