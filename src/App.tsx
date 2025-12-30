@@ -1247,7 +1247,8 @@ export default function App() {
             <summary className="cursor-pointer select-none font-medium text-foreground">Hint</summary>
             <div className="mt-1">
               This is the {formatOrdinal(suitLeadCount)} time this suit has been led and this hand{" "}
-              {formatCardCount(offSuitCount)} {offSuitCount === 1 ? "was" : "were"} played off-suit
+              {formatCardCount(offSuitCount)} {offSuitCount === 1 ? "was" : "were"} played off-suit.
+              This gives an upper bound on the number of cards left in this suit.
             </div>
           </details>
           <div className="flex gap-2">
