@@ -22,6 +22,22 @@ export function estimateBid(hand: CardT[], trump: TrumpConfig): number {
     const trumpCount = suitCounts[trump.suit];
     if (trumpCount >= 5) points += 0.5;
     if (trumpCount >= 6) points += 0.5;
+
+    for (const suit of Object.keys(suitCounts) as Suit[]) {
+      if (suit === trump.suit) continue;
+      const count = suitCounts[suit];
+      if (count === 0) points += 1;
+      if (count === 1) points += 0.5;
+      if (count === 2) points += 0.25;
+    }
+  }
+
+  const shape = Object.values(suitCounts)
+    .slice()
+    .sort((a, b) => b - a)
+    .join("-");
+  if (shape === "4-3-3-3" || shape === "4-4-3-2") {
+    points -= 0.5;
   }
 
   const bid = Math.round(points / 3);

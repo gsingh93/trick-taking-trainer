@@ -26,7 +26,14 @@ export function chooseCardToPlayForBid(
   if (leadSuit) {
     if (needsTricks) {
       const winning = lowestWinningCard(legalCards, ctx.trick, ctx.trump);
-      if (winning) return { cardId: winning.id };
+      if (winning) {
+        const offTrumpWinning = lowestWinningCard(
+          legalCards.filter((c) => !isTrump(c, ctx.trump)),
+          ctx.trick,
+          ctx.trump
+        );
+        return { cardId: (offTrumpWinning ?? winning).id };
+      }
     }
     const lowest = lowestCard(legalCards, ctx.trump);
     return { cardId: lowest.id };
