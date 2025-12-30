@@ -285,6 +285,8 @@ export function TableCard(props: TableCardProps) {
     winIntentPrompt,
   } = props;
 
+  const playCardBox = "h-[35%] aspect-[5/7]";
+
   return (
     <Card>
       <CardHeader className="pb-0">
@@ -384,19 +386,24 @@ export function TableCard(props: TableCardProps) {
                 </Badge>
               </div>
 
-              <div className="relative h-[80%] w-[80%]">
-              <div className="absolute left-1/2 top-0 -translate-x-1/2">
+              <div className="relative h-[90%] w-[90%]">
+              <div className={"absolute left-1/2 top-0 -translate-x-1/2 " + playCardBox}>
                 {(() => {
                   const p = displayTrick.find((t) => t.seat === "Across");
                   return p ? (
-                    <PlayingCard c={p.card} highlight={displayTrickWinner === "Across"} suitStyleMode={suitStyleMode} />
+                    <PlayingCard
+                      c={p.card}
+                      highlight={displayTrickWinner === "Across"}
+                      suitStyleMode={suitStyleMode}
+                      sizeClass="h-full w-full"
+                    />
                   ) : (
-                    <div className="h-14 w-10 opacity-20" />
+                    <div className={"h-full w-full opacity-20"} />
                   );
                 })()}
               </div>
 
-              <div className="absolute left-0 top-1/2 -translate-y-1/2">
+              <div className={"absolute left-0 top-1/2 -translate-y-1/2 " + playCardBox}>
                 {(() => {
                   const p = displayTrick.find((t) => t.seat === "Left");
                   return p ? (
@@ -405,14 +412,15 @@ export function TableCard(props: TableCardProps) {
                       rotateClass="rotate-90"
                       highlight={displayTrickWinner === "Left"}
                       suitStyleMode={suitStyleMode}
+                      sizeClass="h-full w-full"
                     />
                   ) : (
-                    <div className="h-10 w-14 opacity-20" />
+                    <div className={"h-full w-full opacity-20"} />
                   );
                 })()}
               </div>
 
-              <div className="absolute right-0 top-1/2 -translate-y-1/2">
+              <div className={"absolute right-0 top-1/2 -translate-y-1/2 " + playCardBox}>
                 {(() => {
                   const p = displayTrick.find((t) => t.seat === "Right");
                   return p ? (
@@ -421,20 +429,26 @@ export function TableCard(props: TableCardProps) {
                       rotateClass="-rotate-90"
                       highlight={displayTrickWinner === "Right"}
                       suitStyleMode={suitStyleMode}
+                      sizeClass="h-full w-full"
                     />
                   ) : (
-                    <div className="h-10 w-14 opacity-20" />
+                    <div className={"h-full w-full opacity-20"} />
                   );
                 })()}
               </div>
 
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
+              <div className={"absolute bottom-0 left-1/2 -translate-x-1/2 " + playCardBox}>
                 {(() => {
                   const p = displayTrick.find((t) => t.seat === "Me");
                   return p ? (
-                    <PlayingCard c={p.card} highlight={displayTrickWinner === "Me"} suitStyleMode={suitStyleMode} />
+                    <PlayingCard
+                      c={p.card}
+                      highlight={displayTrickWinner === "Me"}
+                      suitStyleMode={suitStyleMode}
+                      sizeClass="h-full w-full"
+                    />
                   ) : (
-                    <div className="h-14 w-10 opacity-20" />
+                    <div className={"h-full w-full opacity-20"} />
                   );
                 })()}
               </div>

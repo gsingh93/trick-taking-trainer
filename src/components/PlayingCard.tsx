@@ -10,6 +10,8 @@ export function PlayingCard({
   highlight,
   title,
   suitStyleMode,
+  sizeClass,
+  textClass,
 }: {
   c: CardT;
   rotateClass?: string;
@@ -19,9 +21,12 @@ export function PlayingCard({
   highlight?: boolean;
   title?: string;
   suitStyleMode: "classic" | "distinct";
+  sizeClass?: string;
+  textClass?: string;
 }) {
-  const base =
-    "flex h-14 w-10 items-center justify-center rounded-xl border bg-card text-sm shadow-sm";
+  const base = "flex items-center justify-center rounded-xl border bg-card shadow-sm [container-type:inline-size]";
+  const textSize = textClass ?? "text-[clamp(16px,30cqw,24px)]";
+  const size = sizeClass ?? "h-14 w-10";
   const inter = onClick
     ? disabled
       ? " opacity-40 cursor-not-allowed"
@@ -34,9 +39,17 @@ export function PlayingCard({
     <div
       title={title}
       onClick={disabled ? undefined : onClick}
-      className={base + inter + sel + win + (rotateClass ? " " + rotateClass : "")}
+      className={
+        base +
+        " " +
+        size +
+        inter +
+        sel +
+        win +
+        (rotateClass ? " " + rotateClass : "")
+      }
     >
-      <span className={`font-semibold ${suitColorClass(c.suit, suitStyleMode)}`}>
+      <span className={`font-semibold ${suitColorClass(c.suit, suitStyleMode)} ${textSize}`}>
         {rankGlyph(c.rank)}
         {suitGlyph(c.suit)}
       </span>
