@@ -39,7 +39,7 @@ export function TrickHistoryCard(props: TrickHistoryCardProps) {
   return (
     <Card className="flex flex-col">
       <CardHeader>
-        <CardTitle>Trick history</CardTitle>
+        <CardTitle>Trick History</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {trickHistory.length === 0 ? (

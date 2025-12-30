@@ -286,7 +286,7 @@ export function TableCard(props: TableCardProps) {
   } = props;
 
   return (
-    <Card className="lg:col-span-2">
+    <Card>
       <CardHeader className="pb-1">
         <CardTitle className="flex items-center justify-between">
           <div className="flex flex-col">

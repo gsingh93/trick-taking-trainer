@@ -224,35 +224,7 @@ function createVoidSelections(): VoidSelections {
 }
 
 
-function useMediaQuery(query: string) {
-  const getMatch = () => (typeof window !== "undefined" ? window.matchMedia(query).matches : false);
-  const [matches, setMatches] = useState(getMatch);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mql = window.matchMedia(query);
-    const onChange = (event: MediaQueryListEvent) => setMatches(event.matches);
-    if (mql.addEventListener) {
-      mql.addEventListener("change", onChange);
-    } else {
-      // Safari < 14
-      mql.addListener(onChange);
-    }
-    setMatches(mql.matches);
-    return () => {
-      if (mql.removeEventListener) {
-        mql.removeEventListener("change", onChange);
-      } else {
-        mql.removeListener(onChange);
-      }
-    };
-  }, [query]);
-
-  return matches;
-}
-
 export default function App() {
-  const isShortViewport = useMediaQuery("(max-height: 499px)");
   const initialSettings = useMemo(() => loadSettings(), []);
   const initialSeed = initialSettings.dealSeed ?? Math.floor(Math.random() * 1_000_000_000);
 
@@ -1542,25 +1514,18 @@ export default function App() {
           </div>
         </header>
 
-        {isShortViewport ? (
-          <div className="space-y-6">
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-1">
             {tableCard}
-            <div className="space-y-6 md:max-w-[330px] md:justify-self-end">
-              {helpCard}
+            <div className="w-full sm:w-[330px] sm:justify-self-end">
               {trickHistoryCard}
-              {settingsCard}
             </div>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_auto] md:gap-1">
-            {tableCard}
-            <div className="space-y-6 w-full md:max-w-[330px] md:justify-self-end">
-              {helpCard}
-              {trickHistoryCard}
-              {settingsCard}
-            </div>
+          <div className="grid grid-cols-1 items-start gap-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-1">
+            <div className="w-full">{helpCard}</div>
+            <div className="w-full sm:w-[330px] sm:justify-self-end">{settingsCard}</div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
