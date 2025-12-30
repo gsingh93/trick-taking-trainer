@@ -51,7 +51,7 @@ import {
   type PlayT,
   type TrumpConfig,
 } from "@/engine/types";
-import { Grid3X3, RefreshCw, Moon, Sun } from "lucide-react";
+import { Spade, RefreshCw, Moon, Sun } from "lucide-react";
 import { rankGlyph, suitColorClass, suitGlyph } from "@/ui/cardUtils";
 import { SettingsCard } from "@/components/SettingsCard";
 import { TrickHistoryCard } from "@/components/TrickHistoryCard";
@@ -1463,7 +1463,7 @@ export default function App() {
       <div className="mx-auto max-w-6xl space-y-4 sm:space-y-6">
         <header className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Grid3X3 className="h-5 w-5" />
+            <span className="text-lg leading-none text-black dark:text-white">♠</span>
             <h1 className="text-xl font-semibold">Trick Taking Trainer</h1>
           </div>
           <div className="flex items-center gap-4">
