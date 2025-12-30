@@ -1276,26 +1276,33 @@ export default function App() {
           <div className={"text-sm " + suitColorClass(leadPromptSuit, suitStyleMode)}>
             Lead suit: {suitGlyph(leadPromptSuit)}
           </div>
-          <div className="space-y-2 text-sm">
-            {OPPONENTS.map((o) => {
-              const isLeader = leadPromptLeader === o;
-              const mismatch = leadMismatch[o];
+          <div className="grid grid-cols-3 grid-rows-3 place-items-center gap-2 text-xs">
+            {(
+              [
+                { seat: "Across", col: 2, row: 1 },
+                { seat: "Left", col: 1, row: 2 },
+                { seat: "Right", col: 3, row: 2 },
+              ] as const
+            ).map(({ seat, col, row }) => {
+              const isLeader = leadPromptLeader === seat;
+              const mismatch = leadMismatch[seat];
               const disabled = isLeader;
               return (
                 <label
-                  key={o}
+                  key={seat}
                   className={
-                    "flex items-center justify-between rounded-md border px-2 py-1 " +
+                    "flex flex-col items-center gap-1 rounded-md border px-2 py-1 " +
                     (mismatch ? "border-destructive" : "border-border") +
                     (disabled ? " opacity-60" : "")
                   }
+                  style={{ gridColumn: col, gridRow: row }}
                 >
-                  <span>{seatLabels[o]}</span>
+                  <span>{seatLabels[seat]}</span>
                   <input
                     type="checkbox"
                     className="h-4 w-4"
-                    checked={leadSelections[o]}
-                    onChange={() => toggleLeadSelection(o)}
+                    checked={leadSelections[seat]}
+                    onChange={() => toggleLeadSelection(seat)}
                     disabled={disabled}
                   />
                 </label>
