@@ -246,6 +246,7 @@ type TableCardProps = {
   onAdvanceTrick: () => void;
   onResetTrick: () => void;
   bidPrompt: ReactNode;
+  voidPrompt: ReactNode;
   suitCountPrompt: ReactNode;
   winIntentPrompt: ReactNode;
 };
@@ -279,6 +280,7 @@ export function TableCard(props: TableCardProps) {
     onAdvanceTrick,
     onResetTrick,
     bidPrompt,
+    voidPrompt,
     suitCountPrompt,
     winIntentPrompt,
   } = props;
@@ -447,6 +449,7 @@ export function TableCard(props: TableCardProps) {
             </div>
 
             {bidPrompt}
+            {voidPrompt}
             {suitCountPrompt}
             {winIntentPrompt}
           </div>

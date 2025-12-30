@@ -55,7 +55,6 @@ import { Grid3X3, RefreshCw, Moon, Sun } from "lucide-react";
 import { rankGlyph, suitColorClass, suitGlyph } from "@/ui/cardUtils";
 import { SettingsCard } from "@/components/SettingsCard";
 import { TrickHistoryCard } from "@/components/TrickHistoryCard";
-import { VoidTrackingCard } from "@/components/VoidTrackingCard";
 import { TableCard } from "@/components/TableCard";
 
 /**
@@ -1267,6 +1266,60 @@ export default function App() {
     );
   };
 
+  const renderVoidPrompt = () => {
+    if (!voidTrackingEnabled || !leadPromptActive || !leadPromptSuit) return null;
+    if (isViewingHistory) return null;
+    return (
+      <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40">
+        <div className="w-[240px] space-y-3 rounded-lg border bg-card px-3 py-3 text-sm shadow-lg">
+          <div className="text-sm font-medium">Which opponents are void in the lead suit?</div>
+          <div className={"text-sm " + suitColorClass(leadPromptSuit, suitStyleMode)}>
+            Lead suit: {suitGlyph(leadPromptSuit)}
+          </div>
+          <div className="space-y-2 text-sm">
+            {OPPONENTS.map((o) => {
+              const isLeader = leadPromptLeader === o;
+              const mismatch = leadMismatch[o];
+              const disabled = isLeader;
+              return (
+                <label
+                  key={o}
+                  className={
+                    "flex items-center justify-between rounded-md border px-2 py-1 " +
+                    (mismatch ? "border-destructive" : "border-border") +
+                    (disabled ? " opacity-60" : "")
+                  }
+                >
+                  <span>{seatLabels[o]}</span>
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4"
+                    checked={leadSelections[o]}
+                    onChange={() => toggleLeadSelection(o)}
+                    disabled={disabled}
+                  />
+                </label>
+              );
+            })}
+          </div>
+          {leadWarning ? <div className="text-xs text-destructive">{leadWarning}</div> : null}
+          <div className="flex gap-2">
+            <Button
+              className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
+              onClick={resumeAfterLeadPrompt}
+              disabled={isResolving || awaitContinue}
+            >
+              Resume
+            </Button>
+            <Button variant="outline" className="flex-1" onClick={skipLeadPrompt} disabled={isResolving || awaitContinue}>
+              Skip
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderWinIntentPrompt = () => {
     if (!pendingIntentCard) return null;
     return (
@@ -1353,6 +1406,7 @@ export default function App() {
       onAdvanceTrick={handleAdvanceTrick}
       onResetTrick={resetTrickOnly}
       bidPrompt={renderBidPrompt()}
+      voidPrompt={renderVoidPrompt()}
       suitCountPrompt={renderSuitCountPrompt()}
       winIntentPrompt={renderWinIntentPrompt()}
     />
@@ -1409,28 +1463,6 @@ export default function App() {
       seatLabelMode={seatLabelMode}
       setSeatLabelMode={setSeatLabelMode}
       suits={SUITS}
-    />
-  );
-
-  const voidTrackingCard = (
-    <VoidTrackingCard
-      voidTrackingEnabled={voidTrackingEnabled}
-      isViewingHistory={isViewingHistory}
-      leadPromptActive={leadPromptActive}
-      trickLength={trick.length}
-      anyVoidObserved={anyVoidObserved}
-      leadPromptSuit={leadPromptSuit}
-      suitStyleMode={suitStyleMode}
-      seatLabels={seatLabels}
-      leadPromptLeader={leadPromptLeader}
-      leadMismatch={leadMismatch}
-      leadSelections={leadSelections}
-      toggleLeadSelection={toggleLeadSelection}
-      leadWarning={leadWarning}
-      resumeAfterLeadPrompt={resumeAfterLeadPrompt}
-      skipLeadPrompt={skipLeadPrompt}
-      isResolving={isResolving}
-      awaitContinue={awaitContinue}
     />
   );
 
@@ -1510,22 +1542,16 @@ export default function App() {
 
         {isShortViewport ? (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 gap-1 md:grid-cols-[minmax(0,1fr)_auto]">
-              {tableCard}
-              <div className="w-full md:max-w-[330px] md:justify-self-end md:self-center">
-                {voidTrackingCard}
-              </div>
-            </div>
+            {tableCard}
             <div className="space-y-6 md:max-w-[330px] md:justify-self-end">
               {trickHistoryCard}
               {settingsCard}
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_auto] md:gap-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_auto] md:gap-1">
             {tableCard}
             <div className="space-y-6 w-full md:max-w-[330px] md:justify-self-end">
-              {voidTrackingCard}
               {trickHistoryCard}
               {settingsCard}
             </div>
