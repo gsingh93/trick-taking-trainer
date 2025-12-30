@@ -31,6 +31,15 @@ type SelectRow = {
   select: ReactNode;
 };
 
+type SuitToggleRow = {
+  key: string;
+  label: string;
+  selectedSuits: Suit[];
+  onToggle: (suit: Suit) => void;
+  disabled?: boolean;
+  className?: string;
+};
+
 function renderSwitchRow(row: SwitchRow) {
   return (
     <div key={row.key} className={"flex justify-between " + (row.className ?? "")}>
@@ -63,6 +72,34 @@ function renderSelectRow(row: SelectRow) {
   );
 }
 
+function renderSuitToggleRow(row: SuitToggleRow, suits: Suit[], suitStyleMode: "classic" | "distinct") {
+  return (
+    <div key={row.key} className={"grid grid-cols-[minmax(0,1fr)_auto] gap-2 " + (row.className ?? "")}>
+      <span className="text-sm">{row.label}</span>
+      <div className={"flex gap-1 " + (row.disabled ? "opacity-50" : "")}>
+        {suits.map((s) => {
+          const selected = row.selectedSuits.includes(s);
+          return (
+            <button
+              key={s}
+              type="button"
+              onClick={() => row.onToggle(s)}
+              disabled={row.disabled}
+              className={
+                "h-8 w-8 rounded-md border text-sm transition " +
+                (selected ? "border-emerald-500 bg-emerald-500/10" : "border-border") +
+                (row.disabled ? " cursor-not-allowed" : " hover:bg-accent")
+              }
+            >
+              <span className={suitColorClass(s, suitStyleMode)}>{suitGlyph(s)}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 type SettingsCardProps = {
   modeOpenHandVerify: boolean;
   setModeOpenHandVerify: (value: boolean) => void;
@@ -70,10 +107,14 @@ type SettingsCardProps = {
   setVoidTrackingEnabled: (value: boolean) => void;
   voidPromptOnlyWhenLeading: boolean;
   setVoidPromptOnlyWhenLeading: (value: boolean) => void;
+  voidTrackingSuits: Suit[];
+  toggleVoidTrackingSuit: (suit: Suit) => void;
   voidPromptScope: "global" | "per-suit";
   setVoidPromptScope: (value: "global" | "per-suit") => void;
   suitCountPromptEnabled: boolean;
   setSuitCountPromptEnabled: (value: boolean) => void;
+  suitCountPromptSuits: Suit[];
+  toggleSuitCountPromptSuit: (suit: Suit) => void;
   winIntentPromptEnabled: boolean;
   setWinIntentPromptEnabled: (value: boolean) => void;
   winIntentMinRank: Rank;
@@ -119,10 +160,14 @@ export function SettingsCard(props: SettingsCardProps) {
     setVoidTrackingEnabled,
     voidPromptOnlyWhenLeading,
     setVoidPromptOnlyWhenLeading,
+    voidTrackingSuits,
+    toggleVoidTrackingSuit,
     voidPromptScope,
     setVoidPromptScope,
     suitCountPromptEnabled,
     setSuitCountPromptEnabled,
+    suitCountPromptSuits,
+    toggleSuitCountPromptSuit,
     winIntentPromptEnabled,
     setWinIntentPromptEnabled,
     winIntentMinRank,
@@ -178,6 +223,16 @@ export function SettingsCard(props: SettingsCardProps) {
         tooltip: "Require confirming which opponents are void in the lead suit",
       },
     ] satisfies SwitchRow[],
+    voidSuitFilter: [
+      {
+        key: "void-tracking-suits",
+        label: "Void tracking suits",
+        selectedSuits: voidTrackingSuits,
+        onToggle: toggleVoidTrackingSuit,
+        disabled: !voidTrackingEnabled,
+        className: !voidTrackingEnabled ? "opacity-50" : "",
+      },
+    ] satisfies SuitToggleRow[],
     voidOptions: [
       {
         key: "void-leading-only",
@@ -220,6 +275,16 @@ export function SettingsCard(props: SettingsCardProps) {
         tooltip: "After the first off-suit in a suit, ask how many of that suit remain outside your hand",
       },
     ] satisfies SwitchRow[],
+    suitCountSuitFilter: [
+      {
+        key: "suit-count-suits",
+        label: "Suit count suits",
+        selectedSuits: suitCountPromptSuits,
+        onToggle: toggleSuitCountPromptSuit,
+        disabled: !suitCountPromptEnabled,
+        className: !suitCountPromptEnabled ? "opacity-50" : "",
+      },
+    ] satisfies SuitToggleRow[],
     winIntent: [
       {
         key: "win-intent",
@@ -499,6 +564,7 @@ export function SettingsCard(props: SettingsCardProps) {
 
         <div className="space-y-3">
           {settingsRows.voidTracking.map(renderSwitchRow)}
+          {settingsRows.voidSuitFilter.map((row) => renderSuitToggleRow(row, suits, suitStyleMode))}
           {settingsRows.voidSelects.map(renderSelectRow)}
         </div>
 
@@ -507,6 +573,7 @@ export function SettingsCard(props: SettingsCardProps) {
         <Separator />
 
         {settingsRows.suitCount.map(renderSwitchRow)}
+        {settingsRows.suitCountSuitFilter.map((row) => renderSuitToggleRow(row, suits, suitStyleMode))}
 
         <Separator />
 

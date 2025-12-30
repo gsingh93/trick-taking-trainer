@@ -81,8 +81,10 @@ type Settings = {
   seedInput: string;
   modeOpenHandVerify: boolean;
   voidTrackingEnabled: boolean;
+  voidTrackingSuits: Suit[];
   darkMode: boolean;
   suitCountPromptEnabled: boolean;
+  suitCountPromptSuits: Suit[];
   checkErrorsEnabled: boolean;
   voidPromptScope: "global" | "per-suit";
   suitOrderMode: "bridge" | "poker";
@@ -114,8 +116,14 @@ function loadSettings(): Partial<Settings> {
     if (typeof data.seedInput === "string") next.seedInput = data.seedInput;
     if (typeof data.modeOpenHandVerify === "boolean") next.modeOpenHandVerify = data.modeOpenHandVerify;
     if (typeof data.voidTrackingEnabled === "boolean") next.voidTrackingEnabled = data.voidTrackingEnabled;
+    if (Array.isArray(data.voidTrackingSuits)) {
+      next.voidTrackingSuits = data.voidTrackingSuits.filter((s): s is Suit => SUITS.includes(s as Suit));
+    }
     if (typeof data.darkMode === "boolean") next.darkMode = data.darkMode;
     if (typeof data.suitCountPromptEnabled === "boolean") next.suitCountPromptEnabled = data.suitCountPromptEnabled;
+    if (Array.isArray(data.suitCountPromptSuits)) {
+      next.suitCountPromptSuits = data.suitCountPromptSuits.filter((s): s is Suit => SUITS.includes(s as Suit));
+    }
     if (typeof data.checkErrorsEnabled === "boolean") next.checkErrorsEnabled = data.checkErrorsEnabled;
     if (data.voidPromptScope === "global" || data.voidPromptScope === "per-suit") {
       next.voidPromptScope = data.voidPromptScope;
@@ -254,9 +262,15 @@ export default function App() {
   const [voidTrackingEnabled, setVoidTrackingEnabled] = useState(
     () => initialSettings.voidTrackingEnabled ?? true
   );
+  const [voidTrackingSuits, setVoidTrackingSuits] = useState<Suit[]>(
+    () => initialSettings.voidTrackingSuits ?? [...SUITS]
+  );
   const [darkMode, setDarkMode] = useState(() => initialSettings.darkMode ?? false);
   const [suitCountPromptEnabled, setSuitCountPromptEnabled] = useState(
     () => initialSettings.suitCountPromptEnabled ?? false
+  );
+  const [suitCountPromptSuits, setSuitCountPromptSuits] = useState<Suit[]>(
+    () => initialSettings.suitCountPromptSuits ?? [...SUITS]
   );
   const [checkErrorsEnabled, setCheckErrorsEnabled] = useState(
     () => initialSettings.checkErrorsEnabled ?? true
@@ -441,8 +455,10 @@ export default function App() {
       seedInput,
       modeOpenHandVerify,
       voidTrackingEnabled,
+      voidTrackingSuits,
       darkMode,
       suitCountPromptEnabled,
+      suitCountPromptSuits,
       checkErrorsEnabled,
       voidPromptScope,
       suitOrderMode,
@@ -471,8 +487,10 @@ export default function App() {
     seedInput,
     modeOpenHandVerify,
     voidTrackingEnabled,
+    voidTrackingSuits,
     darkMode,
     suitCountPromptEnabled,
+    suitCountPromptSuits,
     checkErrorsEnabled,
     voidPromptScope,
     suitOrderMode,
@@ -584,10 +602,24 @@ export default function App() {
   }, [voidTrackingEnabled, trick.length]);
 
   useEffect(() => {
+    if (!leadPromptActive || !leadPromptSuit) return;
+    if (!voidTrackingSuits.includes(leadPromptSuit)) {
+      resetVoidPrompt();
+    }
+  }, [leadPromptActive, leadPromptSuit, voidTrackingSuits]);
+
+  useEffect(() => {
     if (!suitCountPromptEnabled) {
       resetSuitCountPrompt();
     }
   }, [suitCountPromptEnabled]);
+
+  useEffect(() => {
+    if (!suitCountPromptActive || !suitCountPromptSuit) return;
+    if (!suitCountPromptSuits.includes(suitCountPromptSuit)) {
+      resetSuitCountPrompt();
+    }
+  }, [suitCountPromptActive, suitCountPromptSuit, suitCountPromptSuits]);
 
   useEffect(() => {
     if (!voidTrackingEnabled) return;
@@ -595,6 +627,7 @@ export default function App() {
     if (trickNo === 1) return;
     const leadSeat = trick[0].seat;
     const leadSuit = trick[0].card.suit;
+    if (!voidTrackingSuits.includes(leadSuit)) return;
     if (voidPromptOnlyWhenLeading && leadSeat !== "Me") return;
     const shouldPrompt =
       voidPromptScope === "global"
@@ -607,7 +640,7 @@ export default function App() {
     setLeadSelections(createVoidSelections());
     setLeadMismatch(createVoidSelections());
     setLeadWarning(null);
-  }, [voidTrackingEnabled, trick, trickNo, actualVoid, anyVoidObserved, voidPromptScope]);
+  }, [voidTrackingEnabled, voidTrackingSuits, trick, trickNo, actualVoid, anyVoidObserved, voidPromptScope]);
 
   function cancelResolveTimer() {
     if (resolveTimerRef.current != null) {
@@ -871,11 +904,23 @@ export default function App() {
     setReveal((r) => ({ ...r, [seat]: !r[seat] }));
   }
 
+  function toggleSuitSelection(
+    setter: (value: Suit[] | ((prev: Suit[]) => Suit[])) => void,
+    suit: Suit
+  ) {
+    setter((prev) => {
+      const next = prev.includes(suit) ? prev.filter((s) => s !== suit) : [...prev, suit];
+      return SUITS.filter((s) => next.includes(s));
+    });
+  }
+
   function resolveTrickAfterDelay() {
     setIsResolving(true);
     cancelResolveTimer();
     const promptSuit =
       suitCountPromptEnabled && !isViewingHistory ? shouldPromptSuitCount(trickHistory, trick) : null;
+    const filteredPromptSuit =
+      promptSuit && suitCountPromptSuits.includes(promptSuit) ? promptSuit : null;
 
     resolveTimerRef.current = window.setTimeout(() => {
       let resolvedState: GameState | null = null;
@@ -887,9 +932,9 @@ export default function App() {
 
       const nextState = resolvedState as GameState | null;
       if (!nextState) return;
-      if (promptSuit) {
+      if (filteredPromptSuit) {
         setSuitCountPromptActive(true);
-        setSuitCountPromptSuit(promptSuit);
+        setSuitCountPromptSuit(filteredPromptSuit);
         setSuitCountAnswer("0");
         setSuitCountMismatch(false);
         setIsResolving(false);
@@ -1320,10 +1365,14 @@ export default function App() {
       setVoidTrackingEnabled={setVoidTrackingEnabled}
       voidPromptOnlyWhenLeading={voidPromptOnlyWhenLeading}
       setVoidPromptOnlyWhenLeading={setVoidPromptOnlyWhenLeading}
+      voidTrackingSuits={voidTrackingSuits}
+      toggleVoidTrackingSuit={(s) => toggleSuitSelection(setVoidTrackingSuits, s)}
       voidPromptScope={voidPromptScope}
       setVoidPromptScope={setVoidPromptScope}
       suitCountPromptEnabled={suitCountPromptEnabled}
       setSuitCountPromptEnabled={setSuitCountPromptEnabled}
+      suitCountPromptSuits={suitCountPromptSuits}
+      toggleSuitCountPromptSuit={(s) => toggleSuitSelection(setSuitCountPromptSuits, s)}
       winIntentPromptEnabled={winIntentPromptEnabled}
       setWinIntentPromptEnabled={setWinIntentPromptEnabled}
       winIntentMinRank={winIntentMinRank}
