@@ -1,16 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { chooseCardToPlay } from "@/engine/ai/random";
 import { shouldRunAi } from "@/engine/ai/logic";
 import { canAdvanceTrick, canPlayCard } from "@/engine/flow";
@@ -18,12 +7,7 @@ import { chooseCardToPlayForBid } from "@/engine/ai/bidFocus";
 import { estimateBid } from "@/engine/ai/bidHeuristic";
 import { remainingHonorsInSuit } from "@/engine/training";
 import { evaluateWinIntent } from "@/engine/winIntent";
-import {
-  sortHand,
-  compareCardsInTrick,
-  trickLeadSuit,
-  determineTrickWinner,
-} from "@/engine/rules";
+import { compareCardsInTrick, trickLeadSuit, determineTrickWinner } from "@/engine/rules";
 import { buildDeck, createRng, dealNewHands } from "@/engine/deck";
 import {
   initGameState,
@@ -60,20 +44,12 @@ import {
   type PlayT,
   type TrumpConfig,
 } from "@/engine/types";
-import {
-  Grid3X3,
-  RefreshCw,
-  Eye,
-  EyeOff,
-  Moon,
-  Sun,
-  SkipBack,
-  SkipForward,
-  StepBack,
-  StepForward,
-  Play,
-  Pause,
-} from "lucide-react";
+import { Grid3X3, RefreshCw, Moon, Sun } from "lucide-react";
+import { rankGlyph, suitColorClass, suitGlyph } from "@/ui/cardUtils";
+import { SettingsCard } from "@/components/SettingsCard";
+import { TrickHistoryCard } from "@/components/TrickHistoryCard";
+import { VoidTrackingCard } from "@/components/VoidTrackingCard";
+import { TableCard } from "@/components/TableCard";
 
 /**
  * Generic trick engine (v1)
@@ -195,60 +171,6 @@ function loadSettings(): Partial<Settings> {
   }
 }
 
-function suitGlyph(s: Suit) {
-  return s === "S" ? "♠" : s === "H" ? "♥" : s === "D" ? "♦" : "♣";
-}
-
-function suitColorClass(s: Suit, mode: "classic" | "distinct") {
-  if (mode === "distinct") {
-    if (s === "S") return "text-slate-900 dark:text-slate-100";
-    if (s === "C") return "text-emerald-700 dark:text-emerald-300";
-    if (s === "H") return "text-red-600 dark:text-red-400";
-    return "text-blue-600 dark:text-blue-400";
-  }
-  return s === "H" || s === "D" ? "text-red-600" : "text-foreground";
-}
-
-function rankGlyph(n: Rank) {
-  if (n === 14) return "A";
-  if (n === 13) return "K";
-  if (n === 12) return "Q";
-  if (n === 11) return "J";
-  return String(n);
-}
-
-function HelpTooltip({ text }: { text: string }) {
-  return (
-    <span
-      className="inline-flex h-4 w-4 cursor-pointer select-none items-center justify-center rounded-full border text-[10px] font-semibold text-muted-foreground"
-      title={text}
-    >
-      ?
-    </span>
-  );
-}
-
-function formatSeatStatus(args: {
-  label: string;
-  tricksWon: number;
-  bid: string | null;
-  resultLabel: string | null;
-  resultClass: string;
-}) {
-  const { label, tricksWon, bid, resultLabel, resultClass } = args;
-  return (
-    <span>
-      {label}{" "}
-      <span className="text-xs text-muted-foreground">
-        (
-        <span className={resultLabel ? resultClass : ""}>{tricksWon}</span>
-        {bid ? `/${bid}` : ""})
-      </span>
-      {resultLabel ? <span className={"ml-2 text-xs font-medium " + resultClass}>{resultLabel}</span> : null}
-    </span>
-  );
-}
-
 function formatWinIntentDetails(args: {
   higherRanks: Rank[];
   warnHonorsOnly: boolean;
@@ -266,57 +188,6 @@ function formatWinIntentDetails(args: {
     details.push(`Trump threat: an opponent may trump with ${suitGlyph(trumpSuit)}${who}`);
   }
   return details;
-}
-
-type SwitchRow = {
-  key: string;
-  label: string;
-  checked: boolean;
-  onCheckedChange: (value: boolean) => void;
-  disabled?: boolean;
-  tooltip?: string;
-  className?: string;
-};
-
-type SelectRow = {
-  key: string;
-  label: string;
-  tooltip?: string;
-  disabled?: boolean;
-  className?: string;
-  select: React.ReactNode;
-};
-
-function renderSwitchRow(row: SwitchRow) {
-  return (
-    <div key={row.key} className={"flex justify-between " + (row.className ?? "")}>
-      {row.tooltip ? (
-        <div className="flex items-center gap-2">
-          <span className="text-sm">{row.label}</span>
-          <HelpTooltip text={row.tooltip} />
-        </div>
-      ) : (
-        <span className="text-sm">{row.label}</span>
-      )}
-      <Switch checked={row.checked} onCheckedChange={row.onCheckedChange} disabled={row.disabled} />
-    </div>
-  );
-}
-
-function renderSelectRow(row: SelectRow) {
-  return (
-    <div key={row.key} className={"grid grid-cols-[minmax(0,1fr)_auto] gap-2 " + (row.className ?? "")}>
-      {row.tooltip ? (
-        <div className="flex items-center gap-2 text-sm">
-          <span>{row.label}</span>
-          <HelpTooltip text={row.tooltip} />
-        </div>
-      ) : (
-        <span className="text-sm">{row.label}</span>
-      )}
-      {row.select}
-    </div>
-  );
 }
 
 
@@ -350,156 +221,6 @@ function useMediaQuery(query: string) {
   }, [query]);
 
   return matches;
-}
-
-function PlayingCard({
-  c,
-  rotateClass,
-  onClick,
-  disabled,
-  selected,
-  highlight,
-  title,
-  suitStyleMode,
-}: {
-  c: CardT;
-  rotateClass?: string;
-  onClick?: () => void;
-  disabled?: boolean;
-  selected?: boolean;
-  highlight?: boolean;
-  title?: string;
-  suitStyleMode: "classic" | "distinct";
-}) {
-  const base =
-    "flex h-14 w-10 items-center justify-center rounded-xl border bg-card text-sm shadow-sm";
-  const inter = onClick
-    ? disabled
-      ? " opacity-40 cursor-not-allowed"
-      : " cursor-pointer hover:ring-2 hover:ring-foreground/30"
-    : "";
-  const sel = selected ? " ring-2 ring-foreground/60" : "";
-  const win = highlight ? " ring-2 ring-amber-400" : "";
-
-  return (
-    <div
-      title={title}
-      onClick={disabled ? undefined : onClick}
-      className={base + inter + sel + win + (rotateClass ? " " + rotateClass : "")}
-    >
-      <span className={`font-semibold ${suitColorClass(c.suit, suitStyleMode)}`}>
-        {rankGlyph(c.rank)}
-        {suitGlyph(c.suit)}
-      </span>
-    </div>
-  );
-}
-
-function HandRow({
-  seat,
-  hand,
-  rotateClass,
-  legal,
-  onPlay,
-  currentTurn,
-  suitOrder,
-  sortAscending,
-  canPlay,
-  suitStyleMode,
-}: {
-  seat: Seat;
-  hand: CardT[];
-  rotateClass?: string;
-  legal: Set<string>;
-  onPlay: (seat: Seat, card: CardT) => void;
-  currentTurn: Seat;
-  suitOrder: Suit[];
-  sortAscending: boolean;
-  canPlay: boolean;
-  suitStyleMode: "classic" | "distinct";
-}) {
-  const isTurn = seat === currentTurn;
-  return (
-    <div className={"mt-3 " + (rotateClass ?? "")}>
-      <div className="flex flex-wrap gap-px">
-        {sortHand(hand, suitOrder, sortAscending).map((c) => (
-          <PlayingCard
-            key={c.id}
-            c={c}
-            suitStyleMode={suitStyleMode}
-            disabled={!canPlay || !isTurn || !legal.has(c.id)}
-            onClick={() => onPlay(seat, c)}
-            title={
-              !canPlay
-                ? "Start trick first"
-                : !isTurn
-                ? "Not your turn"
-                : !legal.has(c.id)
-                  ? "Illegal (must-follow / must-break)"
-                  : "Play"
-            }
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function HandCol({
-  seat,
-  hand,
-  cardRotateClass,
-  align,
-  legal,
-  onPlay,
-  currentTurn,
-  suitOrder,
-  sortAscending,
-  canPlay,
-  suitStyleMode,
-}: {
-  seat: Seat;
-  hand: CardT[];
-  cardRotateClass: string;
-  align: "start" | "end";
-  legal: Set<string>;
-  onPlay: (seat: Seat, card: CardT) => void;
-  currentTurn: Seat;
-  suitOrder: Suit[];
-  sortAscending: boolean;
-  canPlay: boolean;
-  suitStyleMode: "classic" | "distinct";
-}) {
-  const isTurn = seat === currentTurn;
-  const gridAlign = align === "end" ? "justify-items-end" : "justify-items-start";
-  return (
-    <div className={"mt-3 flex " + (align === "end" ? "justify-end" : "justify-start")}>
-      <div className={"grid grid-cols-1 gap-0 lg:grid-cols-2 " + gridAlign}>
-        {sortHand(hand, suitOrder, sortAscending).map((c) => (
-          <div key={c.id} className="relative h-10 w-14 overflow-visible">
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-              <PlayingCard
-                c={c}
-                rotateClass={cardRotateClass}
-                suitStyleMode={suitStyleMode}
-                disabled={!canPlay || !isTurn || !legal.has(c.id)}
-                onClick={() => onPlay(seat, c)}
-                title={
-                  !canPlay
-                    ? "Start trick first"
-                    : !isTurn
-                    ? "Not your turn"
-                    : !legal.has(c.id)
-                      ? "Illegal (must-follow / must-break)"
-                      : "Play"
-                }
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
 }
 
 export default function App() {
@@ -1515,956 +1236,135 @@ export default function App() {
     );
   };
 
-  const renderTableCard = () => (
-    <Card className="lg:col-span-2">
-      <CardHeader className="pb-1">
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex flex-col">
-            <div className="flex items-center gap-3">
-              <span>Table</span>
-              <Button
-                size="sm"
-                className="bg-emerald-600 text-white hover:bg-emerald-700"
-                onClick={resetTrickOnly}
-                disabled={isViewingHistory}
-              >
-                Reset trick
-              </Button>
-            </div>
-            <div className="pl-0.5 text-xs text-muted-foreground">
-              {isViewingHistory ? `Viewing trick ${displayTrickNo}` : `Trick ${trickNo}`}
-            </div>
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pt-1 pb-3 px-3 sm:pt-3 sm:pb-6 sm:px-6">
-        <div className="grid grid-cols-[minmax(0,0.25fr)_minmax(0,0.5fr)_minmax(0,0.25fr)] grid-rows-[auto_1fr_auto] gap-x-0.5 gap-y-2 sm:grid-cols-[minmax(0,0.25fr)_minmax(0,0.5fr)_minmax(0,0.25fr)] sm:gap-3">
-          {/* Across spans full width */}
-          <div className="col-span-3 rounded-xl border p-2 sm:p-3">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <div
-                className={
-                  "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
-                  (displayTurn === "Across" && !displayHandComplete
-                    ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
-                    : "")
-                }
-              >
-                {formatSeatStatus({
-                  label: seatLabels.Across,
-                  tricksWon: displayTricksWon.Across,
-                  bid: bidDisplay ? bidDisplay.Across : null,
-                  resultLabel: bidResultDisplay ? bidResultDisplay.Across.label : null,
-                  resultClass: bidResultDisplay ? bidResultDisplay.Across.className : "",
-                })}
-              </div>
-              <Badge variant="outline">{displayHands.Across.length}</Badge>
-            </div>
-            <div className="mt-3 flex items-center gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="gap-2 text-emerald-600 border-emerald-600 md:text-foreground md:border-border"
-                onClick={() => toggleRevealSeat("Across")}
-                disabled={modeOpenHandVerify || isViewingHistory}
-              >
-                {shownHands.Across ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                <span className="hidden md:inline">{shownHands.Across ? "Hide" : "Reveal"}</span>
-              </Button>
-            </div>
-            {shownHands.Across ? (
-              <HandRow
-                seat="Across"
-                hand={displayHands.Across}
-                legal={legalBySeat.Across}
-                onPlay={(s, c) => tryPlay(s, c, "human")}
-                currentTurn={displayTurn}
-                suitOrder={suitOrder}
-                sortAscending={sortAscending}
-                canPlay={canPlay}
-                suitStyleMode={suitStyleMode}
-              />
-            ) : null}
-          </div>
-
-          {/* Left spans rows */}
-          <div
-            className={
-              "row-span-2 rounded-xl border p-2 sm:p-3 " + (shownHands.Left ? "min-h-[400px]" : "")
-            }
-          >
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <div
-                className={
-                  "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
-                  (displayTurn === "Left" && !displayHandComplete
-                    ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
-                    : "")
-                }
-              >
-                {formatSeatStatus({
-                  label: seatLabels.Left,
-                  tricksWon: displayTricksWon.Left,
-                  bid: bidDisplay ? bidDisplay.Left : null,
-                  resultLabel: bidResultDisplay ? bidResultDisplay.Left.label : null,
-                  resultClass: bidResultDisplay ? bidResultDisplay.Left.className : "",
-                })}
-              </div>
-              <Badge variant="outline">{displayHands.Left.length}</Badge>
-            </div>
-            <div className="mt-3 flex items-center gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="gap-2 text-emerald-600 border-emerald-600 md:text-foreground md:border-border"
-                onClick={() => toggleRevealSeat("Left")}
-                disabled={modeOpenHandVerify || isViewingHistory}
-              >
-                {shownHands.Left ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                <span className="hidden md:inline">{shownHands.Left ? "Hide" : "Reveal"}</span>
-              </Button>
-            </div>
-            {shownHands.Left ? (
-              <HandCol
-                seat="Left"
-                hand={displayHands.Left}
-                cardRotateClass="rotate-90 origin-center"
-                align="start"
-                legal={legalBySeat.Left}
-                onPlay={(s, c) => tryPlay(s, c, "human")}
-                currentTurn={displayTurn}
-                suitOrder={suitOrder}
-                sortAscending={sortAscending}
-                canPlay={canPlay}
-                suitStyleMode={suitStyleMode}
-              />
-            ) : null}
-          </div>
-
-          {/* Current trick stays fixed size */}
-          <div
-            className="relative flex h-[200px] w-[200px] items-center justify-center rounded-xl border bg-emerald-600/80 p-2 shadow-inner self-center justify-self-center sm:h-[240px] sm:w-[240px] sm:p-3"
-            onClick={
-              canAdvanceTrick({ awaitContinue, handComplete, isViewingHistory })
-                ? () => {
-                    setGame((g) => advanceToNextTrick(g));
-                    setAwaitContinue(false);
-                  }
-                : undefined
-            }
-          >
-            <div className="absolute right-2 top-2 text-white">
-              <Badge className="bg-white/20 text-white hover:bg-white/20" variant="secondary">
-                {displayTrick.length}/4
-              </Badge>
-            </div>
-
-            {/* Diamond layout */}
-            <div className="relative h-36 w-36 sm:h-40 sm:w-40">
-              {/* Across (top) */}
-              <div className="absolute left-1/2 top-0 -translate-x-1/2">
-                {(() => {
-                  const p = displayTrick.find((t) => t.seat === "Across");
-                  return p ? (
-                    <PlayingCard c={p.card} highlight={displayTrickWinner === "Across"} suitStyleMode={suitStyleMode} />
-                  ) : (
-                    <div className="h-14 w-10 opacity-20" />
-                  );
-                })()}
-              </div>
-
-              {/* Left */}
-              <div className="absolute left-0 top-1/2 -translate-y-1/2">
-                {(() => {
-                  const p = displayTrick.find((t) => t.seat === "Left");
-                  return p ? (
-                    <PlayingCard
-                      c={p.card}
-                      rotateClass="rotate-90"
-                      highlight={displayTrickWinner === "Left"}
-                      suitStyleMode={suitStyleMode}
-                    />
-                  ) : (
-                    <div className="h-10 w-14 opacity-20" />
-                  );
-                })()}
-              </div>
-
-              {/* Right */}
-              <div className="absolute right-0 top-1/2 -translate-y-1/2">
-                {(() => {
-                  const p = displayTrick.find((t) => t.seat === "Right");
-                  return p ? (
-                    <PlayingCard
-                      c={p.card}
-                      rotateClass="-rotate-90"
-                      highlight={displayTrickWinner === "Right"}
-                      suitStyleMode={suitStyleMode}
-                    />
-                  ) : (
-                    <div className="h-10 w-14 opacity-20" />
-                  );
-                })()}
-              </div>
-
-              {/* Me (bottom) */}
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
-                {(() => {
-                  const p = displayTrick.find((t) => t.seat === "Me");
-                  return p ? (
-                    <PlayingCard c={p.card} highlight={displayTrickWinner === "Me"} suitStyleMode={suitStyleMode} />
-                  ) : (
-                    <div className="h-14 w-10 opacity-20" />
-                  );
-                })()}
-              </div>
-            </div>
-
-            <div className="absolute bottom-2 left-1/2 w-[190px] -translate-x-1/2 text-center text-xs text-white/80 sm:w-[220px]">
-              {awaitContinue && !handComplete && !isViewingHistory ? (
-                <>
-                  <span className="sm:hidden">Click to continue</span>
-                  <span className="hidden sm:inline">Press Enter/Space or click to continue</span>
-                </>
-              ) : null}
-            </div>
-
-            {renderBidPrompt()}
-            {renderSuitCountPrompt()}
-            {renderWinIntentPrompt()}
-          </div>
-
-          {/* Right spans rows */}
-          <div
-            className={
-              "row-span-2 rounded-xl border p-2 sm:p-3 " + (shownHands.Right ? "min-h-[400px]" : "")
-            }
-          >
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <div
-                className={
-                  "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
-                  (displayTurn === "Right" && !displayHandComplete
-                    ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
-                    : "")
-                }
-              >
-                {formatSeatStatus({
-                  label: seatLabels.Right,
-                  tricksWon: displayTricksWon.Right,
-                  bid: bidDisplay ? bidDisplay.Right : null,
-                  resultLabel: bidResultDisplay ? bidResultDisplay.Right.label : null,
-                  resultClass: bidResultDisplay ? bidResultDisplay.Right.className : "",
-                })}
-              </div>
-              <Badge variant="outline">{displayHands.Right.length}</Badge>
-            </div>
-            <div className="mt-3 flex items-center gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="gap-2 text-emerald-600 border-emerald-600 md:text-foreground md:border-border"
-                onClick={() => toggleRevealSeat("Right")}
-                disabled={modeOpenHandVerify || isViewingHistory}
-              >
-                {shownHands.Right ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                <span className="hidden md:inline">{shownHands.Right ? "Hide" : "Reveal"}</span>
-              </Button>
-            </div>
-            {shownHands.Right ? (
-              <HandCol
-                seat="Right"
-                hand={displayHands.Right}
-                cardRotateClass="-rotate-90 origin-center"
-                align="end"
-                legal={legalBySeat.Right}
-                onPlay={(s, c) => tryPlay(s, c, "human")}
-                currentTurn={displayTurn}
-                suitOrder={suitOrder}
-                sortAscending={sortAscending}
-                canPlay={canPlay}
-                suitStyleMode={suitStyleMode}
-              />
-            ) : null}
-          </div>
-
-          {/* Me spans full width */}
-          <div className="col-span-3 rounded-xl border p-2 sm:p-3">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <div
-                className={
-                  "flex items-center gap-2 rounded-md px-1 py-0.5 text-sm font-medium " +
-                  (displayTurn === "Me" && !displayHandComplete
-                    ? "bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100"
-                    : "")
-                }
-              >
-                {formatSeatStatus({
-                  label: seatLabels.Me,
-                  tricksWon: displayTricksWon.Me,
-                  bid: bidDisplay ? bidDisplay.Me : null,
-                  resultLabel: bidResultDisplay ? bidResultDisplay.Me.label : null,
-                  resultClass: bidResultDisplay ? bidResultDisplay.Me.className : "",
-                })}
-              </div>
-              <Badge variant="outline">{displayHands.Me.length}</Badge>
-            </div>
-            <HandRow
-              seat="Me"
-              hand={displayHands.Me}
-              legal={legalBySeat.Me}
-              onPlay={(s, c) => tryPlay(s, c, "human")}
-              currentTurn={displayTurn}
-              suitOrder={suitOrder}
-              sortAscending={sortAscending}
-              canPlay={canPlay}
-              suitStyleMode={suitStyleMode}
-            />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
-  const renderVoidTrackingCard = () => (
-    <Card className="flex flex-col">
-      <CardHeader>
-        <CardTitle>Void tracking</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
-        <div className="space-y-2">
-          <div className="text-xs text-muted-foreground">
-            After a lead, confirm which opponents are void in the lead suit.
-          </div>
-          <div className="text-sm font-medium">
-            {!voidTrackingEnabled
-              ? "Void tracking is disabled"
-              : isViewingHistory
-                ? "Viewing trick history"
-                : leadPromptActive
-                  ? "Which opponents are void in the lead suit?"
-                  : trick.length === 0
-                    ? "Waiting for a card to be led..."
-                    : anyVoidObserved
-                      ? "Trick in progress..."
-                      : "Waiting for first off-suit..."}
-          </div>
-          {leadPromptSuit ? (
-            <div className={"text-sm " + suitColorClass(leadPromptSuit, suitStyleMode)}>
-              Lead suit: {suitGlyph(leadPromptSuit)}
-            </div>
-          ) : null}
-          <div className="space-y-2 text-sm">
-            {OPPONENTS.map((o) => {
-              const isLeader = leadPromptLeader === o;
-              const mismatch = leadMismatch[o];
-              const disabled = !voidTrackingEnabled || isViewingHistory || !leadPromptActive || isLeader;
-              return (
-                <label
-                  key={o}
-                  className={
-                    "flex items-center justify-between rounded-md border px-2 py-1 " +
-                    (mismatch ? "border-destructive" : "border-border") +
-                    (disabled ? " opacity-60" : "")
-                  }
-                >
-                  <span>{seatLabels[o]}</span>
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4"
-                    checked={leadSelections[o]}
-                    onChange={() => toggleLeadSelection(o)}
-                    disabled={disabled}
-                  />
-                </label>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          {leadWarning ? <div className="text-xs text-destructive">{leadWarning}</div> : null}
-          <div className="flex gap-2">
-            <Button
-              onClick={resumeAfterLeadPrompt}
-              disabled={
-                isViewingHistory ||
-                !leadPromptActive ||
-                isResolving ||
-                awaitContinue ||
-                (leadPromptActive && !voidTrackingEnabled)
-              }
-              className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-600/50"
-            >
-              Resume
-            </Button>
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={skipLeadPrompt}
-              disabled={isViewingHistory || !leadPromptActive || isResolving || awaitContinue}
-            >
-              Skip
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
-  const renderTrickHistoryCard = () => (
-    <Card className="flex flex-col">
-      <CardHeader>
-        <CardTitle>Trick history</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        {trickHistory.length === 0 ? (
-          <div className="text-xs text-muted-foreground">No completed tricks yet</div>
-        ) : (
-          <div className="space-y-2">
-            {trickHistory.map((t, idx) => {
-              const leadSuit = trickLeadSuit(t);
-              const winner = t.length === 4 ? determineTrickWinner(t, trump) : null;
-              const leadSeat = t[0]?.seat ? seatLabels[t[0].seat] : "-";
-              const isActive = viewedTrickIndex === idx;
-              return (
-                <button
-                  key={`${idx}-${t[0]?.card.id ?? "trick"}`}
-                  type="button"
-                  onClick={() => {
-                    setViewedTrickIndex(idx);
-                    setViewedTrickStep(0);
-                    setHistoryPlaying(false);
-                  }}
-                  className={
-                    "w-full rounded-md border px-2 py-2 text-left text-xs transition " +
-                    (isActive
-                      ? "border-emerald-400 bg-emerald-50 text-emerald-900 dark:border-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-100"
-                      : "border-border hover:bg-accent")
-                  }
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium">Trick {idx + 1}</span>
-                    {leadSuit ? <span className={suitColorClass(leadSuit, suitStyleMode)}>{suitGlyph(leadSuit)}</span> : null}
-                  </div>
-                  <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                    <span>Lead: {leadSeat}</span>
-                    {winner ? <span>Winner: {seatLabels[winner]}</span> : null}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {isViewingHistory && viewedTrickIndex != null ? (
-          <div className="space-y-2">
-            <div className="text-xs text-muted-foreground">
-              Viewing trick {viewedTrickIndex + 1} • Step {Math.min(viewedTrickStep, 4)}/4
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setViewedTrickStep(0);
-                  setHistoryPlaying(false);
-                }}
-                aria-label="Jump to start"
-              >
-                <SkipBack className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setViewedTrickStep((s) => Math.max(0, s - 1));
-                  setHistoryPlaying(false);
-                }}
-                aria-label="Step back"
-              >
-                <StepBack className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const maxStep = trickHistory[viewedTrickIndex]?.length ?? 0;
-                  if (viewedTrickStep >= maxStep) {
-                    setHistoryPlaying(false);
-                    return;
-                  }
-                  setHistoryPlaying((p) => !p);
-                }}
-                aria-label={historyPlaying ? "Pause" : "Play"}
-              >
-                {historyPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const maxStep = trickHistory[viewedTrickIndex]?.length ?? 0;
-                  setViewedTrickStep((s) => Math.min(maxStep, s + 1));
-                  setHistoryPlaying(false);
-                }}
-                aria-label="Step forward"
-              >
-                <StepForward className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const maxStep = trickHistory[viewedTrickIndex]?.length ?? 0;
-                  setViewedTrickStep(maxStep);
-                  setHistoryPlaying(false);
-                }}
-                aria-label="Jump to end"
-              >
-                <SkipForward className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={() => setViewedTrickIndex(null)}>
-                Return to live
-              </Button>
-              <Button
-                size="sm"
-                className="bg-emerald-600 text-white hover:bg-emerald-700"
-                onClick={() => resumeFromHistory(viewedTrickIndex, viewedTrickStep)}
-              >
-                Play from this point
-              </Button>
-            </div>
-          </div>
-        ) : null}
-      </CardContent>
-    </Card>
-  );
-
-  const renderSettingsCard = () => {
-    const settingsRows = {
-      training: [
-        {
-          key: "open-hand-verify",
-          label: "Open-hand verify",
-          checked: modeOpenHandVerify,
-          onCheckedChange: setModeOpenHandVerify,
-        },
-      ] satisfies SwitchRow[],
-      voidTracking: [
-        {
-          key: "void-tracking",
-          label: "Void tracking",
-          checked: voidTrackingEnabled,
-          onCheckedChange: setVoidTrackingEnabled,
-          tooltip: "Require confirming which opponents are void in the lead suit",
-        },
-      ] satisfies SwitchRow[],
-      voidOptions: [
-        {
-          key: "void-leading-only",
-          label: "Void prompts only when leading",
-          checked: voidPromptOnlyWhenLeading,
-          onCheckedChange: setVoidPromptOnlyWhenLeading,
-          disabled: !voidTrackingEnabled,
-          className: !voidTrackingEnabled ? "opacity-50" : "",
-        },
-      ] satisfies SwitchRow[],
-      voidSelects: [
-        {
-          key: "void-prompt-scope",
-          label: "Prompt after first void",
-          tooltip: "Global: after any off-suit, prompt on every lead\nPer suit: only prompt after off-suit in that suit",
-          className: !voidTrackingEnabled ? "opacity-50" : "",
-          select: (
-            <Select
-              value={voidPromptScope}
-              onValueChange={(v) => setVoidPromptScope(v as "global" | "per-suit")}
-              disabled={!voidTrackingEnabled}
-            >
-              <SelectTrigger className="h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="global">Global</SelectItem>
-                <SelectItem value="per-suit">Per suit</SelectItem>
-              </SelectContent>
-            </Select>
-          ),
-        },
-      ] satisfies SelectRow[],
-      suitCount: [
-        {
-          key: "suit-count",
-          label: "Suit count prompt",
-          checked: suitCountPromptEnabled,
-          onCheckedChange: setSuitCountPromptEnabled,
-          tooltip: "After the first off-suit in a suit, ask how many of that suit remain outside your hand",
-        },
-      ] satisfies SwitchRow[],
-      winIntent: [
-        {
-          key: "win-intent",
-          label: "Win intent prompt",
-          checked: winIntentPromptEnabled,
-          onCheckedChange: setWinIntentPromptEnabled,
-          tooltip:
-            "When you play a card at or above the win intent minimum rank, ask if you intend to win the trick and warn if it can be beaten",
-        },
-      ] satisfies SwitchRow[],
-      winIntentWarn: [
-        {
-          key: "win-intent-honors",
-          label: "Warn about higher honors only",
-          checked: winIntentWarnHonorsOnly,
-          onCheckedChange: setWinIntentWarnHonorsOnly,
-          disabled: !winIntentPromptEnabled,
-          className: !winIntentPromptEnabled ? "opacity-50" : "",
-          tooltip: "When enabled, only warn if higher honors remain instead of any higher card",
-        },
-        {
-          key: "win-intent-trump",
-          label: "Warn about trump voids",
-          checked: winIntentWarnTrump,
-          onCheckedChange: setWinIntentWarnTrump,
-          disabled: !winIntentPromptEnabled,
-          className: !winIntentPromptEnabled ? "opacity-50" : "",
-          tooltip: "Warn if an opponent may be void in the lead suit and able to trump",
-        },
-      ] satisfies SwitchRow[],
-      winIntentSelects: [
-        {
-          key: "win-intent-min-rank",
-          label: "Win intent minimum rank",
-          tooltip: "Only prompt when playing this rank or higher",
-          className: !winIntentPromptEnabled ? "opacity-50" : "",
-          select: (
-            <Select
-              value={String(winIntentMinRank)}
-              onValueChange={(v) => setWinIntentMinRank(Number(v) as Rank)}
-              disabled={!winIntentPromptEnabled}
-            >
-              <SelectTrigger className="h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {[
-                  { label: "2", value: 2 },
-                  { label: "3", value: 3 },
-                  { label: "4", value: 4 },
-                  { label: "5", value: 5 },
-                  { label: "6", value: 6 },
-                  { label: "7", value: 7 },
-                  { label: "8", value: 8 },
-                  { label: "9", value: 9 },
-                  { label: "10", value: 10 },
-                  { label: "J", value: 11 },
-                  { label: "Q", value: 12 },
-                  { label: "K", value: 13 },
-                  { label: "A", value: 14 },
-                ].map((opt) => (
-                  <SelectItem key={opt.value} value={String(opt.value)}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ),
-        },
-      ] satisfies SelectRow[],
-      errors: [
-        {
-          key: "show-errors",
-          label: "Show errors",
-          checked: checkErrorsEnabled,
-          onCheckedChange: setCheckErrorsEnabled,
-          tooltip: "When enabled, highlight incorrect selections in red",
-        },
-      ] satisfies SwitchRow[],
-      ai: [
-        {
-          key: "ai-enabled",
-          label: "AI opponents",
-          checked: aiEnabled,
-          onCheckedChange: setAiEnabled,
-        },
-        {
-          key: "ai-play-me",
-          label: "AI for me",
-          checked: aiPlayMe,
-          onCheckedChange: setAiPlayMe,
-          disabled: !aiEnabled,
-          className: !aiEnabled ? "opacity-50" : "",
-        },
-        {
-          key: "pause-before",
-          label: "Pause before next trick",
-          checked: pauseBeforeNextTrick,
-          onCheckedChange: setPauseBeforeNextTrick,
-        },
-      ] satisfies SwitchRow[],
-      aiSelects: [
-        {
-          key: "ai-mode",
-          label: "AI mode",
-          className: handInProgress || biddingActive ? "opacity-50" : "",
-          select: (
-            <Select
-              value={aiMode}
-              onValueChange={(v) => setAiMode(v as "random" | "bidding")}
-              disabled={handInProgress || biddingActive}
-            >
-              <SelectTrigger className="h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="random">Random</SelectItem>
-                <SelectItem value="bidding">Bidding</SelectItem>
-              </SelectContent>
-            </Select>
-          ),
-        },
-      ] satisfies SelectRow[],
-      trump: [
-        {
-          key: "trump-enabled",
-          label: "Trump enabled",
-          checked: trump.enabled,
-          onCheckedChange: (v) => setTrump((t) => ({ ...t, enabled: v })),
-        },
-        {
-          key: "must-break",
-          label: "Must break",
-          checked: trump.mustBreak,
-          onCheckedChange: (v) => setTrump((t) => ({ ...t, mustBreak: v })),
-          disabled: !trump.enabled,
-          className: !trump.enabled ? "opacity-50" : "",
-          tooltip: "Prevents leading trump until trump has been played (unless you only have trump)",
-        },
-      ] satisfies SwitchRow[],
-      trumpSelects: [
-        {
-          key: "trump-suit",
-          label: "Trump suit",
-          className: !trump.enabled ? "opacity-50" : "",
-          select: (
-            <Select
-              value={trump.suit}
-              onValueChange={(v) => setTrump((t) => ({ ...t, suit: v as Suit }))}
-              disabled={!trump.enabled}
-            >
-              <SelectTrigger className="h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SUITS.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    <span className={suitColorClass(s, suitStyleMode)}>{suitGlyph(s)}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ),
-        },
-      ] satisfies SelectRow[],
-      ui: [
-        {
-          key: "sort-ascending",
-          label: "Sort ascending",
-          checked: sortAscending,
-          onCheckedChange: setSortAscending,
-        },
-      ] satisfies SwitchRow[],
-      uiSelects: [
-        {
-          key: "suit-order",
-          label: "Suit order",
-          select: (
-            <Select value={suitOrderMode} onValueChange={(v) => setSuitOrderMode(v as "bridge" | "poker")}>
-              <SelectTrigger className="h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="bridge">
-                  Bridge (
-                  <span className="inline-flex gap-1">
-                    {["S", "H", "D", "C"].map((s) => (
-                      <span key={s} className={suitColorClass(s as Suit, suitStyleMode)}>
-                        {suitGlyph(s as Suit)}
-                      </span>
-                    ))}
-                  </span>
-                  )
-                </SelectItem>
-                <SelectItem value="poker">
-                  Poker (
-                  <span className="inline-flex gap-1">
-                    {["C", "D", "H", "S"].map((s) => (
-                      <span key={s} className={suitColorClass(s as Suit, suitStyleMode)}>
-                        {suitGlyph(s as Suit)}
-                      </span>
-                    ))}
-                  </span>
-                  )
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          ),
-        },
-        {
-          key: "suit-colors",
-          label: "Suit colors",
-          select: (
-            <Select value={suitStyleMode} onValueChange={(v) => setSuitStyleMode(v as "classic" | "distinct")}>
-              <SelectTrigger className="h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="classic">
-                  Classic (
-                  <span className="inline-flex gap-1">
-                    {["S", "C"].map((s) => (
-                      <span key={s} className={suitColorClass(s as Suit, "classic")}>
-                        {suitGlyph(s as Suit)}
-                      </span>
-                    ))}
-                    {["H", "D"].map((s) => (
-                      <span key={s} className={suitColorClass(s as Suit, "classic")}>
-                        {suitGlyph(s as Suit)}
-                      </span>
-                    ))}
-                  </span>
-                  )
-                </SelectItem>
-                <SelectItem value="distinct">
-                  Distinct (
-                  <span className="inline-flex gap-1">
-                    {["S", "C", "H", "D"].map((s) => (
-                      <span key={s} className={suitColorClass(s as Suit, "distinct")}>
-                        {suitGlyph(s as Suit)}
-                      </span>
-                    ))}
-                  </span>
-                  )
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          ),
-        },
-        {
-          key: "seat-labels",
-          label: "Seat labels",
-          select: (
-            <Select value={seatLabelMode} onValueChange={(v) => setSeatLabelMode(v as "relative" | "compass")}>
-              <SelectTrigger className="h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="relative">Left / Across / Right / Me</SelectItem>
-                <SelectItem value="compass">North / South / East / West</SelectItem>
-              </SelectContent>
-            </Select>
-          ),
-        },
-      ] satisfies SelectRow[],
-    };
-
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Training Settings</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {settingsRows.training.map(renderSwitchRow)}
-
-          <Separator />
-
-          <div className="space-y-3">
-            {settingsRows.voidTracking.map(renderSwitchRow)}
-            {settingsRows.voidSelects.map(renderSelectRow)}
-          </div>
-
-          {settingsRows.voidOptions.map(renderSwitchRow)}
-
-          <Separator />
-
-          {settingsRows.suitCount.map(renderSwitchRow)}
-
-          <Separator />
-
-          {settingsRows.winIntent.map(renderSwitchRow)}
-          {settingsRows.winIntentSelects.map(renderSelectRow)}
-
-          {settingsRows.winIntentWarn.map(renderSwitchRow)}
-
-          <Separator />
-
-          {settingsRows.errors.map(renderSwitchRow)}
-
-          <div className="h-1" />
-          <CardTitle>Gameplay &amp; UI Settings</CardTitle>
-
-          {settingsRows.ai.slice(0, 1).map(renderSwitchRow)}
-          {settingsRows.aiSelects.map(renderSelectRow)}
-
-          {settingsRows.ai.slice(1, 2).map(renderSwitchRow)}
-
-          <div className={"grid grid-cols-[minmax(0,1fr)_auto] gap-2 " + (!aiEnabled ? "opacity-50" : "")}>
-            <span className="text-sm">AI delay (ms)</span>
-            <input
-              type="number"
-              min={0}
-              step={250}
-              value={aiDelayInput}
-              disabled={!aiEnabled}
-              onChange={(e) => {
-                const raw = e.target.value;
-                setAiDelayInput(raw);
-                if (raw.trim() === "") return;
-                const n = Number(raw);
-                if (Number.isFinite(n) && n >= 0) {
-                  setAiDelayMs(Math.floor(n));
-                }
-              }}
-              onBlur={() => {
-                commitAiDelayInput(aiDelayInput);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  commitAiDelayInput(aiDelayInput);
-                }
-              }}
-              className="h-8 w-20 rounded-md border bg-background px-2 text-sm"
-            />
-          </div>
-
-          {settingsRows.ai.slice(2).map(renderSwitchRow)}
-
-          <Separator />
-
-          {settingsRows.trump.slice(0, 1).map(renderSwitchRow)}
-          {settingsRows.trumpSelects.map(renderSelectRow)}
-
-          {settingsRows.trump.slice(1).map(renderSwitchRow)}
-
-          <Separator />
-
-          {settingsRows.uiSelects.slice(0, 2).map(renderSelectRow)}
-
-          {settingsRows.ui.map(renderSwitchRow)}
-
-          <Separator />
-
-          {settingsRows.uiSelects.slice(2).map(renderSelectRow)}
-        </CardContent>
-      </Card>
-    );
+  const canAdvance = canAdvanceTrick({ awaitContinue, handComplete, isViewingHistory });
+  const handleAdvanceTrick = () => {
+    setGame((g) => advanceToNextTrick(g));
+    setAwaitContinue(false);
   };
+
+  const tableCard = (
+    <TableCard
+      seatLabels={seatLabels}
+      displayHands={displayHands}
+      displayTricksWon={displayTricksWon}
+      displayTurn={displayTurn}
+      displayHandComplete={displayHandComplete}
+      displayTrick={displayTrick}
+      displayTrickWinner={displayTrickWinner}
+      displayTrickNo={displayTrickNo}
+      trickNo={trickNo}
+      bidDisplay={bidDisplay}
+      bidResultDisplay={bidResultDisplay}
+      shownHands={shownHands}
+      toggleRevealSeat={toggleRevealSeat}
+      modeOpenHandVerify={modeOpenHandVerify}
+      isViewingHistory={isViewingHistory}
+      legalBySeat={legalBySeat}
+      onPlayCard={(s, c) => tryPlay(s, c, "human")}
+      suitOrder={suitOrder}
+      sortAscending={sortAscending}
+      canPlay={canPlay}
+      suitStyleMode={suitStyleMode}
+      awaitContinue={awaitContinue}
+      handComplete={handComplete}
+      canAdvance={canAdvance}
+      onAdvanceTrick={handleAdvanceTrick}
+      onResetTrick={resetTrickOnly}
+      bidPrompt={renderBidPrompt()}
+      suitCountPrompt={renderSuitCountPrompt()}
+      winIntentPrompt={renderWinIntentPrompt()}
+    />
+  );
+
+  const settingsCard = (
+    <SettingsCard
+      modeOpenHandVerify={modeOpenHandVerify}
+      setModeOpenHandVerify={setModeOpenHandVerify}
+      voidTrackingEnabled={voidTrackingEnabled}
+      setVoidTrackingEnabled={setVoidTrackingEnabled}
+      voidPromptOnlyWhenLeading={voidPromptOnlyWhenLeading}
+      setVoidPromptOnlyWhenLeading={setVoidPromptOnlyWhenLeading}
+      voidPromptScope={voidPromptScope}
+      setVoidPromptScope={setVoidPromptScope}
+      suitCountPromptEnabled={suitCountPromptEnabled}
+      setSuitCountPromptEnabled={setSuitCountPromptEnabled}
+      winIntentPromptEnabled={winIntentPromptEnabled}
+      setWinIntentPromptEnabled={setWinIntentPromptEnabled}
+      winIntentMinRank={winIntentMinRank}
+      setWinIntentMinRank={setWinIntentMinRank}
+      winIntentWarnHonorsOnly={winIntentWarnHonorsOnly}
+      setWinIntentWarnHonorsOnly={setWinIntentWarnHonorsOnly}
+      winIntentWarnTrump={winIntentWarnTrump}
+      setWinIntentWarnTrump={setWinIntentWarnTrump}
+      checkErrorsEnabled={checkErrorsEnabled}
+      setCheckErrorsEnabled={setCheckErrorsEnabled}
+      aiEnabled={aiEnabled}
+      setAiEnabled={setAiEnabled}
+      aiMode={aiMode}
+      setAiMode={setAiMode}
+      aiPlayMe={aiPlayMe}
+      setAiPlayMe={setAiPlayMe}
+      aiDelayInput={aiDelayInput}
+      setAiDelayInput={setAiDelayInput}
+      setAiDelayMs={setAiDelayMs}
+      commitAiDelayInput={commitAiDelayInput}
+      pauseBeforeNextTrick={pauseBeforeNextTrick}
+      setPauseBeforeNextTrick={setPauseBeforeNextTrick}
+      handInProgress={handInProgress}
+      biddingActive={biddingActive}
+      trump={trump}
+      setTrump={setTrump}
+      suitOrderMode={suitOrderMode}
+      setSuitOrderMode={setSuitOrderMode}
+      suitStyleMode={suitStyleMode}
+      setSuitStyleMode={setSuitStyleMode}
+      sortAscending={sortAscending}
+      setSortAscending={setSortAscending}
+      seatLabelMode={seatLabelMode}
+      setSeatLabelMode={setSeatLabelMode}
+      suits={SUITS}
+    />
+  );
+
+  const voidTrackingCard = (
+    <VoidTrackingCard
+      voidTrackingEnabled={voidTrackingEnabled}
+      isViewingHistory={isViewingHistory}
+      leadPromptActive={leadPromptActive}
+      trickLength={trick.length}
+      anyVoidObserved={anyVoidObserved}
+      leadPromptSuit={leadPromptSuit}
+      suitStyleMode={suitStyleMode}
+      seatLabels={seatLabels}
+      leadPromptLeader={leadPromptLeader}
+      leadMismatch={leadMismatch}
+      leadSelections={leadSelections}
+      toggleLeadSelection={toggleLeadSelection}
+      leadWarning={leadWarning}
+      resumeAfterLeadPrompt={resumeAfterLeadPrompt}
+      skipLeadPrompt={skipLeadPrompt}
+      isResolving={isResolving}
+      awaitContinue={awaitContinue}
+    />
+  );
+
+  const trickHistoryCard = (
+    <TrickHistoryCard
+      trickHistory={trickHistory}
+      viewedTrickIndex={viewedTrickIndex}
+      viewedTrickStep={viewedTrickStep}
+      setViewedTrickIndex={setViewedTrickIndex}
+      setViewedTrickStep={setViewedTrickStep}
+      historyPlaying={historyPlaying}
+      setHistoryPlaying={setHistoryPlaying}
+      resumeFromHistory={resumeFromHistory}
+      seatLabels={seatLabels}
+      isViewingHistory={isViewingHistory}
+      trump={trump}
+      suitStyleMode={suitStyleMode}
+    />
+  );
+
 
   return (
     <div className="min-h-screen bg-background p-3 sm:p-6">
@@ -2525,23 +1425,23 @@ export default function App() {
         {isShortViewport ? (
           <div className="space-y-6">
             <div className="grid grid-cols-1 gap-1 md:grid-cols-[minmax(0,1fr)_auto]">
-              {renderTableCard()}
+              {tableCard}
               <div className="w-full md:max-w-[330px] md:justify-self-end md:self-center">
-                {renderVoidTrackingCard()}
+                {voidTrackingCard}
               </div>
             </div>
             <div className="space-y-6 md:max-w-[330px] md:justify-self-end">
-              {renderTrickHistoryCard()}
-              {renderSettingsCard()}
+              {trickHistoryCard}
+              {settingsCard}
             </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_auto] md:gap-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-            {renderTableCard()}
+            {tableCard}
             <div className="space-y-6 w-full md:max-w-[330px] md:justify-self-end">
-              {renderVoidTrackingCard()}
-              {renderTrickHistoryCard()}
-              {renderSettingsCard()}
+              {voidTrackingCard}
+              {trickHistoryCard}
+              {settingsCard}
             </div>
           </div>
         )}
