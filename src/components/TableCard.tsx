@@ -457,8 +457,8 @@ export function TableCard(props: TableCardProps) {
             <div className="absolute bottom-2 left-1/2 w-[85%] -translate-x-1/2 text-center text-xs text-white/80">
               {awaitContinue && !handComplete && !isViewingHistory ? (
                 <>
-                  <span className="sm:hidden">Click to continue</span>
-                  <span className="hidden sm:inline">Press Enter/Space or click to continue</span>
+                  <span className="lg:hidden">Click to continue</span>
+                  <span className="hidden lg:inline">Press Enter/Space or click to continue</span>
                 </>
               ) : null}
             </div>
