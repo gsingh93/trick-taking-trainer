@@ -35,6 +35,31 @@ function getCardTitle(args: { canPlay: boolean; isTurn: boolean; isLegal: boolea
   return "Play";
 }
 
+function renderPlayingCard(args: {
+  card: CardT;
+  seat: Seat;
+  currentTurn: Seat;
+  legal: Set<string>;
+  canPlay: boolean;
+  suitStyleMode: "classic" | "distinct";
+  onPlay: (seat: Seat, card: CardT) => void;
+  rotateClass?: string;
+}) {
+  const { card, seat, currentTurn, legal, canPlay, suitStyleMode, onPlay, rotateClass } = args;
+  const isTurn = seat === currentTurn;
+  const isLegal = legal.has(card.id);
+  return (
+    <PlayingCard
+      c={card}
+      rotateClass={rotateClass}
+      suitStyleMode={suitStyleMode}
+      disabled={!canPlay || !isTurn || !isLegal}
+      onClick={() => onPlay(seat, card)}
+      title={getCardTitle({ canPlay, isTurn, isLegal })}
+    />
+  );
+}
+
 function SeatPanel({
   label,
   tricksWon,
@@ -127,14 +152,17 @@ function HandRow({
     <div className={"mt-3 " + (rotateClass ?? "")}>
       <div className="flex flex-wrap gap-px">
         {sortHand(hand, suitOrder, sortAscending).map((c) => (
-          <PlayingCard
-            key={c.id}
-            c={c}
-            suitStyleMode={suitStyleMode}
-            disabled={!canPlay || !isTurn || !legal.has(c.id)}
-            onClick={() => onPlay(seat, c)}
-            title={getCardTitle({ canPlay, isTurn, isLegal: legal.has(c.id) })}
-          />
+          <div key={c.id}>
+            {renderPlayingCard({
+              card: c,
+              seat,
+              currentTurn,
+              legal,
+              canPlay,
+              suitStyleMode,
+              onPlay,
+            })}
+          </div>
         ))}
       </div>
     </div>
@@ -174,14 +202,16 @@ function HandCol({
         {sortHand(hand, suitOrder, sortAscending).map((c) => (
           <div key={c.id} className="relative h-10 w-14 overflow-visible">
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-              <PlayingCard
-                c={c}
-                rotateClass={cardRotateClass}
-                suitStyleMode={suitStyleMode}
-                disabled={!canPlay || !isTurn || !legal.has(c.id)}
-                onClick={() => onPlay(seat, c)}
-                title={getCardTitle({ canPlay, isTurn, isLegal: legal.has(c.id) })}
-              />
+              {renderPlayingCard({
+                card: c,
+                seat,
+                currentTurn,
+                legal,
+                canPlay,
+                suitStyleMode,
+                onPlay,
+                rotateClass: cardRotateClass,
+              })}
             </div>
           </div>
         ))}
