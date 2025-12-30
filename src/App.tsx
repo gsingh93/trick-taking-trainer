@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { chooseCardToPlay } from "@/engine/ai/random";
 import { shouldRunAi } from "@/engine/ai/logic";
 import { canAdvanceTrick, canPlayCard } from "@/engine/flow";
@@ -109,9 +116,6 @@ function loadSettings(): Partial<Settings> {
     if (typeof data.voidTrackingEnabled === "boolean") next.voidTrackingEnabled = data.voidTrackingEnabled;
     if (typeof data.darkMode === "boolean") next.darkMode = data.darkMode;
     if (typeof data.suitCountPromptEnabled === "boolean") next.suitCountPromptEnabled = data.suitCountPromptEnabled;
-    if (typeof data.leadCountPromptEnabled === "boolean" && typeof next.suitCountPromptEnabled !== "boolean") {
-      next.suitCountPromptEnabled = data.leadCountPromptEnabled;
-    }
     if (typeof data.checkErrorsEnabled === "boolean") next.checkErrorsEnabled = data.checkErrorsEnabled;
     if (data.voidPromptScope === "global" || data.voidPromptScope === "per-suit") {
       next.voidPromptScope = data.voidPromptScope;
@@ -143,9 +147,6 @@ function loadSettings(): Partial<Settings> {
     }
     if (typeof data.winIntentWarnHonorsOnly === "boolean") {
       next.winIntentWarnHonorsOnly = data.winIntentWarnHonorsOnly;
-    }
-    if (typeof data.winIntentWarnAnyHigher === "boolean" && typeof next.winIntentWarnHonorsOnly !== "boolean") {
-      next.winIntentWarnHonorsOnly = !data.winIntentWarnAnyHigher;
     }
     if (typeof data.winIntentMinRank === "number") {
       const value = Math.floor(data.winIntentMinRank) as Rank;
