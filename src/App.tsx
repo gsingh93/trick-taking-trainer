@@ -14,7 +14,7 @@ import { chooseCardToPlayForBid } from "@/engine/ai/bidFocus";
 import { estimateBid } from "@/engine/ai/bidHeuristic";
 import { remainingHonorsInSuit } from "@/engine/training";
 import { evaluateWinIntent } from "@/engine/winIntent";
-import { compareCardsInTrick, trickLeadSuit, determineTrickWinner } from "@/engine/rules";
+import { compareCardsInTrick, trickLeadSuit, determineTrickWinner, canFollowSuit, isTrump, nextSeat } from "@/engine/rules";
 import { buildDeck, createRng, dealNewHands } from "@/engine/deck";
 import {
   initGameState,
@@ -82,6 +82,7 @@ type Settings = {
   modeOpenHandVerify: boolean;
   voidTrackingEnabled: boolean;
   voidTrackingSuits: Suit[];
+  voidPromptSkipLowImpact: boolean;
   darkMode: boolean;
   suitCountPromptEnabled: boolean;
   suitCountPromptSuits: Suit[];
@@ -118,6 +119,9 @@ function loadSettings(): Partial<Settings> {
     if (typeof data.voidTrackingEnabled === "boolean") next.voidTrackingEnabled = data.voidTrackingEnabled;
     if (Array.isArray(data.voidTrackingSuits)) {
       next.voidTrackingSuits = data.voidTrackingSuits.filter((s): s is Suit => SUITS.includes(s as Suit));
+    }
+    if (typeof data.voidPromptSkipLowImpact === "boolean") {
+      next.voidPromptSkipLowImpact = data.voidPromptSkipLowImpact;
     }
     if (typeof data.darkMode === "boolean") next.darkMode = data.darkMode;
     if (typeof data.suitCountPromptEnabled === "boolean") next.suitCountPromptEnabled = data.suitCountPromptEnabled;
@@ -236,6 +240,9 @@ export default function App() {
   );
   const [voidTrackingSuits, setVoidTrackingSuits] = useState<Suit[]>(
     () => initialSettings.voidTrackingSuits ?? [...SUITS]
+  );
+  const [voidPromptSkipLowImpact, setVoidPromptSkipLowImpact] = useState(
+    () => initialSettings.voidPromptSkipLowImpact ?? true
   );
   const [darkMode, setDarkMode] = useState(() => initialSettings.darkMode ?? false);
   const [suitCountPromptEnabled, setSuitCountPromptEnabled] = useState(
@@ -428,6 +435,7 @@ export default function App() {
       modeOpenHandVerify,
       voidTrackingEnabled,
       voidTrackingSuits,
+      voidPromptSkipLowImpact,
       darkMode,
       suitCountPromptEnabled,
       suitCountPromptSuits,
@@ -460,6 +468,7 @@ export default function App() {
     modeOpenHandVerify,
     voidTrackingEnabled,
     voidTrackingSuits,
+    voidPromptSkipLowImpact,
     darkMode,
     suitCountPromptEnabled,
     suitCountPromptSuits,
@@ -600,6 +609,13 @@ export default function App() {
     const leadSeat = trick[0].seat;
     const leadSuit = trick[0].card.suit;
     if (!voidTrackingSuits.includes(leadSuit)) return;
+    if (voidPromptSkipLowImpact) {
+      const lastSeat = nextSeat(nextSeat(nextSeat(leadSeat)));
+      if (lastSeat === "Me") return;
+      const hasLeadSuit = canFollowSuit(hands.Me, leadSuit);
+      const hasTrump = hands.Me.some((card) => isTrump(card, trump));
+      if (!hasLeadSuit && !hasTrump) return;
+    }
     if (voidPromptOnlyWhenLeading && leadSeat !== "Me") return;
     const shouldPrompt =
       voidPromptScope === "global"
@@ -612,7 +628,18 @@ export default function App() {
     setLeadSelections(createVoidSelections());
     setLeadMismatch(createVoidSelections());
     setLeadWarning(null);
-  }, [voidTrackingEnabled, voidTrackingSuits, trick, trickNo, actualVoid, anyVoidObserved, voidPromptScope]);
+  }, [
+    voidTrackingEnabled,
+    voidTrackingSuits,
+    voidPromptSkipLowImpact,
+    trick,
+    trickNo,
+    actualVoid,
+    anyVoidObserved,
+    voidPromptScope,
+    hands.Me,
+    trump,
+  ]);
 
   function cancelResolveTimer() {
     if (resolveTimerRef.current != null) {
@@ -1395,6 +1422,8 @@ export default function App() {
       setVoidPromptOnlyWhenLeading={setVoidPromptOnlyWhenLeading}
       voidTrackingSuits={voidTrackingSuits}
       toggleVoidTrackingSuit={(s) => toggleSuitSelection(setVoidTrackingSuits, s)}
+      voidPromptSkipLowImpact={voidPromptSkipLowImpact}
+      setVoidPromptSkipLowImpact={setVoidPromptSkipLowImpact}
       voidPromptScope={voidPromptScope}
       setVoidPromptScope={setVoidPromptScope}
       suitCountPromptEnabled={suitCountPromptEnabled}

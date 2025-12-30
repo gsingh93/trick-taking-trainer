@@ -113,6 +113,8 @@ type SettingsCardProps = {
   setVoidTrackingEnabled: (value: boolean) => void;
   voidPromptOnlyWhenLeading: boolean;
   setVoidPromptOnlyWhenLeading: (value: boolean) => void;
+  voidPromptSkipLowImpact: boolean;
+  setVoidPromptSkipLowImpact: (value: boolean) => void;
   voidTrackingSuits: Suit[];
   toggleVoidTrackingSuit: (suit: Suit) => void;
   voidPromptScope: "global" | "per-suit";
@@ -166,6 +168,8 @@ export function SettingsCard(props: SettingsCardProps) {
     setVoidTrackingEnabled,
     voidPromptOnlyWhenLeading,
     setVoidPromptOnlyWhenLeading,
+    voidPromptSkipLowImpact,
+    setVoidPromptSkipLowImpact,
     voidTrackingSuits,
     toggleVoidTrackingSuit,
     voidPromptScope,
@@ -247,6 +251,15 @@ export function SettingsCard(props: SettingsCardProps) {
         onCheckedChange: setVoidPromptOnlyWhenLeading,
         disabled: !voidTrackingEnabled,
         className: !voidTrackingEnabled ? "opacity-50" : "",
+      },
+      {
+        key: "void-skip-low-impact",
+        label: "Skip low-impact void prompts",
+        checked: voidPromptSkipLowImpact,
+        onCheckedChange: setVoidPromptSkipLowImpact,
+        disabled: !voidTrackingEnabled,
+        className: !voidTrackingEnabled ? "opacity-50" : "",
+        tooltip: "Skip prompts when you are last to play or you are void with no trump",
       },
     ] satisfies SwitchRow[],
     voidSelects: [
