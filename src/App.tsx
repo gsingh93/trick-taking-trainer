@@ -268,7 +268,32 @@ function formatWinIntentDetails(args: {
   return details;
 }
 
- 
+type SwitchRow = {
+  key: string;
+  label: string;
+  checked: boolean;
+  onCheckedChange: (value: boolean) => void;
+  disabled?: boolean;
+  tooltip?: string;
+  className?: string;
+};
+
+function renderSwitchRow(row: SwitchRow) {
+  return (
+    <div key={row.key} className={"flex justify-between " + (row.className ?? "")}>
+      {row.tooltip ? (
+        <div className="flex items-center gap-2">
+          <span className="text-sm">{row.label}</span>
+          <HelpTooltip text={row.tooltip} />
+        </div>
+      ) : (
+        <span className="text-sm">{row.label}</span>
+      )}
+      <Switch checked={row.checked} onCheckedChange={row.onCheckedChange} disabled={row.disabled} />
+    </div>
+  );
+}
+
 
 function createVoidSelections(): VoidSelections {
   return { Left: false, Across: false, Right: false };
@@ -1996,339 +2021,391 @@ export default function App() {
     </Card>
   );
 
-  const renderSettingsCard = () => (
-    <Card>
-      <CardHeader>
-        <CardTitle>Training Settings</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex justify-between">
-          <span className="text-sm">Open-hand verify</span>
-          <Switch checked={modeOpenHandVerify} onCheckedChange={setModeOpenHandVerify} />
-        </div>
+  const renderSettingsCard = () => {
+    const trainingRows: SwitchRow[] = [
+      {
+        key: "open-hand-verify",
+        label: "Open-hand verify",
+        checked: modeOpenHandVerify,
+        onCheckedChange: setModeOpenHandVerify,
+      },
+    ];
+    const voidRows: SwitchRow[] = [
+      {
+        key: "void-tracking",
+        label: "Void tracking",
+        checked: voidTrackingEnabled,
+        onCheckedChange: setVoidTrackingEnabled,
+        tooltip: "Require confirming which opponents are void in the lead suit",
+      },
+    ];
+    const voidOptionRows: SwitchRow[] = [
+      {
+        key: "void-leading-only",
+        label: "Void prompts only when leading",
+        checked: voidPromptOnlyWhenLeading,
+        onCheckedChange: setVoidPromptOnlyWhenLeading,
+        disabled: !voidTrackingEnabled,
+        className: !voidTrackingEnabled ? "opacity-50" : "",
+      },
+    ];
+    const suitCountRows: SwitchRow[] = [
+      {
+        key: "suit-count",
+        label: "Suit count prompt",
+        checked: suitCountPromptEnabled,
+        onCheckedChange: setSuitCountPromptEnabled,
+        tooltip: "After the first off-suit in a suit, ask how many of that suit remain outside your hand",
+      },
+    ];
+    const winIntentRows: SwitchRow[] = [
+      {
+        key: "win-intent",
+        label: "Win intent prompt",
+        checked: winIntentPromptEnabled,
+        onCheckedChange: setWinIntentPromptEnabled,
+        tooltip:
+          "When you play a card at or above the win intent minimum rank, ask if you intend to win the trick and warn if it can be beaten",
+      },
+    ];
+    const winIntentWarnRows: SwitchRow[] = [
+      {
+        key: "win-intent-honors",
+        label: "Warn about higher honors only",
+        checked: winIntentWarnHonorsOnly,
+        onCheckedChange: setWinIntentWarnHonorsOnly,
+        disabled: !winIntentPromptEnabled,
+        className: !winIntentPromptEnabled ? "opacity-50" : "",
+        tooltip: "When enabled, only warn if higher honors remain instead of any higher card",
+      },
+      {
+        key: "win-intent-trump",
+        label: "Warn about trump voids",
+        checked: winIntentWarnTrump,
+        onCheckedChange: setWinIntentWarnTrump,
+        disabled: !winIntentPromptEnabled,
+        className: !winIntentPromptEnabled ? "opacity-50" : "",
+        tooltip: "Warn if an opponent may be void in the lead suit and able to trump",
+      },
+    ];
+    const errorRows: SwitchRow[] = [
+      {
+        key: "show-errors",
+        label: "Show errors",
+        checked: checkErrorsEnabled,
+        onCheckedChange: setCheckErrorsEnabled,
+        tooltip: "When enabled, highlight incorrect selections in red",
+      },
+    ];
+    const aiRows: SwitchRow[] = [
+      {
+        key: "ai-enabled",
+        label: "AI opponents",
+        checked: aiEnabled,
+        onCheckedChange: setAiEnabled,
+      },
+      {
+        key: "ai-play-me",
+        label: "AI for me",
+        checked: aiPlayMe,
+        onCheckedChange: setAiPlayMe,
+        disabled: !aiEnabled,
+        className: !aiEnabled ? "opacity-50" : "",
+      },
+      {
+        key: "pause-before",
+        label: "Pause before next trick",
+        checked: pauseBeforeNextTrick,
+        onCheckedChange: setPauseBeforeNextTrick,
+      },
+    ];
+    const trumpRows: SwitchRow[] = [
+      {
+        key: "trump-enabled",
+        label: "Trump enabled",
+        checked: trump.enabled,
+        onCheckedChange: (v) => setTrump((t) => ({ ...t, enabled: v })),
+      },
+      {
+        key: "must-break",
+        label: "Must break",
+        checked: trump.mustBreak,
+        onCheckedChange: (v) => setTrump((t) => ({ ...t, mustBreak: v })),
+        disabled: !trump.enabled,
+        className: !trump.enabled ? "opacity-50" : "",
+        tooltip: "Prevents leading trump until trump has been played (unless you only have trump)",
+      },
+    ];
+    const uiRows: SwitchRow[] = [
+      {
+        key: "sort-ascending",
+        label: "Sort ascending",
+        checked: sortAscending,
+        onCheckedChange: setSortAscending,
+      },
+    ];
 
-        <Separator />
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Training Settings</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {trainingRows.map(renderSwitchRow)}
 
-        <div className="space-y-3">
-          <div className="flex justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-sm">Void tracking</span>
-              <HelpTooltip text="Require confirming which opponents are void in the lead suit" />
+          <Separator />
+
+          <div className="space-y-3">
+            {voidRows.map(renderSwitchRow)}
+
+            <div className={"flex items-center justify-between gap-2 " + (!voidTrackingEnabled ? "opacity-50" : "")}>
+              <div className="flex items-center gap-2 text-sm">
+                <span>Prompt after first void</span>
+                <HelpTooltip text={"Global: after any off-suit, prompt on every lead\nPer suit: only prompt after off-suit in that suit"} />
+              </div>
+              <Select
+                value={voidPromptScope}
+                onValueChange={(v) => setVoidPromptScope(v as "global" | "per-suit")}
+                disabled={!voidTrackingEnabled}
+              >
+                <SelectTrigger className="h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="global">Global</SelectItem>
+                  <SelectItem value="per-suit">Per suit</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <Switch checked={voidTrackingEnabled} onCheckedChange={setVoidTrackingEnabled} />
           </div>
 
-          <div className={"flex items-center justify-between gap-2 " + (!voidTrackingEnabled ? "opacity-50" : "")}>
+          {voidOptionRows.map(renderSwitchRow)}
+
+          <Separator />
+
+          {suitCountRows.map(renderSwitchRow)}
+
+          <Separator />
+
+          {winIntentRows.map(renderSwitchRow)}
+
+          <div className={"grid grid-cols-[minmax(0,1fr)_auto] gap-2 " + (!winIntentPromptEnabled ? "opacity-50" : "")}>
             <div className="flex items-center gap-2 text-sm">
-              <span>Prompt after first void</span>
-              <HelpTooltip text={"Global: after any off-suit, prompt on every lead\nPer suit: only prompt after off-suit in that suit"} />
+              <span>Win intent minimum rank</span>
+              <HelpTooltip text="Only prompt when playing this rank or higher" />
             </div>
             <Select
-              value={voidPromptScope}
-              onValueChange={(v) => setVoidPromptScope(v as "global" | "per-suit")}
-              disabled={!voidTrackingEnabled}
+              value={String(winIntentMinRank)}
+              onValueChange={(v) => setWinIntentMinRank(Number(v) as Rank)}
+              disabled={!winIntentPromptEnabled}
             >
               <SelectTrigger className="h-8">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="global">Global</SelectItem>
-                <SelectItem value="per-suit">Per suit</SelectItem>
+                {[
+                  { label: "2", value: 2 },
+                  { label: "3", value: 3 },
+                  { label: "4", value: 4 },
+                  { label: "5", value: 5 },
+                  { label: "6", value: 6 },
+                  { label: "7", value: 7 },
+                  { label: "8", value: 8 },
+                  { label: "9", value: 9 },
+                  { label: "10", value: 10 },
+                  { label: "J", value: 11 },
+                  { label: "Q", value: 12 },
+                  { label: "K", value: 13 },
+                  { label: "A", value: 14 },
+                ].map((opt) => (
+                  <SelectItem key={opt.value} value={String(opt.value)}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
-        </div>
 
-        <div className={"flex justify-between " + (!voidTrackingEnabled ? "opacity-50" : "")}>
-          <span className="text-sm">Void prompts only when leading</span>
-          <Switch
-            checked={voidPromptOnlyWhenLeading}
-            onCheckedChange={setVoidPromptOnlyWhenLeading}
-            disabled={!voidTrackingEnabled}
-          />
-        </div>
+          {winIntentWarnRows.map(renderSwitchRow)}
 
-        <Separator />
+          <Separator />
 
-        <div className="flex justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-sm">Suit count prompt</span>
-            <HelpTooltip text="After the first off-suit in a suit, ask how many of that suit remain outside your hand" />
+          {errorRows.map(renderSwitchRow)}
+
+          <div className="h-1" />
+          <CardTitle>Gameplay &amp; UI Settings</CardTitle>
+
+          {aiRows.slice(0, 1).map(renderSwitchRow)}
+
+          <div className={"grid grid-cols-[minmax(0,1fr)_auto] gap-2 " + (handInProgress || biddingActive ? "opacity-50" : "")}>
+            <span className="text-sm">AI mode</span>
+            <Select
+              value={aiMode}
+              onValueChange={(v) => setAiMode(v as "random" | "bidding")}
+              disabled={handInProgress || biddingActive}
+            >
+              <SelectTrigger className="h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="random">Random</SelectItem>
+                <SelectItem value="bidding">Bidding</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <Switch checked={suitCountPromptEnabled} onCheckedChange={setSuitCountPromptEnabled} />
-        </div>
 
-        <Separator />
+          {aiRows.slice(1, 2).map(renderSwitchRow)}
 
-        <div className="flex justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-sm">Win intent prompt</span>
-            <HelpTooltip text="When you play a card at or above the win intent minimum rank, ask if you intend to win the trick and warn if it can be beaten" />
-          </div>
-          <Switch checked={winIntentPromptEnabled} onCheckedChange={setWinIntentPromptEnabled} />
-        </div>
-
-        <div className={"grid grid-cols-[minmax(0,1fr)_auto] gap-2 " + (!winIntentPromptEnabled ? "opacity-50" : "")}>
-          <div className="flex items-center gap-2 text-sm">
-            <span>Win intent minimum rank</span>
-            <HelpTooltip text="Only prompt when playing this rank or higher" />
-          </div>
-          <Select
-            value={String(winIntentMinRank)}
-            onValueChange={(v) => setWinIntentMinRank(Number(v) as Rank)}
-            disabled={!winIntentPromptEnabled}
-          >
-            <SelectTrigger className="h-8">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {[
-                { label: "2", value: 2 },
-                { label: "3", value: 3 },
-                { label: "4", value: 4 },
-                { label: "5", value: 5 },
-                { label: "6", value: 6 },
-                { label: "7", value: 7 },
-                { label: "8", value: 8 },
-                { label: "9", value: 9 },
-                { label: "10", value: 10 },
-                { label: "J", value: 11 },
-                { label: "Q", value: 12 },
-                { label: "K", value: 13 },
-                { label: "A", value: 14 },
-              ].map((opt) => (
-                <SelectItem key={opt.value} value={String(opt.value)}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className={"flex justify-between " + (!winIntentPromptEnabled ? "opacity-50" : "")}>
-          <div className="flex items-center gap-2">
-            <span className="text-sm">Warn about higher honors only</span>
-            <HelpTooltip text="When enabled, only warn if higher honors remain instead of any higher card" />
-          </div>
-          <Switch
-            checked={winIntentWarnHonorsOnly}
-            onCheckedChange={setWinIntentWarnHonorsOnly}
-            disabled={!winIntentPromptEnabled}
-          />
-        </div>
-
-        <div className={"flex justify-between " + (!winIntentPromptEnabled ? "opacity-50" : "")}>
-          <div className="flex items-center gap-2">
-            <span className="text-sm">Warn about trump voids</span>
-            <HelpTooltip text="Warn if an opponent may be void in the lead suit and able to trump" />
-          </div>
-          <Switch
-            checked={winIntentWarnTrump}
-            onCheckedChange={setWinIntentWarnTrump}
-            disabled={!winIntentPromptEnabled}
-          />
-        </div>
-
-        <Separator />
-
-        <div className="flex justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-sm">Show errors</span>
-            <HelpTooltip text="When enabled, highlight incorrect selections in red" />
-          </div>
-          <Switch checked={checkErrorsEnabled} onCheckedChange={setCheckErrorsEnabled} />
-        </div>
-
-        <div className="h-1" />
-        <CardTitle>Gameplay &amp; UI Settings</CardTitle>
-
-        <div className="flex justify-between">
-          <span className="text-sm">AI opponents</span>
-          <Switch checked={aiEnabled} onCheckedChange={setAiEnabled} />
-        </div>
-
-        <div className={"grid grid-cols-[minmax(0,1fr)_auto] gap-2 " + (handInProgress || biddingActive ? "opacity-50" : "")}>
-          <span className="text-sm">AI mode</span>
-          <Select
-            value={aiMode}
-            onValueChange={(v) => setAiMode(v as "random" | "bidding")}
-            disabled={handInProgress || biddingActive}
-          >
-            <SelectTrigger className="h-8">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="random">Random</SelectItem>
-              <SelectItem value="bidding">Bidding</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className={"flex justify-between " + (!aiEnabled ? "opacity-50" : "")}>
-          <span className="text-sm">AI for me</span>
-          <Switch checked={aiPlayMe} onCheckedChange={setAiPlayMe} disabled={!aiEnabled} />
-        </div>
-
-        <div className={"grid grid-cols-[minmax(0,1fr)_auto] gap-2 " + (!aiEnabled ? "opacity-50" : "")}>
-          <span className="text-sm">AI delay (ms)</span>
-          <input
-            type="number"
-            min={0}
-            step={250}
-            value={aiDelayInput}
-            disabled={!aiEnabled}
-            onChange={(e) => {
-              const raw = e.target.value;
-              setAiDelayInput(raw);
-              if (raw.trim() === "") return;
-              const n = Number(raw);
-              if (Number.isFinite(n) && n >= 0) {
-                setAiDelayMs(Math.floor(n));
-              }
-            }}
-            onBlur={() => {
-              commitAiDelayInput(aiDelayInput);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
+          <div className={"grid grid-cols-[minmax(0,1fr)_auto] gap-2 " + (!aiEnabled ? "opacity-50" : "")}>
+            <span className="text-sm">AI delay (ms)</span>
+            <input
+              type="number"
+              min={0}
+              step={250}
+              value={aiDelayInput}
+              disabled={!aiEnabled}
+              onChange={(e) => {
+                const raw = e.target.value;
+                setAiDelayInput(raw);
+                if (raw.trim() === "") return;
+                const n = Number(raw);
+                if (Number.isFinite(n) && n >= 0) {
+                  setAiDelayMs(Math.floor(n));
+                }
+              }}
+              onBlur={() => {
                 commitAiDelayInput(aiDelayInput);
-              }
-            }}
-            className="h-8 w-20 rounded-md border bg-background px-2 text-sm"
-          />
-        </div>
-
-        <div className="flex justify-between">
-          <span className="text-sm">Pause before next trick</span>
-          <Switch checked={pauseBeforeNextTrick} onCheckedChange={setPauseBeforeNextTrick} />
-        </div>
-
-        <Separator />
-
-        <div className="flex justify-between">
-          <span className="text-sm">Trump enabled</span>
-          <Switch checked={trump.enabled} onCheckedChange={(v) => setTrump((t) => ({ ...t, enabled: v }))} />
-        </div>
-
-        <div className={"grid grid-cols-[minmax(0,1fr)_auto] gap-2 " + (!trump.enabled ? "opacity-50" : "")}>
-          <span className="text-sm">Trump suit</span>
-          <Select value={trump.suit} onValueChange={(v) => setTrump((t) => ({ ...t, suit: v as Suit }))} disabled={!trump.enabled}>
-            <SelectTrigger className="h-8">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {SUITS.map((s) => (
-                <SelectItem key={s} value={s}>
-                  <span className={suitColorClass(s, suitStyleMode)}>{suitGlyph(s)}</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className={"flex justify-between " + (!trump.enabled ? "opacity-50" : "")}>
-          <div className="flex items-center gap-2">
-            <span className="text-sm">Must break</span>
-            <HelpTooltip text="Prevents leading trump until trump has been played (unless you only have trump)" />
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  commitAiDelayInput(aiDelayInput);
+                }
+              }}
+              className="h-8 w-20 rounded-md border bg-background px-2 text-sm"
+            />
           </div>
-          <Switch checked={trump.mustBreak} onCheckedChange={(v) => setTrump((t) => ({ ...t, mustBreak: v }))} disabled={!trump.enabled} />
-        </div>
 
-        <Separator />
+          {aiRows.slice(2).map(renderSwitchRow)}
 
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-          <span className="text-sm">Suit order</span>
-          <Select value={suitOrderMode} onValueChange={(v) => setSuitOrderMode(v as "bridge" | "poker")}>
-            <SelectTrigger className="h-8">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="bridge">
-                Bridge (
-                <span className="inline-flex gap-1">
-                  {["S", "H", "D", "C"].map((s) => (
-                    <span key={s} className={suitColorClass(s as Suit, suitStyleMode)}>
-                      {suitGlyph(s as Suit)}
-                    </span>
-                  ))}
-                </span>
-                )
-              </SelectItem>
-              <SelectItem value="poker">
-                Poker (
-                <span className="inline-flex gap-1">
-                  {["C", "D", "H", "S"].map((s) => (
-                    <span key={s} className={suitColorClass(s as Suit, suitStyleMode)}>
-                      {suitGlyph(s as Suit)}
-                    </span>
-                  ))}
-                </span>
-                )
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+          <Separator />
 
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-          <span className="text-sm">Suit colors</span>
-          <Select value={suitStyleMode} onValueChange={(v) => setSuitStyleMode(v as "classic" | "distinct")}>
-            <SelectTrigger className="h-8">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="classic">
-                Classic (
-                <span className="inline-flex gap-1">
-                  {["S", "C"].map((s) => (
-                    <span key={s} className={suitColorClass(s as Suit, "classic")}>
-                      {suitGlyph(s as Suit)}
-                    </span>
-                  ))}
-                  {["H", "D"].map((s) => (
-                    <span key={s} className={suitColorClass(s as Suit, "classic")}>
-                      {suitGlyph(s as Suit)}
-                    </span>
-                  ))}
-                </span>
-                )
-              </SelectItem>
-              <SelectItem value="distinct">
-                Distinct (
-                <span className="inline-flex gap-1">
-                  {["S", "C", "H", "D"].map((s) => (
-                    <span key={s} className={suitColorClass(s as Suit, "distinct")}>
-                      {suitGlyph(s as Suit)}
-                    </span>
-                  ))}
-                </span>
-                )
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+          {trumpRows.slice(0, 1).map(renderSwitchRow)}
 
-        <div className="flex justify-between">
-          <span className="text-sm">Sort ascending</span>
-          <Switch checked={sortAscending} onCheckedChange={setSortAscending} />
-        </div>
+          <div className={"grid grid-cols-[minmax(0,1fr)_auto] gap-2 " + (!trump.enabled ? "opacity-50" : "")}>
+            <span className="text-sm">Trump suit</span>
+            <Select
+              value={trump.suit}
+              onValueChange={(v) => setTrump((t) => ({ ...t, suit: v as Suit }))}
+              disabled={!trump.enabled}
+            >
+              <SelectTrigger className="h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SUITS.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    <span className={suitColorClass(s, suitStyleMode)}>{suitGlyph(s)}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <Separator />
+          {trumpRows.slice(1).map(renderSwitchRow)}
 
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-          <span className="text-sm">Seat labels</span>
-          <Select value={seatLabelMode} onValueChange={(v) => setSeatLabelMode(v as "relative" | "compass")}>
-            <SelectTrigger className="h-8">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-          <SelectItem value="relative">Left / Across / Right / Me</SelectItem>
-          <SelectItem value="compass">North / South / East / West</SelectItem>
-        </SelectContent>
-      </Select>
-    </div>
-      </CardContent>
-    </Card>
-  );
+          <Separator />
+
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+            <span className="text-sm">Suit order</span>
+            <Select value={suitOrderMode} onValueChange={(v) => setSuitOrderMode(v as "bridge" | "poker")}>
+              <SelectTrigger className="h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="bridge">
+                  Bridge (
+                  <span className="inline-flex gap-1">
+                    {["S", "H", "D", "C"].map((s) => (
+                      <span key={s} className={suitColorClass(s as Suit, suitStyleMode)}>
+                        {suitGlyph(s as Suit)}
+                      </span>
+                    ))}
+                  </span>
+                  )
+                </SelectItem>
+                <SelectItem value="poker">
+                  Poker (
+                  <span className="inline-flex gap-1">
+                    {["C", "D", "H", "S"].map((s) => (
+                      <span key={s} className={suitColorClass(s as Suit, suitStyleMode)}>
+                        {suitGlyph(s as Suit)}
+                      </span>
+                    ))}
+                  </span>
+                  )
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+            <span className="text-sm">Suit colors</span>
+            <Select value={suitStyleMode} onValueChange={(v) => setSuitStyleMode(v as "classic" | "distinct")}>
+              <SelectTrigger className="h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="classic">
+                  Classic (
+                  <span className="inline-flex gap-1">
+                    {["S", "C"].map((s) => (
+                      <span key={s} className={suitColorClass(s as Suit, "classic")}>
+                        {suitGlyph(s as Suit)}
+                      </span>
+                    ))}
+                    {["H", "D"].map((s) => (
+                      <span key={s} className={suitColorClass(s as Suit, "classic")}>
+                        {suitGlyph(s as Suit)}
+                      </span>
+                    ))}
+                  </span>
+                  )
+                </SelectItem>
+                <SelectItem value="distinct">
+                  Distinct (
+                  <span className="inline-flex gap-1">
+                    {["S", "C", "H", "D"].map((s) => (
+                      <span key={s} className={suitColorClass(s as Suit, "distinct")}>
+                        {suitGlyph(s as Suit)}
+                      </span>
+                    ))}
+                  </span>
+                  )
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {uiRows.map(renderSwitchRow)}
+
+          <Separator />
+
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+            <span className="text-sm">Seat labels</span>
+            <Select value={seatLabelMode} onValueChange={(v) => setSeatLabelMode(v as "relative" | "compass")}>
+              <SelectTrigger className="h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="relative">Left / Across / Right / Me</SelectItem>
+                <SelectItem value="compass">North / South / East / West</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background p-3 sm:p-6">
