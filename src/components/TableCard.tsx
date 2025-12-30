@@ -115,7 +115,7 @@ function SeatPanel({
             disabled={disableReveal}
           >
             {isRevealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            <span className="hidden md:inline">{isRevealed ? "Hide" : "Reveal"}</span>
+            <span className="hidden lg:inline">{isRevealed ? "Hide" : "Reveal"}</span>
           </Button>
         </div>
       ) : null}
