@@ -17,6 +17,7 @@ import { canAdvanceTrick, canPlayCard } from "@/engine/flow";
 import { chooseCardToPlayForBid } from "@/engine/ai/bidFocus";
 import { estimateBid } from "@/engine/ai/bidHeuristic";
 import { remainingHonorsInSuit } from "@/engine/training";
+import { evaluateWinIntent } from "@/engine/winIntent";
 import {
   sortHand,
   compareCardsInTrick,
@@ -984,26 +985,6 @@ export default function App() {
     return compareCardsInTrick(card, currentBest, suit, trump) === -1;
   }
 
-  function remainingHigherRanksInSuit(card: CardT, suit: Suit): Rank[] {
-    const played = new Set<Rank>();
-    for (const t of trickHistory) {
-      for (const play of t) {
-        if (play.card.suit === suit) played.add(play.card.rank);
-      }
-    }
-    for (const play of trick) {
-      if (play.card.suit === suit) played.add(play.card.rank);
-    }
-    for (const c of hands.Me) {
-      if (c.suit === suit) played.add(c.rank);
-    }
-    const ranks: Rank[] = [];
-    for (let r = card.rank + 1; r <= 14; r += 1) {
-      if (!played.has(r as Rank)) ranks.push(r as Rank);
-    }
-    return ranks;
-  }
-
   function shouldPromptWinIntent(card: CardT, seat: Seat): boolean {
     if (!winIntentPromptEnabled) return false;
     if (seat !== "Me") return false;
@@ -1020,48 +1001,6 @@ export default function App() {
     return true;
   }
 
-  function evaluateWinIntent(card: CardT): { warning: string | null; details: string[] } {
-    const leadSuit = trickLeadSuit(trick) ?? card.suit;
-    const honors = honorRemainingBySuit[leadSuit].filter((r) => r > card.rank);
-    const higherRanks = winIntentWarnHonorsOnly ? honors : remainingHigherRanksInSuit(card, leadSuit);
-    const honorWarning = higherRanks.length > 0;
-    const details: string[] = [];
-    let trumpWarning = false;
-    const trumpThreats: string[] = [];
-    if (
-      winIntentWarnTrump &&
-      trump.enabled &&
-      leadSuit !== trump.suit &&
-      !remainingPlayersVoidInSuit(leadSuit, "Me")
-    ) {
-      const playedSeats = new Set(trick.map((t) => t.seat));
-      const remaining = SEATS.filter((s) => s !== "Me" && !playedSeats.has(s));
-      trumpWarning = remaining.some(
-        (seat) => seat !== "Me" && actualVoid[seat][leadSuit] && !actualVoid[seat][trump.suit]
-      );
-      for (const seat of remaining) {
-        if (seat === "Me") continue;
-        if (actualVoid[seat][leadSuit] && !actualVoid[seat][trump.suit]) {
-          trumpThreats.push(seatLabels[seat]);
-        }
-      }
-    }
-    if (honorWarning) {
-      const label = winIntentWarnHonorsOnly ? "Higher honors remaining" : "Higher cards remaining";
-      details.push(`${label}: ${higherRanks.map(rankGlyph).join(", ")}`);
-    }
-    if (trumpWarning) {
-      const who = trumpThreats.length ? ` (${trumpThreats.join(", ")})` : "";
-      details.push(`Trump threat: an opponent may trump with ${suitGlyph(trump.suit)}${who}`);
-    }
-    if (honorWarning && trumpWarning) {
-      return { warning: "This card can be beaten by a higher card or trump", details };
-    }
-    if (honorWarning) return { warning: "This card can be beaten by a higher card", details };
-    if (trumpWarning) return { warning: "This card can be trumped", details };
-    return { warning: null, details: [] };
-  }
-
   function handleWinIntentDecision(intentToWin: boolean) {
     if (!pendingIntentCard) return;
     if (!intentToWin) {
@@ -1070,15 +1009,35 @@ export default function App() {
       tryPlay("Me", card, "human", { skipIntentPrompt: true });
       return;
     }
-    const assessment = evaluateWinIntent(pendingIntentCard);
+    const assessment = evaluateWinIntent({
+      card: pendingIntentCard,
+      trickHistory,
+      trick,
+      hand: hands.Me,
+      trump,
+      winIntentWarnTrump,
+      winIntentWarnHonorsOnly,
+      actualVoid,
+    });
     if (!assessment.warning) {
       const card = pendingIntentCard;
       resetWinIntentPrompt();
       tryPlay("Me", card, "human", { skipIntentPrompt: true });
       return;
     }
+    const details: string[] = [];
+    if (assessment.higherRanks.length) {
+      const label = winIntentWarnHonorsOnly ? "Higher honors remaining" : "Higher cards remaining";
+      details.push(`${label}: ${assessment.higherRanks.map(rankGlyph).join(", ")}`);
+    }
+    if (assessment.warning.includes("trump")) {
+      const who = assessment.trumpThreats.length
+        ? ` (${assessment.trumpThreats.map((s) => seatLabels[s]).join(", ")})`
+        : "";
+      details.push(`Trump threat: an opponent may trump with ${suitGlyph(trump.suit)}${who}`);
+    }
     setIntentWarning(assessment.warning);
-    setIntentDetails(assessment.details);
+    setIntentDetails(details);
   }
 
   function confirmIntentPlay() {
