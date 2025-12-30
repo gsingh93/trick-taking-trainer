@@ -51,7 +51,7 @@ import {
   type PlayT,
   type TrumpConfig,
 } from "@/engine/types";
-import { Spade, RefreshCw, Moon, Sun } from "lucide-react";
+import { RefreshCw, Moon, Sun } from "lucide-react";
 import { rankGlyph, suitColorClass, suitGlyph } from "@/ui/cardUtils";
 import { SettingsCard } from "@/components/SettingsCard";
 import { TrickHistoryCard } from "@/components/TrickHistoryCard";
