@@ -1150,7 +1150,7 @@ export default function App() {
       <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40">
         <div className="w-[170px] space-y-3 rounded-lg border bg-card px-3 py-3 text-sm shadow-lg">
           <div className="text-sm font-medium">Enter your bid</div>
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
             <Select value={bidInput} onValueChange={(v) => setBidInput(v)}>
               <SelectTrigger className="h-8">
                 <SelectValue />

@@ -58,7 +58,10 @@ function renderSwitchRow(row: SwitchRow) {
 
 function renderSelectRow(row: SelectRow) {
   return (
-    <div key={row.key} className={"grid grid-cols-[minmax(0,1fr)_auto] gap-2 " + (row.className ?? "")}>
+    <div
+      key={row.key}
+      className={"grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 " + (row.className ?? "")}
+    >
       {row.tooltip ? (
         <div className="flex items-center gap-2 text-sm">
           <span>{row.label}</span>
@@ -74,7 +77,10 @@ function renderSelectRow(row: SelectRow) {
 
 function renderSuitToggleRow(row: SuitToggleRow, suits: Suit[], suitStyleMode: "classic" | "distinct") {
   return (
-    <div key={row.key} className={"grid grid-cols-[minmax(0,1fr)_auto] gap-2 " + (row.className ?? "")}>
+    <div
+      key={row.key}
+      className={"grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 " + (row.className ?? "")}
+    >
       <span className="text-sm">{row.label}</span>
       <div className={"flex gap-1 " + (row.disabled ? "opacity-50" : "")}>
         {suits.map((s) => {
