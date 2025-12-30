@@ -1504,7 +1504,7 @@ export default function App() {
                 </div>
                 <Button className="gap-2 bg-emerald-600 text-white hover:bg-emerald-700" onClick={newSeed}>
                   <RefreshCw className="h-4 w-4" />
-                  New seed
+                  New hand
                 </Button>
                 <Button className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={resetHand}>
                   Reset hand
