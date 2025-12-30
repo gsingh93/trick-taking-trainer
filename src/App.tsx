@@ -732,28 +732,17 @@ export default function App() {
 
   useEffect(() => {
     if (!voidTrackingEnabled) {
-      setLeadPromptActive(false);
-      setLeadPromptSuit(null);
-      setLeadPromptLeader(null);
-      setLeadWarning(null);
-      setLeadMismatch(createVoidSelections());
+      resetVoidPrompt();
       return;
     }
     if (trick.length === 0) {
-      setLeadPromptActive(false);
-      setLeadPromptSuit(null);
-      setLeadPromptLeader(null);
-      setLeadWarning(null);
-      setLeadMismatch(createVoidSelections());
+      resetVoidPrompt();
     }
   }, [voidTrackingEnabled, trick.length]);
 
   useEffect(() => {
     if (!suitCountPromptEnabled) {
-      setSuitCountPromptActive(false);
-      setSuitCountPromptSuit(null);
-      setSuitCountAnswer("0");
-      setSuitCountMismatch(false);
+      resetSuitCountPrompt();
     }
   }, [suitCountPromptEnabled]);
 
@@ -784,6 +773,28 @@ export default function App() {
     }
   }
 
+  function resetVoidPrompt() {
+    setLeadPromptActive(false);
+    setLeadPromptSuit(null);
+    setLeadPromptLeader(null);
+    setLeadSelections(createVoidSelections());
+    setLeadMismatch(createVoidSelections());
+    setLeadWarning(null);
+  }
+
+  function resetSuitCountPrompt() {
+    setSuitCountPromptActive(false);
+    setSuitCountPromptSuit(null);
+    setSuitCountAnswer("0");
+    setSuitCountMismatch(false);
+  }
+
+  function resetWinIntentPrompt() {
+    setPendingIntentCard(null);
+    setIntentWarning(null);
+    setIntentDetails([]);
+  }
+
   function resetForDeal(seed: number) {
     cancelResolveTimer();
     setDealSeed(seed);
@@ -794,19 +805,9 @@ export default function App() {
     setHistoryPlaying(false);
     setBidState(aiMode === "bidding" ? initBidState("Me") : null);
     setBidInput("0");
-    setPendingIntentCard(null);
-    setIntentWarning(null);
-    setIntentDetails([]);
-    setLeadPromptActive(false);
-    setLeadPromptSuit(null);
-    setLeadPromptLeader(null);
-    setLeadSelections(createVoidSelections());
-    setLeadMismatch(createVoidSelections());
-    setLeadWarning(null);
-    setSuitCountPromptActive(false);
-    setSuitCountPromptSuit(null);
-    setSuitCountAnswer("0");
-    setSuitCountMismatch(false);
+    resetWinIntentPrompt();
+    resetVoidPrompt();
+    resetSuitCountPrompt();
     setReveal({ Left: false, Across: false, Right: false, Me: true });
     setIsResolving(false);
     setAwaitContinue(false);
@@ -862,21 +863,13 @@ export default function App() {
       setLeadWarning("Selections do not match void status");
       return;
     }
-    setLeadPromptActive(false);
-    setLeadPromptSuit(null);
-    setLeadPromptLeader(null);
-    setLeadWarning(null);
-    setLeadMismatch(createVoidSelections());
+    resetVoidPrompt();
   }
 
   function skipLeadPrompt() {
     if (isViewingHistory) return;
     if (!leadPromptActive) return;
-    setLeadPromptActive(false);
-    setLeadPromptSuit(null);
-    setLeadPromptLeader(null);
-    setLeadWarning(null);
-    setLeadMismatch(createVoidSelections());
+    resetVoidPrompt();
   }
 
   function trickHasOffSuit(trickPlays: PlayT[]): boolean {
@@ -913,10 +906,7 @@ export default function App() {
       setSuitCountMismatch(true);
       return;
     }
-    setSuitCountPromptActive(false);
-    setSuitCountPromptSuit(null);
-    setSuitCountAnswer("0");
-    setSuitCountMismatch(false);
+    resetSuitCountPrompt();
     setAwaitContinue(false);
     if (!handComplete) {
       setGame((g) => advanceToNextTrick(g));
@@ -926,10 +916,7 @@ export default function App() {
   function skipSuitCountPrompt() {
     if (isViewingHistory) return;
     if (!suitCountPromptActive) return;
-    setSuitCountPromptActive(false);
-    setSuitCountPromptSuit(null);
-    setSuitCountAnswer("0");
-    setSuitCountMismatch(false);
+    resetSuitCountPrompt();
     setAwaitContinue(false);
     if (!handComplete) {
       setGame((g) => advanceToNextTrick(g));
@@ -1068,18 +1055,14 @@ export default function App() {
     if (!pendingIntentCard) return;
     if (!intentToWin) {
       const card = pendingIntentCard;
-      setPendingIntentCard(null);
-      setIntentWarning(null);
-      setIntentDetails([]);
+      resetWinIntentPrompt();
       tryPlay("Me", card, "human", { skipIntentPrompt: true });
       return;
     }
     const assessment = evaluateWinIntent(pendingIntentCard);
     if (!assessment.warning) {
       const card = pendingIntentCard;
-      setPendingIntentCard(null);
-      setIntentWarning(null);
-      setIntentDetails([]);
+      resetWinIntentPrompt();
       tryPlay("Me", card, "human", { skipIntentPrompt: true });
       return;
     }
@@ -1090,16 +1073,12 @@ export default function App() {
   function confirmIntentPlay() {
     if (!pendingIntentCard) return;
     const card = pendingIntentCard;
-    setPendingIntentCard(null);
-    setIntentWarning(null);
-    setIntentDetails([]);
+    resetWinIntentPrompt();
     tryPlay("Me", card, "human", { skipIntentPrompt: true });
   }
 
   function cancelIntentPrompt() {
-    setPendingIntentCard(null);
-    setIntentWarning(null);
-    setIntentDetails([]);
+    resetWinIntentPrompt();
   }
 
   function submitBidForSeat(seat: Seat, bid: number) {
@@ -1233,19 +1212,9 @@ export default function App() {
     cancelResolveTimer();
     setIsResolving(false);
     setAwaitContinue(false);
-    setLeadPromptActive(false);
-    setLeadPromptSuit(null);
-    setLeadPromptLeader(null);
-    setLeadSelections(createVoidSelections());
-    setLeadMismatch(createVoidSelections());
-    setLeadWarning(null);
-    setSuitCountPromptActive(false);
-    setSuitCountPromptSuit(null);
-    setSuitCountAnswer("0");
-    setSuitCountMismatch(false);
-    setPendingIntentCard(null);
-    setIntentWarning(null);
-    setIntentDetails([]);
+    resetVoidPrompt();
+    resetSuitCountPrompt();
+    resetWinIntentPrompt();
     setGame((g) => resetTrick(g, trump));
   }
 
@@ -1269,19 +1238,9 @@ export default function App() {
     }));
     setAwaitContinue(snapshot.awaitContinue);
     setIsResolving(false);
-    setLeadPromptActive(false);
-    setLeadPromptSuit(null);
-    setLeadPromptLeader(null);
-    setLeadSelections(createVoidSelections());
-    setLeadMismatch(createVoidSelections());
-    setLeadWarning(null);
-    setSuitCountPromptActive(false);
-    setSuitCountPromptSuit(null);
-    setSuitCountAnswer("0");
-    setSuitCountMismatch(false);
-    setPendingIntentCard(null);
-    setIntentWarning(null);
-    setIntentDetails([]);
+    resetVoidPrompt();
+    resetSuitCountPrompt();
+    resetWinIntentPrompt();
     setViewedTrickIndex(null);
     setViewedTrickStep(0);
     setHistoryPlaying(false);
