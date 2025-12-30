@@ -384,7 +384,7 @@ export function TableCard(props: TableCardProps) {
                 </Badge>
               </div>
 
-              <div className="relative h-[70%] w-[70%]">
+              <div className="relative h-[80%] w-[80%]">
               <div className="absolute left-1/2 top-0 -translate-x-1/2">
                 {(() => {
                   const p = displayTrick.find((t) => t.seat === "Across");
