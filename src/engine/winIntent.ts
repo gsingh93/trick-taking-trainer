@@ -67,7 +67,10 @@ export function evaluateWinIntent(args: {
     actualVoid,
   } = args;
   const leadSuit = trickLeadSuit(trick) ?? card.suit;
-  const honors = remainingHonorsInSuit(trickHistory, trick, leadSuit).filter((r) => r > card.rank);
+  const handSuitRanks = new Set(hand.filter((c) => c.suit === leadSuit).map((c) => c.rank));
+  const honors = remainingHonorsInSuit(trickHistory, trick, leadSuit).filter(
+    (r) => r > card.rank && !handSuitRanks.has(r)
+  );
   const higherRanks = winIntentWarnHonorsOnly
     ? honors
     : remainingHigherRanksInSuit(card, leadSuit, trickHistory, trick, hand);
