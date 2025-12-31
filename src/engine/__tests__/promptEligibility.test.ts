@@ -46,6 +46,15 @@ describe("getVoidPromptLead", () => {
     expect(getVoidPromptLead(args)).toBeNull();
   });
 
+  it("returns a lead when only prompting when leading and you led", () => {
+    const args = {
+      ...baseVoidArgs(),
+      voidPromptOnlyWhenLeading: true,
+      trick: [makePlay("Me", makeCard("H", 2, "H2"))],
+    };
+    expect(getVoidPromptLead(args)).toEqual({ leadSeat: "Me", leadSuit: "H" });
+  });
+
   it("returns null when low-impact skip applies", () => {
     const args = {
       ...baseVoidArgs(),
