@@ -146,7 +146,6 @@ type SettingsCardProps = {
   pauseBeforeNextTrick: boolean;
   setPauseBeforeNextTrick: (value: boolean) => void;
   handInProgress: boolean;
-  biddingActive: boolean;
   trump: TrumpConfig;
   setTrump: Dispatch<SetStateAction<TrumpConfig>>;
   suitOrderMode: "bridge" | "poker";
@@ -201,7 +200,6 @@ export function SettingsCard(props: SettingsCardProps) {
     pauseBeforeNextTrick,
     setPauseBeforeNextTrick,
     handInProgress,
-    biddingActive,
     trump,
     setTrump,
     suitOrderMode,
@@ -410,12 +408,12 @@ export function SettingsCard(props: SettingsCardProps) {
       {
         key: "ai-mode",
         label: "AI mode",
-        className: handInProgress || biddingActive ? "opacity-50" : "",
+        className: handInProgress ? "opacity-50" : "",
         select: (
           <Select
             value={aiMode}
             onValueChange={(v) => setAiMode(v as "random" | "bidding")}
-            disabled={handInProgress || biddingActive}
+            disabled={handInProgress}
           >
             <SelectTrigger className="h-8">
               <SelectValue />

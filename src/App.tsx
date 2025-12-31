@@ -1483,7 +1483,6 @@ export default function App() {
       pauseBeforeNextTrick={pauseBeforeNextTrick}
       setPauseBeforeNextTrick={setPauseBeforeNextTrick}
       handInProgress={handInProgress}
-      biddingActive={biddingActive}
       trump={trump}
       setTrump={setTrump}
       suitOrderMode={suitOrderMode}
