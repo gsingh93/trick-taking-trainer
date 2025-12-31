@@ -9,18 +9,26 @@ function buildHands(meCards: CardT[]): Record<Seat, CardT[]> {
   return { Me: meCards, Left: [], Across: [], Right: [] };
 }
 
+function makeCard(suit: Suit, rank: Rank, id: string): CardT {
+  return { suit, rank, id };
+}
+
+function makePlay(seat: Seat, card: CardT): PlayT {
+  return { seat, card };
+}
+
 function baseVoidArgs(): VoidPromptEligibilityArgs {
   const actualVoid = createVoidGrid();
   actualVoid.Across.H = true;
   return {
     voidTrackingEnabled: true,
-    voidTrackingSuits: ["S", "H", "D", "C"],
+    voidTrackingSuits: ["S", "H", "D", "C"] as Suit[],
     voidPromptSkipLowImpact: false,
     voidPromptOnlyWhenLeading: false,
-    voidPromptScope: "per-suit",
-    trick: [{ seat: "Left", card: { suit: "H", rank: 2, id: "H2" } }],
+    voidPromptScope: "per-suit" as const,
+    trick: [makePlay("Left", makeCard("H", 2, "H2"))],
     trickNo: 2,
-    hands: buildHands([{ suit: "H", rank: 9, id: "H9" }]),
+    hands: buildHands([makeCard("H", 9, "H9")]),
     trump: noTrump,
     anyVoidObserved: false,
     actualVoid,
@@ -29,7 +37,7 @@ function baseVoidArgs(): VoidPromptEligibilityArgs {
 
 describe("getVoidPromptLead", () => {
   it("returns null when the lead suit is not tracked", () => {
-    const args = { ...baseVoidArgs(), voidTrackingSuits: ["S"] };
+    const args = { ...baseVoidArgs(), voidTrackingSuits: ["S"] as Suit[] };
     expect(getVoidPromptLead(args)).toBeNull();
   });
 
@@ -42,8 +50,8 @@ describe("getVoidPromptLead", () => {
     const args = {
       ...baseVoidArgs(),
       voidPromptSkipLowImpact: true,
-      trick: [{ seat: "Left", card: { suit: "H", rank: 2, id: "H2" } }],
-      hands: buildHands([{ suit: "C", rank: 9, id: "C9" }]),
+      trick: [makePlay("Left", makeCard("H", 2, "H2"))],
+      hands: buildHands([makeCard("C", 9, "C9")]),
     };
     expect(getVoidPromptLead(args)).toBeNull();
   });
@@ -54,7 +62,7 @@ describe("getVoidPromptLead", () => {
   });
 
   it("returns a lead when global voids are observed", () => {
-    const args = { ...baseVoidArgs(), voidPromptScope: "global", anyVoidObserved: true };
+    const args = { ...baseVoidArgs(), voidPromptScope: "global" as const, anyVoidObserved: true };
     expect(getVoidPromptLead(args)).toEqual({ leadSeat: "Left", leadSuit: "H" });
   });
 });
@@ -62,15 +70,15 @@ describe("getVoidPromptLead", () => {
 function baseWinIntentArgs(): WinIntentEligibilityArgs {
   const honorRemainingBySuit: Record<Suit, Rank[]> = { S: [], H: [11, 12, 13, 14], D: [], C: [] };
   return {
-    card: { suit: "H", rank: 12, id: "H12" },
+    card: makeCard("H", 12, "H12"),
     seat: "Me",
-    trick: [{ seat: "Left", card: { suit: "H", rank: 9, id: "H9" } }],
+    trick: [makePlay("Left", makeCard("H", 9, "H9"))],
     trickNo: 2,
     winIntentPromptEnabled: true,
     winIntentMinRank: 10,
     aiPlayMe: false,
     honorRemainingBySuit,
-    hands: buildHands([{ suit: "H", rank: 12, id: "H12" }]),
+    hands: buildHands([makeCard("H", 12, "H12")]),
     trump: noTrump,
     actualVoid: createVoidGrid(),
   };
@@ -83,15 +91,15 @@ describe("shouldPromptWinIntent", () => {
   });
 
   it("returns false when not playing as Me", () => {
-    const args = { ...baseWinIntentArgs(), seat: "Left" };
+    const args = { ...baseWinIntentArgs(), seat: "Left" as Seat };
     expect(shouldPromptWinIntent(args)).toBe(false);
   });
 
   it("returns false when the trick is nearly complete", () => {
     const trick: PlayT[] = [
-      { seat: "Left", card: { suit: "H", rank: 9, id: "H9" } },
-      { seat: "Across", card: { suit: "H", rank: 10, id: "H10" } },
-      { seat: "Right", card: { suit: "H", rank: 11, id: "H11" } },
+      makePlay("Left", makeCard("H", 9, "H9")),
+      makePlay("Across", makeCard("H", 10, "H10")),
+      makePlay("Right", makeCard("H", 11, "H11")),
     ];
     const args = { ...baseWinIntentArgs(), trick };
     expect(shouldPromptWinIntent(args)).toBe(false);
@@ -103,25 +111,25 @@ describe("shouldPromptWinIntent", () => {
   });
 
   it("returns false when the card is below the minimum rank", () => {
-    const args = { ...baseWinIntentArgs(), card: { suit: "H", rank: 9, id: "H9" } };
+    const args = { ...baseWinIntentArgs(), card: makeCard("H", 9, "H9") };
     expect(shouldPromptWinIntent(args)).toBe(false);
   });
 
   it("returns false when an ace is led and no remaining players are void", () => {
-    const args = { ...baseWinIntentArgs(), card: { suit: "H", rank: 14, id: "H14" } };
+    const args = { ...baseWinIntentArgs(), card: makeCard("H", 14, "H14") };
     expect(shouldPromptWinIntent(args)).toBe(false);
   });
 
   it("returns false when higher honors are all in hand", () => {
     const args = {
       ...baseWinIntentArgs(),
-      card: { suit: "H", rank: 10, id: "H10" },
+      card: makeCard("H", 10, "H10"),
       hands: buildHands([
-        { suit: "H", rank: 10, id: "H10" },
-        { suit: "H", rank: 11, id: "H11" },
-        { suit: "H", rank: 12, id: "H12" },
-        { suit: "H", rank: 13, id: "H13" },
-        { suit: "H", rank: 14, id: "H14" },
+        makeCard("H", 10, "H10"),
+        makeCard("H", 11, "H11"),
+        makeCard("H", 12, "H12"),
+        makeCard("H", 13, "H13"),
+        makeCard("H", 14, "H14"),
       ]),
     };
     expect(shouldPromptWinIntent(args)).toBe(false);
@@ -130,8 +138,8 @@ describe("shouldPromptWinIntent", () => {
   it("returns false when already losing the trick", () => {
     const args = {
       ...baseWinIntentArgs(),
-      card: { suit: "H", rank: 10, id: "H10" },
-      trick: [{ seat: "Left", card: { suit: "H", rank: 13, id: "H13" } }],
+      card: makeCard("H", 10, "H10"),
+      trick: [makePlay("Left", makeCard("H", 13, "H13"))],
     };
     expect(shouldPromptWinIntent(args)).toBe(false);
   });
@@ -143,8 +151,8 @@ describe("shouldPromptWinIntent", () => {
     const args = {
       ...baseWinIntentArgs(),
       actualVoid,
-      card: { suit: "H", rank: 12, id: "H12" },
-      trick: [{ seat: "Left", card: { suit: "H", rank: 9, id: "H9" } }],
+      card: makeCard("H", 12, "H12"),
+      trick: [makePlay("Left", makeCard("H", 9, "H9"))],
     };
     expect(shouldPromptWinIntent(args)).toBe(false);
   });

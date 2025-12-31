@@ -1,5 +1,5 @@
 import { canFollowSuit, compareCardsInTrick, isTrump, nextSeat, trickLeadSuit } from "./rules";
-import { OPPONENTS, SEATS, type CardT, type Opp, type PlayT, type Rank, type Seat, type Suit, type TrumpConfig } from "./types";
+import { OPPONENTS, SEATS, type CardT, type PlayT, type Rank, type Seat, type Suit, type TrumpConfig } from "./types";
 import type { VoidGrid } from "./state";
 
 export type VoidPromptEligibilityArgs = {
