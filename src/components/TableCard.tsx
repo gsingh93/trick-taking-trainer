@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Fragment } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +37,6 @@ function getCardTitle(args: { canPlay: boolean; isTurn: boolean; isLegal: boolea
 }
 
 function renderPlayingCard(args: {
-  key: string;
   card: CardT;
   seat: Seat;
   currentTurn: Seat;
@@ -46,12 +46,11 @@ function renderPlayingCard(args: {
   onPlay: (seat: Seat, card: CardT) => void;
   rotateClass?: string;
 }) {
-  const { key, card, seat, currentTurn, legal, canPlay, suitStyleMode, onPlay, rotateClass } = args;
+  const { card, seat, currentTurn, legal, canPlay, suitStyleMode, onPlay, rotateClass } = args;
   const isTurn = seat === currentTurn;
   const isLegal = legal.has(card.id);
   return (
     <PlayingCard
-      key={key}
       c={card}
       rotateClass={rotateClass}
       suitStyleMode={suitStyleMode}
@@ -154,18 +153,19 @@ function HandRow({
   return (
     <div className={"mt-3 " + (rotateClass ?? "")}>
       <div className="flex flex-wrap gap-px">
-        {sortHand(hand, suitOrder, sortAscending).map((c) =>
-          renderPlayingCard({
-            key: c.id,
-            card: c,
-            seat,
-            currentTurn,
-            legal,
-            canPlay,
-            suitStyleMode,
-            onPlay,
-          })
-        )}
+        {sortHand(hand, suitOrder, sortAscending).map((c) => (
+          <Fragment key={c.id}>
+            {renderPlayingCard({
+              card: c,
+              seat,
+              currentTurn,
+              legal,
+              canPlay,
+              suitStyleMode,
+              onPlay,
+            })}
+          </Fragment>
+        ))}
       </div>
     </div>
   );
@@ -204,7 +204,6 @@ function HandCol({
           <div key={c.id} className="relative h-10 w-14 overflow-visible">
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
               {renderPlayingCard({
-                key: c.id,
                 card: c,
                 seat,
                 currentTurn,
