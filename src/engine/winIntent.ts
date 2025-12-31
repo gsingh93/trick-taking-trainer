@@ -2,24 +2,7 @@ import type { CardT, PlayT, Rank, Seat, Suit, TrumpConfig } from "./types";
 import { remainingHonorsInSuit } from "./training";
 import { trickLeadSuit } from "./rules";
 import type { VoidGrid } from "./state";
-import { OPPONENTS } from "./types";
-
-function remainingPlayersVoidInSuit(
-  suit: Suit,
-  currentSeat: Seat,
-  trick: PlayT[],
-  actualVoid: VoidGrid
-): boolean {
-  const playedSeats = new Set(trick.map((t) => t.seat));
-  const remaining = OPPONENTS.filter(
-    (s) => s !== currentSeat && !playedSeats.has(s as Seat)
-  );
-  if (!remaining.length) return true;
-  for (const seat of remaining) {
-    if (!actualVoid[seat][suit]) return false;
-  }
-  return true;
-}
+import { remainingOpponentSeats, remainingPlayersVoidInSuit } from "./voids";
 
 export function remainingHigherRanksInSuit(
   card: CardT,
@@ -82,10 +65,9 @@ export function evaluateWinIntent(args: {
     winIntentWarnTrump &&
     trump.enabled &&
     leadSuit !== trump.suit &&
-    !remainingPlayersVoidInSuit(leadSuit, "Me", trick, actualVoid)
+    !remainingPlayersVoidInSuit(leadSuit, "Me", trick, actualVoid, true)
   ) {
-    const playedSeats = new Set(trick.map((t) => t.seat));
-    const remaining = OPPONENTS.filter((s) => !playedSeats.has(s as Seat));
+    const remaining = remainingOpponentSeats(trick);
     trumpWarning = remaining.some((seat) => actualVoid[seat][leadSuit] && !actualVoid[seat][trump.suit]);
     for (const seat of remaining) {
       if (actualVoid[seat][leadSuit] && !actualVoid[seat][trump.suit]) {

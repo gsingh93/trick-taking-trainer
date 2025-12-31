@@ -1,6 +1,7 @@
 import { canFollowSuit, compareCardsInTrick, isTrump, nextSeat, trickLeadSuit } from "./rules";
-import { OPPONENTS, SEATS, type CardT, type PlayT, type Rank, type Seat, type Suit, type TrumpConfig } from "./types";
+import { OPPONENTS, type CardT, type PlayT, type Rank, type Seat, type Suit, type TrumpConfig } from "./types";
 import type { VoidGrid } from "./state";
+import { anyRemainingVoidInSuit, remainingPlayersVoidInSuit } from "./voids";
 
 export type VoidPromptEligibilityArgs = {
   voidTrackingEnabled: boolean;
@@ -53,36 +54,6 @@ export type WinIntentEligibilityArgs = {
   actualVoid: VoidGrid;
 };
 
-function remainingPlayersVoidInSuit(
-  suit: Suit,
-  currentSeat: Seat,
-  trick: PlayT[],
-  actualVoid: VoidGrid
-): boolean {
-  const playedSeats = new Set(trick.map((t) => t.seat));
-  const remaining = SEATS.filter((s) => s !== currentSeat && !playedSeats.has(s));
-  if (!remaining.length) return true;
-  for (const seat of remaining) {
-    if (seat === "Me") return false;
-    if (!actualVoid[seat][suit]) return false;
-  }
-  return true;
-}
-
-function anyRemainingVoidInSuit(
-  suit: Suit,
-  currentSeat: Seat,
-  trick: PlayT[],
-  actualVoid: VoidGrid
-): boolean {
-  const playedSeats = new Set(trick.map((t) => t.seat));
-  const remaining = SEATS.filter((s) => s !== currentSeat && !playedSeats.has(s));
-  for (const seat of remaining) {
-    if (seat === "Me") continue;
-    if (actualVoid[seat][suit]) return true;
-  }
-  return false;
-}
 
 function currentTrickHasAllHigherHonors(card: CardT, suit: Suit, trick: PlayT[]): boolean {
   if (card.rank >= 14) return false;
@@ -124,12 +95,15 @@ export function shouldPromptWinIntent(args: WinIntentEligibilityArgs): boolean {
   if (args.trickNo === 1) return false;
   if (args.card.rank < args.winIntentMinRank) return false;
   const leadSuit = trickLeadSuit(args.trick) ?? args.card.suit;
-  if (args.card.rank === 14 && !anyRemainingVoidInSuit(leadSuit, args.seat, args.trick, args.actualVoid)) {
+  if (
+    args.card.rank === 14 &&
+    !anyRemainingVoidInSuit(leadSuit, args.seat, args.trick, args.actualVoid, false)
+  ) {
     return false;
   }
   if (currentTrickHasAllHigherHonors(args.card, leadSuit, args.trick)) return false;
   if (higherHonorsAllInHand(args.card, leadSuit, args.honorRemainingBySuit, args.hands.Me)) return false;
   if (alreadyLosingTrick(args.card, leadSuit, args.trick, args.trump)) return false;
-  if (remainingPlayersVoidInSuit(leadSuit, args.seat, args.trick, args.actualVoid)) return false;
+  if (remainingPlayersVoidInSuit(leadSuit, args.seat, args.trick, args.actualVoid, false)) return false;
   return true;
 }
