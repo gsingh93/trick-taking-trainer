@@ -7,6 +7,7 @@ import {
   initGameState,
   isPlayLegal,
   resetTrick,
+  replayStateFromHistory,
   resolveTrick,
   advanceToNextTrick,
   buildHistorySnapshot,
@@ -195,6 +196,37 @@ describe("state", () => {
     ];
     const snapshot = buildHistorySnapshot(history, 0, 1, 1, trump);
     expect(snapshot.turn).toBe("Left");
+  });
+
+  it("replayStateFromHistory pauses after a completed trick when pauseBeforeNextTrick is enabled", () => {
+    const trump: TrumpConfig = { enabled: false, suit: "S", mustBreak: true };
+    const history: PlayT[][] = [
+      [
+        { seat: "Me", card: { suit: "H", rank: 10, id: "H10" } },
+        { seat: "Left", card: { suit: "H", rank: 12, id: "H12" } },
+        { seat: "Across", card: { suit: "H", rank: 3, id: "H3" } },
+        { seat: "Right", card: { suit: "H", rank: 14, id: "H14" } },
+      ],
+    ];
+    const replay = replayStateFromHistory(history, 1, trump, true);
+    expect(replay.awaitContinue).toBe(true);
+    expect(replay.trick).toHaveLength(4);
+    expect(replay.trickNo).toBe(1);
+  });
+
+  it("buildHistorySnapshot marks awaitContinue when the trick is completed", () => {
+    const trump: TrumpConfig = { enabled: false, suit: "S", mustBreak: true };
+    const history: PlayT[][] = [
+      [
+        { seat: "Me", card: { suit: "H", rank: 10, id: "H10" } },
+        { seat: "Left", card: { suit: "H", rank: 12, id: "H12" } },
+        { seat: "Across", card: { suit: "H", rank: 3, id: "H3" } },
+        { seat: "Right", card: { suit: "H", rank: 14, id: "H14" } },
+      ],
+    ];
+    const snapshot = buildHistorySnapshot(history, 0, 4, 1, trump);
+    expect(snapshot.awaitContinue).toBe(true);
+    expect(snapshot.historySlice).toHaveLength(1);
   });
 
   it("computeLegalBySeat and isPlayLegal agree on legality", () => {
