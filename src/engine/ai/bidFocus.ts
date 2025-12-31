@@ -24,6 +24,10 @@ export function chooseCardToPlayForBid(
   const leadSuit = trickLeadSuit(ctx.trick);
 
   if (leadSuit) {
+    // Following a trick:
+    // - If we still need tricks, attempt to win with the lowest winning card.
+    //   Prefer winning off-trump to conserve trump when possible.
+    // - Otherwise, dump the lowest card to avoid accidental wins.
     if (needsTricks) {
       const winning = lowestWinningCard(legalCards, ctx.trick, ctx.trump);
       if (winning) {
@@ -41,10 +45,12 @@ export function chooseCardToPlayForBid(
 
   // Leading a trick.
   if (needsTricks) {
+    // Lead the highest-scoring card based on rank, trump, and suit length.
     const suitCounts = countSuits(ctx.hand);
     const best = highestCard(legalCards, ctx.trump, suitCounts, rng);
     return { cardId: best.id };
   }
+  // If we're already at/above the bid, lead low to avoid taking extras.
   const lowest = lowestCard(legalCards, ctx.trump);
   return { cardId: lowest.id };
 }
@@ -70,6 +76,7 @@ function highestCard(
   suitCounts: Record<Suit, number>,
   rng: () => number
 ): CardT {
+  // Score cards by rank, trump weight, and suit length; break ties randomly.
   const scored = cards.map((c) => ({
     card: c,
     score: winScore(c, trump, suitCounts),
