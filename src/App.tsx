@@ -619,7 +619,10 @@ export default function App() {
       anyVoidObserved,
       actualVoid,
     });
-    if (!leadInfo) return;
+    if (!leadInfo) {
+      if (leadPromptActive) resetVoidPrompt();
+      return;
+    }
     setLeadPromptActive(true);
     setLeadPromptSuit(leadInfo.leadSuit);
     setLeadPromptLeader(leadInfo.leadSeat === "Me" ? null : leadInfo.leadSeat);
@@ -630,6 +633,7 @@ export default function App() {
     voidTrackingEnabled,
     voidTrackingSuits,
     voidPromptSkipLowImpact,
+    voidPromptOnlyWhenLeading,
     trick,
     trickNo,
     actualVoid,
