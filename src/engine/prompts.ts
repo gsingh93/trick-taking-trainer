@@ -20,17 +20,20 @@ export type VoidPromptEligibilityArgs = {
 export function getVoidPromptLead(args: VoidPromptEligibilityArgs): { leadSeat: Seat; leadSuit: Suit } | null {
   if (!args.voidTrackingEnabled) return null;
   if (args.trick.length !== 1) return null;
+  // Skip the very first trick since no void information can exist yet.
   if (args.trickNo === 1) return null;
   const leadSeat = args.trick[0].seat;
   const leadSuit = args.trick[0].card.suit;
   if (!args.voidTrackingSuits.includes(leadSuit)) return null;
   if (args.voidPromptSkipLowImpact) {
     const lastSeat = nextSeat(nextSeat(nextSeat(leadSeat)));
+    // If we're last and can't follow suit or trump, void info won't change our play.
     if (lastSeat === "Me") return null;
     const hasLeadSuit = canFollowSuit(args.hands.Me, leadSuit);
     const hasTrump = args.hands.Me.some((card) => isTrump(card, args.trump));
     if (!hasLeadSuit && !hasTrump) return null;
   }
+  // Honor "only when leading" by suppressing opponent-led prompts.
   if (args.voidPromptOnlyWhenLeading && leadSeat !== "Me") return null;
   const shouldPrompt =
     args.voidPromptScope === "global"
@@ -92,18 +95,24 @@ export function shouldPromptWinIntent(args: WinIntentEligibilityArgs): boolean {
   if (args.seat !== "Me") return false;
   if (args.aiPlayMe) return false;
   if (args.trick.length >= 3) return false;
+  // Skip the first trick since we lack enough info for a useful warning.
   if (args.trickNo === 1) return false;
   if (args.card.rank < args.winIntentMinRank) return false;
   const leadSuit = trickLeadSuit(args.trick) ?? args.card.suit;
+  // If an ace is led and no remaining opponents are void, there's no immediate threat.
   if (
     args.card.rank === 14 &&
     !anyRemainingVoidInSuit(leadSuit, args.seat, args.trick, args.actualVoid, false)
   ) {
     return false;
   }
+  // Don't prompt when all higher honors have already appeared this trick.
   if (currentTrickHasAllHigherHonors(args.card, leadSuit, args.trick)) return false;
+  // Don't prompt when any remaining higher honors are already in hand.
   if (higherHonorsAllInHand(args.card, leadSuit, args.honorRemainingBySuit, args.hands.Me)) return false;
+  // If we're already losing, the prompt isn't useful.
   if (alreadyLosingTrick(args.card, leadSuit, args.trick, args.trump)) return false;
+  // If everyone left is void, we can't be beaten in-suit.
   if (remainingPlayersVoidInSuit(leadSuit, args.seat, args.trick, args.actualVoid, false)) return false;
   return true;
 }
