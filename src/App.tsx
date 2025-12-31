@@ -14,7 +14,8 @@ import { chooseCardToPlayForBid } from "@/engine/ai/bidFocus";
 import { estimateBid } from "@/engine/ai/bidHeuristic";
 import { remainingHonorsInSuit } from "@/engine/training";
 import { evaluateWinIntent } from "@/engine/winIntent";
-import { compareCardsInTrick, trickLeadSuit, determineTrickWinner, canFollowSuit, isTrump, nextSeat } from "@/engine/rules";
+import { trickLeadSuit, determineTrickWinner } from "@/engine/rules";
+import { getVoidPromptLead, shouldPromptWinIntent } from "@/engine/prompts";
 import { buildDeck, createRng, dealNewHands } from "@/engine/deck";
 import {
   initGameState,
@@ -605,28 +606,23 @@ export default function App() {
   }, [suitCountPromptActive, suitCountPromptSuit, suitCountPromptSuits]);
 
   useEffect(() => {
-    if (!voidTrackingEnabled) return;
-    if (trick.length !== 1) return;
-    if (trickNo === 1) return;
-    const leadSeat = trick[0].seat;
-    const leadSuit = trick[0].card.suit;
-    if (!voidTrackingSuits.includes(leadSuit)) return;
-    if (voidPromptSkipLowImpact) {
-      const lastSeat = nextSeat(nextSeat(nextSeat(leadSeat)));
-      if (lastSeat === "Me") return;
-      const hasLeadSuit = canFollowSuit(hands.Me, leadSuit);
-      const hasTrump = hands.Me.some((card) => isTrump(card, trump));
-      if (!hasLeadSuit && !hasTrump) return;
-    }
-    if (voidPromptOnlyWhenLeading && leadSeat !== "Me") return;
-    const shouldPrompt =
-      voidPromptScope === "global"
-        ? anyVoidObserved
-        : OPPONENTS.some((o) => actualVoid[o][leadSuit]);
-    if (!shouldPrompt) return;
+    const leadInfo = getVoidPromptLead({
+      voidTrackingEnabled,
+      voidTrackingSuits,
+      voidPromptSkipLowImpact,
+      voidPromptOnlyWhenLeading,
+      voidPromptScope,
+      trick,
+      trickNo,
+      hands,
+      trump,
+      anyVoidObserved,
+      actualVoid,
+    });
+    if (!leadInfo) return;
     setLeadPromptActive(true);
-    setLeadPromptSuit(leadSuit);
-    setLeadPromptLeader(leadSeat === "Me" ? null : leadSeat);
+    setLeadPromptSuit(leadInfo.leadSuit);
+    setLeadPromptLeader(leadInfo.leadSeat === "Me" ? null : leadInfo.leadSeat);
     setLeadSelections(createVoidSelections());
     setLeadMismatch(createVoidSelections());
     setLeadWarning(null);
@@ -786,71 +782,6 @@ export default function App() {
     }
   }
 
-  function remainingPlayersVoidInSuit(suit: Suit, currentSeat: Seat): boolean {
-    const playedSeats = new Set(trick.map((t) => t.seat));
-    const remaining = SEATS.filter((s) => s !== currentSeat && !playedSeats.has(s));
-    if (!remaining.length) return true;
-    for (const seat of remaining) {
-      if (seat === "Me") return false;
-      if (!actualVoid[seat][suit]) return false;
-    }
-    return true;
-  }
-
-  function anyRemainingVoidInSuit(suit: Suit, currentSeat: Seat): boolean {
-    const playedSeats = new Set(trick.map((t) => t.seat));
-    const remaining = SEATS.filter((s) => s !== currentSeat && !playedSeats.has(s));
-    for (const seat of remaining) {
-      if (seat === "Me") continue;
-      if (actualVoid[seat][suit]) return true;
-    }
-    return false;
-  }
-
-  function currentTrickHasAllHigherHonors(card: CardT, suit: Suit): boolean {
-    if (card.rank >= 14) return false;
-    const ranksInTrick = new Set(
-      trick.filter((t) => t.card.suit === suit).map((t) => t.card.rank)
-    );
-    const higherHonors = ([11, 12, 13, 14] as Rank[]).filter((r) => r > card.rank);
-    return higherHonors.every((r) => ranksInTrick.has(r));
-  }
-
-  function higherHonorsAllInHand(card: CardT, suit: Suit): boolean {
-    if (card.rank >= 14) return false;
-    const remaining = honorRemainingBySuit[suit].filter((r) => r > card.rank);
-    if (!remaining.length) return false;
-    const handRanks = new Set(hands.Me.filter((c) => c.suit === suit).map((c) => c.rank));
-    return remaining.every((r) => handRanks.has(r));
-  }
-
-  function alreadyLosingTrick(card: CardT, suit: Suit): boolean {
-    if (!trick.length) return false;
-    let currentBest = trick[0].card;
-    for (let i = 1; i < trick.length; i++) {
-      const challenger = trick[i].card;
-      if (compareCardsInTrick(challenger, currentBest, suit, trump) === 1) {
-        currentBest = challenger;
-      }
-    }
-    return compareCardsInTrick(card, currentBest, suit, trump) === -1;
-  }
-
-  function shouldPromptWinIntent(card: CardT, seat: Seat): boolean {
-    if (!winIntentPromptEnabled) return false;
-    if (seat !== "Me") return false;
-    if (aiPlayMe) return false;
-    if (trick.length >= 3) return false;
-    if (trickNo === 1) return false;
-    if (card.rank < winIntentMinRank) return false;
-    const leadSuit = trickLeadSuit(trick) ?? card.suit;
-    if (card.rank === 14 && !anyRemainingVoidInSuit(leadSuit, seat)) return false;
-    if (currentTrickHasAllHigherHonors(card, leadSuit)) return false;
-    if (higherHonorsAllInHand(card, leadSuit)) return false;
-    if (alreadyLosingTrick(card, leadSuit)) return false;
-    if (remainingPlayersVoidInSuit(leadSuit, seat)) return false;
-    return true;
-  }
 
   function handleWinIntentDecision(intentToWin: boolean) {
     if (!pendingIntentCard) return;
@@ -996,7 +927,19 @@ export default function App() {
       seat === "Me" &&
       !pendingIntentCard &&
       !opts?.skipIntentPrompt &&
-      shouldPromptWinIntent(card, seat)
+      shouldPromptWinIntent({
+        card,
+        seat,
+        trick,
+        trickNo,
+        winIntentPromptEnabled,
+        winIntentMinRank,
+        aiPlayMe,
+        honorRemainingBySuit,
+        hands,
+        trump,
+        actualVoid,
+      })
     ) {
       setPendingIntentCard(card);
       setIntentWarning(null);
