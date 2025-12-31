@@ -100,6 +100,20 @@ describe("state", () => {
     expect(reset.trickHistory).toHaveLength(0);
   });
 
+  it("resetTrick recomputes trumpBroken from remaining history", () => {
+    const trump: TrumpConfig = { enabled: true, suit: "S", mustBreak: true };
+    const base = initGameState(1);
+    const trick: PlayT[] = [
+      { seat: "Me", card: { suit: "S", rank: 10, id: "S10" } },
+      { seat: "Left", card: { suit: "H", rank: 12, id: "H12" } },
+      { seat: "Across", card: { suit: "H", rank: 3, id: "H3" } },
+      { seat: "Right", card: { suit: "H", rank: 14, id: "H14" } },
+    ];
+    const resolved = resolveTrick({ ...base, trick, trumpBroken: true }, trump);
+    const reset = resetTrick({ ...resolved }, trump);
+    expect(reset.trumpBroken).toBe(false);
+  });
+
   it("computeActualVoid flags off-suit plays", () => {
     const trick: PlayT[] = [
       { seat: "Left", card: { suit: "H", rank: 2, id: "H2" } },

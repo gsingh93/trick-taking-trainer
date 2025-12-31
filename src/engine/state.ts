@@ -120,6 +120,9 @@ export function resetTrick(state: GameState, trump: TrumpConfig): GameState {
         ? state.trickHistory.slice(0, -1)
         : state.trickHistory;
   }
+  const trumpBroken = trump.enabled
+    ? trickHistory.some((t) => t.some((play) => isTrump(play.card, trump)))
+    : false;
 
   return {
     ...state,
@@ -129,6 +132,7 @@ export function resetTrick(state: GameState, trump: TrumpConfig): GameState {
     trick: [],
     leader: state.trickStartLeader,
     turn: state.trickStartTurn,
+    trumpBroken,
     handComplete: false,
   };
 }
