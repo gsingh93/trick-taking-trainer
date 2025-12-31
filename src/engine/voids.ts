@@ -33,8 +33,10 @@ export function anyRemainingVoidInSuit(
 ): boolean {
   const remaining = remainingSeats(currentSeat, trick);
   for (const seat of remaining) {
-    if (!includeMe && seat === "Me") continue;
-    if (seat === "Me") continue;
+    if (seat === "Me") {
+      if (!includeMe) continue;
+      return true;
+    }
     if (actualVoid[seat][suit]) return true;
   }
   return false;

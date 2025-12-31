@@ -23,6 +23,13 @@ describe("void helpers", () => {
     expect(anyRemainingVoidInSuit("S", "Me", trick, actualVoid, false)).toBe(true);
   });
 
+  it("treats remaining self as a void when includeMe is true", () => {
+    const actualVoid = createVoidGrid();
+    const trick = [makePlay("Left", "H")] as PlayT[];
+    expect(anyRemainingVoidInSuit("H", "Across", trick, actualVoid, true)).toBe(true);
+    expect(anyRemainingVoidInSuit("H", "Across", trick, actualVoid, false)).toBe(false);
+  });
+
   it("lists remaining opponent seats based on current trick", () => {
     const trick = [makePlay("Left", "D"), makePlay("Across", "D")];
     expect(remainingOpponentSeats(trick)).toEqual(["Right"]);
