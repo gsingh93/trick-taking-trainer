@@ -47,6 +47,6 @@ export function estimateBid(hand: CardT[], trump: TrumpConfig): number {
   }
 
   // Convert points to a coarse bid estimate and clamp to hand size.
-  const bid = Math.round(points / 3);
+  const bid = Math.floor(points / 3);
   return Math.max(0, Math.min(13, bid));
 }
