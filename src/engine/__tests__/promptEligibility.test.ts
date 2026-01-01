@@ -65,6 +65,16 @@ describe("getVoidPromptLead", () => {
     expect(getVoidPromptLead(args)).toBeNull();
   });
 
+  it("returns a lead when low-impact skip is enabled but you can follow or trump", () => {
+    const args = {
+      ...baseVoidArgs(),
+      voidPromptSkipLowImpact: true,
+      trick: [makePlay("Left", makeCard("H", 2, "H2"))],
+      hands: buildHands([makeCard("H", 9, "H9")]),
+    };
+    expect(getVoidPromptLead(args)).toEqual({ leadSeat: "Left", leadSuit: "H" });
+  });
+
   it("returns a lead when per-suit voids exist", () => {
     const args = baseVoidArgs();
     expect(getVoidPromptLead(args)).toEqual({ leadSeat: "Left", leadSuit: "H" });
