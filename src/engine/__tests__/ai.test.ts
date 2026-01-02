@@ -162,11 +162,14 @@ describe("ai", () => {
   it("estimates higher bids for stronger hands", () => {
     const strong: CardT[] = [
       { suit: "S", rank: 14, id: "S14" },
-      { suit: "H", rank: 13, id: "H13" },
-      { suit: "D", rank: 12, id: "D12" },
-      { suit: "C", rank: 11, id: "C11" },
+      { suit: "S", rank: 13, id: "S13" },
+      { suit: "S", rank: 12, id: "S12" },
+      { suit: "S", rank: 11, id: "S11" },
       { suit: "S", rank: 10, id: "S10" },
-      { suit: "S", rank: 9, id: "S9" },
+      { suit: "S", rank: 5, id: "S5" },
+      { suit: "S", rank: 4, id: "S4" },
+      { suit: "S", rank: 3, id: "S3" },
+      { suit: "S", rank: 2, id: "S2" },
     ];
     const weak: CardT[] = [
       { suit: "S", rank: 2, id: "S2" },
@@ -178,5 +181,47 @@ describe("ai", () => {
     ];
     const trump: TrumpConfig = { enabled: true, suit: "S", mustBreak: true };
     expect(estimateBid(strong, trump)).toBeGreaterThanOrEqual(estimateBid(weak, trump));
+  });
+
+  it("scores non-trump honors with sacrifice logic", () => {
+    const noTrump: TrumpConfig = { enabled: false, suit: "S", mustBreak: true };
+    const aqDoubleton: CardT[] = [
+      { suit: "H", rank: 14, id: "H14" },
+      { suit: "H", rank: 12, id: "H12" },
+    ];
+    const aqx: CardT[] = [
+      { suit: "H", rank: 14, id: "H14" },
+      { suit: "H", rank: 12, id: "H12" },
+      { suit: "H", rank: 3, id: "H3" },
+    ];
+    const kqDoubleton: CardT[] = [
+      { suit: "H", rank: 13, id: "H13" },
+      { suit: "H", rank: 12, id: "H12" },
+    ];
+    const kqx: CardT[] = [
+      { suit: "H", rank: 13, id: "H13" },
+      { suit: "H", rank: 12, id: "H12" },
+      { suit: "H", rank: 4, id: "H4" },
+    ];
+    expect(estimateBid(aqDoubleton, noTrump)).toBe(1);
+    expect(estimateBid(aqx, noTrump)).toBe(2);
+    expect(estimateBid(kqDoubleton, noTrump)).toBe(1);
+    expect(estimateBid(kqx, noTrump)).toBe(2);
+  });
+
+  it("counts trump honors and caps short-suit bonus by leftover sacrifices", () => {
+    const trump: TrumpConfig = { enabled: true, suit: "S", mustBreak: true };
+    const hand: CardT[] = [
+      { suit: "S", rank: 10, id: "S10" },
+      { suit: "S", rank: 6, id: "S6" },
+      { suit: "S", rank: 5, id: "S5" },
+      { suit: "S", rank: 4, id: "S4" },
+      { suit: "S", rank: 3, id: "S3" },
+      { suit: "S", rank: 2, id: "S2" },
+      { suit: "H", rank: 2, id: "H2" }, // singleton
+      { suit: "C", rank: 3, id: "C3" }, // doubleton
+      { suit: "C", rank: 4, id: "C4" },
+    ];
+    expect(estimateBid(hand, trump)).toBe(1);
   });
 });

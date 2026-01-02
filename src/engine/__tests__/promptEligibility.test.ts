@@ -69,10 +69,10 @@ describe("getVoidPromptLead", () => {
     const args = {
       ...baseVoidArgs(),
       voidPromptSkipLowImpact: true,
-      trick: [makePlay("Left", makeCard("H", 2, "H2"))],
+      trick: [makePlay("Across", makeCard("H", 2, "H2"))],
       hands: buildHands([makeCard("H", 9, "H9")]),
     };
-    expect(getVoidPromptLead(args)).toEqual({ leadSeat: "Left", leadSuit: "H" });
+    expect(getVoidPromptLead(args)).toEqual({ leadSeat: "Across", leadSuit: "H" });
   });
 
   it("returns a lead when per-suit voids exist", () => {
