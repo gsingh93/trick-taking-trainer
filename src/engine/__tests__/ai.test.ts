@@ -136,7 +136,7 @@ describe("ai", () => {
       },
       () => 0
     );
-    expect(decision?.cardId).toBe("S2");
+    expect(decision?.cardId).toBe("H14");
   });
 
   it("avoids trump when it has already met the bid", () => {

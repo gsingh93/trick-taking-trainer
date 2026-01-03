@@ -45,7 +45,29 @@ export function chooseCardToPlayForBid(
 
   // Leading a trick.
   if (needsTricks) {
-    // Lead the highest-scoring card based on rank, trump, and suit length.
+    const trumpCards = legalCards.filter((c) => isTrump(c, ctx.trump));
+    const nonTrumpCards = legalCards.filter((c) => !isTrump(c, ctx.trump));
+    if (nonTrumpCards.length) {
+      // 1) Shorten non-trump suits first by leading low from the shortest suit.
+      const suitCounts = countSuits(nonTrumpCards);
+      const shortestSuit = shortestNonTrumpSuit(nonTrumpCards);
+      const shortestCount = suitCounts[shortestSuit];
+      if (shortestCount <= 2) {
+        return { cardId: lowestCardInSuit(nonTrumpCards, shortestSuit).id };
+      }
+      // 2) Otherwise, try to win with the highest non-trump card.
+      return { cardId: highestCardInSuit(nonTrumpCards, strongestSuit(nonTrumpCards)).id };
+    }
+    if (ctx.trump.enabled && trumpCards.length) {
+      const hasAceTrump = ctx.hand.some((c) => c.suit === ctx.trump.suit && c.rank === 14);
+      // 3) If only trump remains, lead high trump when it's likely to win.
+      if (hasAceTrump) {
+        return { cardId: highestCardInSuit(trumpCards, ctx.trump.suit).id };
+      }
+      // 4) Otherwise, pull trump with the lowest card.
+      return { cardId: lowestCard(trumpCards, ctx.trump).id };
+    }
+    // Fallback to highest card when no other rule applies.
     const suitCounts = countSuits(ctx.hand);
     const best = highestCard(legalCards, ctx.trump, suitCounts, rng);
     return { cardId: best.id };
@@ -68,6 +90,49 @@ function lowestCard(cards: CardT[], trump: TrumpConfig): CardT {
     const cardScore = loseScore(card, trump);
     return cardScore < bestScore ? card : best;
   }, cards[0]);
+}
+
+function lowestCardInSuit(cards: CardT[], suit: Suit): CardT {
+  const suitCards = cards.filter((c) => c.suit === suit);
+  return suitCards.reduce((best, card) => (card.rank < best.rank ? card : best), suitCards[0]);
+}
+
+function shortestNonTrumpSuit(cards: CardT[]): Suit {
+  const counts: Record<Suit, number> = { S: 0, H: 0, D: 0, C: 0 };
+  for (const card of cards) counts[card.suit] += 1;
+  let bestSuit: Suit = "S";
+  let bestCount = Number.POSITIVE_INFINITY;
+  for (const suit of Object.keys(counts) as Suit[]) {
+    const count = counts[suit];
+    if (count === 0) continue;
+    if (count < bestCount) {
+      bestSuit = suit;
+      bestCount = count;
+    }
+  }
+  return bestSuit;
+}
+
+function strongestSuit(cards: CardT[]): Suit {
+  const suits: Record<Suit, CardT[]> = { S: [], H: [], D: [], C: [] };
+  for (const card of cards) suits[card.suit].push(card);
+  let bestSuit: Suit = "S";
+  let bestRank = -1;
+  for (const suit of Object.keys(suits) as Suit[]) {
+    const suitCards = suits[suit];
+    if (!suitCards.length) continue;
+    const top = suitCards.reduce((best, card) => (card.rank > best.rank ? card : best), suitCards[0]);
+    if (top && top.rank > bestRank) {
+      bestRank = top.rank;
+      bestSuit = suit;
+    }
+  }
+  return bestSuit;
+}
+
+function highestCardInSuit(cards: CardT[], suit: Suit): CardT {
+  const suitCards = cards.filter((c) => c.suit === suit);
+  return suitCards.reduce((best, card) => (card.rank > best.rank ? card : best), suitCards[0]);
 }
 
 function highestCard(
