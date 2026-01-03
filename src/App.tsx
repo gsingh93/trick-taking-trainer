@@ -236,6 +236,7 @@ export default function App() {
   const [modeOpenHandVerify, setModeOpenHandVerify] = useState(
     () => initialSettings.modeOpenHandVerify ?? false
   );
+  const [debugAutoPlay, setDebugAutoPlay] = useState(false);
   const [debugOpen, setDebugOpen] = useState(false);
   const [voidTrackingEnabled, setVoidTrackingEnabled] = useState(
     () => initialSettings.voidTrackingEnabled ?? true
@@ -859,6 +860,7 @@ export default function App() {
     const filteredPromptSuit =
       promptSuit && suitCountPromptSuits.includes(promptSuit) ? promptSuit : null;
 
+    const resolveDelay = debugAutoPlay ? 0 : aiDelayMs;
     resolveTimerRef.current = window.setTimeout(() => {
       let resolvedState: GameState | null = null;
       setGame((g) => {
@@ -869,7 +871,7 @@ export default function App() {
 
       const nextState = resolvedState as GameState | null;
       if (!nextState) return;
-      if (filteredPromptSuit) {
+      if (filteredPromptSuit && !debugAutoPlay) {
         setSuitCountPromptActive(true);
         setSuitCountPromptSuit(filteredPromptSuit);
         setSuitCountAnswer("0");
@@ -886,7 +888,7 @@ export default function App() {
         return;
       }
 
-      if (pauseBeforeNextTrick) {
+      if (pauseBeforeNextTrick && !debugAutoPlay) {
         // Keep the completed trick visible; wait for user input.
         setIsResolving(false);
         setAwaitContinue(true);
@@ -899,7 +901,7 @@ export default function App() {
       setIsResolving(false);
       setAwaitContinue(false);
       resolveTimerRef.current = null;
-    }, aiDelayMs);
+    }, resolveDelay);
   }
 
   function tryPlay(
@@ -908,9 +910,10 @@ export default function App() {
     source: "human" | "ai" = "human",
     opts?: { skipIntentPrompt?: boolean }
   ) {
+    const bypassPrompts = debugAutoPlay && source === "ai";
     if (isResolving) return;
     if (isViewingHistory) return;
-    if (awaitContinue) return;
+    if (awaitContinue && !bypassPrompts) return;
     if (handComplete) return;
     if (biddingActive && !biddingComplete) return;
     if (pendingIntentCard && source === "human" && !opts?.skipIntentPrompt) return;
@@ -919,8 +922,8 @@ export default function App() {
     if (trick.length === 0 && seat !== leader) return;
 
     // Require void tracking prompt to be resolved before any play.
-    if (voidTrackingEnabled && leadPromptActive) return;
-    if (suitCountPromptActive) return;
+    if (voidTrackingEnabled && leadPromptActive && !bypassPrompts) return;
+    if (suitCountPromptActive && !bypassPrompts) return;
 
     if (seat !== turn) return;
 
@@ -1017,19 +1020,26 @@ export default function App() {
 
   // Basic AI: players play a random valid card when it's their turn.
   useEffect(() => {
+    const effectiveAiEnabled = aiEnabled || debugAutoPlay;
+    const effectiveAiPlayMe = aiPlayMe || debugAutoPlay;
+    const effectiveDelay = debugAutoPlay ? 0 : aiDelayMs;
+    const effectiveAwaitContinue = debugAutoPlay ? false : awaitContinue;
+    const effectiveLeadPromptActive = debugAutoPlay ? false : voidTrackingEnabled && leadPromptActive;
+    const effectiveSuitCountPromptActive = debugAutoPlay ? false : suitCountPromptActive;
+
     if (
       !shouldRunAi({
-        aiEnabled,
+        aiEnabled: effectiveAiEnabled,
         biddingActive,
         biddingComplete: !!biddingComplete,
         isResolving,
         handComplete,
-        awaitContinue,
+        awaitContinue: effectiveAwaitContinue,
         isViewingHistory,
         turn,
-        aiPlayMe,
-        leadPromptActive: voidTrackingEnabled && leadPromptActive,
-        suitCountPromptActive,
+        aiPlayMe: effectiveAiPlayMe,
+        leadPromptActive: effectiveLeadPromptActive,
+        suitCountPromptActive: effectiveSuitCountPromptActive,
         trickLength: trick.length,
         leader,
       })
@@ -1059,13 +1069,14 @@ export default function App() {
 
     const timer = window.setTimeout(() => {
       tryPlay(turn, card, "ai");
-    }, aiDelayMs);
+    }, effectiveDelay);
 
     return () => clearTimeout(timer);
   }, [
     aiEnabled,
     aiPlayMe,
     aiDelayMs,
+    debugAutoPlay,
     turn,
     legalBySeat,
     hands,
@@ -1085,15 +1096,17 @@ export default function App() {
     if (!biddingActive || !bidState) return;
     if (isBiddingComplete(bidState)) return;
     const seat = currentBidder(bidState);
-    if (!seat || seat === "Me") return;
+    if (!seat) return;
+    if (seat === "Me" && !debugAutoPlay) return;
 
+    const delay = debugAutoPlay ? 0 : aiDelayMs;
     const timer = window.setTimeout(() => {
       const bid = estimateBid(hands[seat], trump);
       submitBidForSeat(seat, bid);
-    }, aiDelayMs);
+    }, delay);
 
     return () => clearTimeout(timer);
-  }, [biddingActive, bidState, aiDelayMs, hands, trump]);
+  }, [biddingActive, bidState, aiDelayMs, debugAutoPlay, hands, trump]);
 
   // If paused after a completed trick, advance on any key.
   useEffect(() => {
@@ -1412,6 +1425,17 @@ export default function App() {
     setAwaitContinue(false);
   };
 
+  useEffect(() => {
+    if (!debugAutoPlay) return;
+    if (handComplete) {
+      setDebugAutoPlay(false);
+      return;
+    }
+    if (canAdvance) {
+      handleAdvanceTrick();
+    }
+  }, [debugAutoPlay, handComplete, canAdvance]);
+
   const tableCard = (
     <TableCard
       seatLabels={seatLabels}
@@ -1598,6 +1622,21 @@ export default function App() {
           }}
         >
           Clear prompts
+        </Button>
+        <Button
+          variant={debugAutoPlay ? "default" : "outline"}
+          className="w-full"
+          onClick={() => {
+            setLeadPromptActive(false);
+            setSuitCountPromptActive(false);
+            setPendingIntentCard(null);
+            setIntentWarning(null);
+            setIntentDetails([]);
+            setPeekPrompt(null);
+            setDebugAutoPlay((active) => !active);
+          }}
+        >
+          {debugAutoPlay ? "Stop auto-play hand" : "Auto-play hand"}
         </Button>
         <div className="space-y-2">
           <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Bid breakdown</div>
