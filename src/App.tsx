@@ -1624,6 +1624,44 @@ export default function App() {
           Clear prompts
         </Button>
         <Button
+          variant="outline"
+          className="w-full"
+          onClick={() => {
+            const formatHandLine = (seat: Seat) =>
+              sortHand(hands[seat], suitOrder, sortAscending)
+                .map((card) => `${rankGlyph(card.rank)}${suitGlyph(card.suit)}`)
+                .join(" ");
+            const bidLine = (seat: Seat) => (bidState?.bids[seat] != null ? bidState.bids[seat] : "?");
+            const lines = [
+              "Trick Taking Trainer Snapshot",
+              `Seed: ${dealSeed}`,
+              `Trick: ${trickNo}`,
+              `Leader: ${seatLabels[leader]}`,
+              "",
+              "Bids:",
+              ...SEATS.map((seat) => `  ${seatLabels[seat]}: ${bidLine(seat)}`),
+              "",
+              "Tricks Won:",
+              ...SEATS.map((seat) => `  ${seatLabels[seat]}: ${tricksWon[seat]}`),
+              "",
+              "Hands:",
+              ...SEATS.map((seat) => `  ${seatLabels[seat]}: ${formatHandLine(seat)}`),
+              "",
+            ];
+            const blob = new Blob([lines.join("\n")], { type: "text/plain" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `trick-taking-trainer-${dealSeed}-trick-${trickNo}.txt`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+          }}
+        >
+          Download snapshot
+        </Button>
+        <Button
           variant={debugAutoPlay ? "default" : "outline"}
           className="w-full"
           onClick={() => {
