@@ -52,7 +52,7 @@ import {
   type PlayT,
   type TrumpConfig,
 } from "@/engine/types";
-import { RefreshCw, Moon, Sun } from "lucide-react";
+import { RefreshCw, Moon, Sun, Bug, X } from "lucide-react";
 import { rankGlyph, suitColorClass, suitGlyph } from "@/ui/cardUtils";
 import { SettingsCard } from "@/components/SettingsCard";
 import { TrickHistoryCard } from "@/components/TrickHistoryCard";
@@ -236,6 +236,7 @@ export default function App() {
   const [modeOpenHandVerify, setModeOpenHandVerify] = useState(
     () => initialSettings.modeOpenHandVerify ?? false
   );
+  const [debugOpen, setDebugOpen] = useState(false);
   const [voidTrackingEnabled, setVoidTrackingEnabled] = useState(
     () => initialSettings.voidTrackingEnabled ?? true
   );
@@ -1707,6 +1708,41 @@ export default function App() {
     </div>
   ) : null;
 
+  const debugDrawer = import.meta.env.DEV ? (
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        className="fixed bottom-4 right-4 z-50 shadow"
+        onClick={() => setDebugOpen((open) => !open)}
+        aria-label={debugOpen ? "Close debug panel" : "Open debug panel"}
+      >
+        <Bug className="h-4 w-4" />
+      </Button>
+      <div
+        className={
+          "fixed right-0 top-0 z-50 h-full w-[90vw] max-w-[380px] border-l bg-background shadow-lg transition-transform duration-200 " +
+          (debugOpen ? "translate-x-0" : "translate-x-full")
+        }
+      >
+        <div className="flex items-center justify-between border-b px-3 py-2">
+          <div className="text-sm font-semibold">Debug</div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => setDebugOpen(false)}
+            aria-label="Close debug panel"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="h-full overflow-y-auto p-3">{debugCard}</div>
+      </div>
+    </>
+  ) : null;
+
   return (
     <div className="min-h-screen bg-background p-3 sm:p-6">
       <div className="mx-auto max-w-6xl space-y-4 sm:space-y-6">
@@ -1775,12 +1811,12 @@ export default function App() {
             <div className="w-full min-[750px]:w-[330px] min-[750px]:justify-self-end">
               <div className="space-y-4">
                 {settingsCard}
-                {debugCard}
               </div>
             </div>
           </div>
         </div>
       </div>
+      {debugDrawer}
     </div>
   );
 }
