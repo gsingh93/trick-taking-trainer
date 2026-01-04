@@ -222,6 +222,6 @@ describe("ai", () => {
       { suit: "C", rank: 3, id: "C3" }, // doubleton
       { suit: "C", rank: 4, id: "C4" },
     ];
-    expect(estimateBid(hand, trump)).toBe(1);
+    expect(estimateBid(hand, trump)).toBe(2);
   });
 });
