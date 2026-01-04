@@ -1633,11 +1633,15 @@ export default function App() {
                 .map((card) => `${rankGlyph(card.rank)}${suitGlyph(card.suit)}`)
                 .join(" ");
             const bidLine = (seat: Seat) => (bidState?.bids[seat] != null ? bidState.bids[seat] : "?");
+            const trumpStatus = trump.enabled
+              ? `${suitGlyph(trump.suit)} (${game.trumpBroken ? "broken" : "not broken"})`
+              : "None";
             const lines = [
               "Trick Taking Trainer Snapshot",
               `Seed: ${dealSeed}`,
               `Trick: ${trickNo}`,
               `Leader: ${seatLabels[leader]}`,
+              `Trump: ${trumpStatus}`,
               "",
               "Bids:",
               ...SEATS.map((seat) => `  ${seatLabels[seat]}: ${bidLine(seat)}`),
@@ -1672,11 +1676,15 @@ export default function App() {
                 .map((card) => `${rankGlyph(card.rank)}${suitGlyph(card.suit)}`)
                 .join(" ");
             const bidLine = (seat: Seat) => (bidState?.bids[seat] != null ? bidState.bids[seat] : "?");
+            const trumpStatus = trump.enabled
+              ? `${suitGlyph(trump.suit)} (${game.trumpBroken ? "broken" : "not broken"})`
+              : "None";
             const lines = [
               "Trick Taking Trainer Snapshot",
               `Seed: ${dealSeed}`,
               `Trick: ${trickNo}`,
               `Leader: ${seatLabels[leader]}`,
+              `Trump: ${trumpStatus}`,
               "",
               "Bids:",
               ...SEATS.map((seat) => `  ${seatLabels[seat]}: ${bidLine(seat)}`),
