@@ -115,7 +115,13 @@ export function TrickHistoryCard(props: TrickHistoryCardProps) {
                 onClick={() => {
                   const maxStep = trickHistory[viewedTrickIndex]?.length ?? 0;
                   if (viewedTrickStep >= maxStep) {
-                    setHistoryPlaying(false);
+                    if (viewedTrickIndex + 1 < trickHistory.length) {
+                      setViewedTrickIndex(viewedTrickIndex + 1);
+                      setViewedTrickStep(0);
+                      setHistoryPlaying(true);
+                    } else {
+                      setHistoryPlaying(false);
+                    }
                     return;
                   }
                   setHistoryPlaying((p) => !p);
@@ -129,7 +135,14 @@ export function TrickHistoryCard(props: TrickHistoryCardProps) {
                 size="sm"
                 onClick={() => {
                   const maxStep = trickHistory[viewedTrickIndex]?.length ?? 0;
-                  setViewedTrickStep((s) => Math.min(maxStep, s + 1));
+                  if (viewedTrickStep >= maxStep) {
+                    if (viewedTrickIndex + 1 < trickHistory.length) {
+                      setViewedTrickIndex(viewedTrickIndex + 1);
+                      setViewedTrickStep(0);
+                    }
+                  } else {
+                    setViewedTrickStep((s) => Math.min(maxStep, s + 1));
+                  }
                   setHistoryPlaying(false);
                 }}
                 aria-label="Step forward"
