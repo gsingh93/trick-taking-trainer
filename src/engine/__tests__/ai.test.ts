@@ -78,6 +78,114 @@ describe("ai", () => {
     expect(should).toBe(false);
   });
 
+  it("blocks AI when awaiting continue or resolving or history view is active", () => {
+    expect(
+      shouldRunAi({
+        aiEnabled: true,
+        biddingActive: false,
+        biddingComplete: true,
+        isResolving: true,
+        handComplete: false,
+        awaitContinue: false,
+        isViewingHistory: false,
+        turn: "Left",
+        aiPlayMe: true,
+        leadPromptActive: false,
+        suitCountPromptActive: false,
+        trickLength: 1,
+        leader: "Left",
+      })
+    ).toBe(false);
+    expect(
+      shouldRunAi({
+        aiEnabled: true,
+        biddingActive: false,
+        biddingComplete: true,
+        isResolving: false,
+        handComplete: false,
+        awaitContinue: true,
+        isViewingHistory: false,
+        turn: "Left",
+        aiPlayMe: true,
+        leadPromptActive: false,
+        suitCountPromptActive: false,
+        trickLength: 1,
+        leader: "Left",
+      })
+    ).toBe(false);
+    expect(
+      shouldRunAi({
+        aiEnabled: true,
+        biddingActive: false,
+        biddingComplete: true,
+        isResolving: false,
+        handComplete: false,
+        awaitContinue: false,
+        isViewingHistory: true,
+        turn: "Left",
+        aiPlayMe: true,
+        leadPromptActive: false,
+        suitCountPromptActive: false,
+        trickLength: 1,
+        leader: "Left",
+      })
+    ).toBe(false);
+  });
+
+  it("blocks AI when prompts are active or when turn/leader mismatch at trick start", () => {
+    expect(
+      shouldRunAi({
+        aiEnabled: true,
+        biddingActive: false,
+        biddingComplete: true,
+        isResolving: false,
+        handComplete: false,
+        awaitContinue: false,
+        isViewingHistory: false,
+        turn: "Left",
+        aiPlayMe: true,
+        leadPromptActive: true,
+        suitCountPromptActive: false,
+        trickLength: 1,
+        leader: "Left",
+      })
+    ).toBe(false);
+    expect(
+      shouldRunAi({
+        aiEnabled: true,
+        biddingActive: false,
+        biddingComplete: true,
+        isResolving: false,
+        handComplete: false,
+        awaitContinue: false,
+        isViewingHistory: false,
+        turn: "Left",
+        aiPlayMe: true,
+        leadPromptActive: false,
+        suitCountPromptActive: true,
+        trickLength: 1,
+        leader: "Left",
+      })
+    ).toBe(false);
+    expect(
+      shouldRunAi({
+        aiEnabled: true,
+        biddingActive: false,
+        biddingComplete: true,
+        isResolving: false,
+        handComplete: false,
+        awaitContinue: false,
+        isViewingHistory: false,
+        turn: "Across",
+        aiPlayMe: true,
+        leadPromptActive: false,
+        suitCountPromptActive: false,
+        trickLength: 0,
+        leader: "Left",
+      })
+    ).toBe(false);
+  });
+
   it("canPlayCard blocks play during bidding or pauses", () => {
     expect(
       canPlayCard({

@@ -23,6 +23,14 @@ describe("void helpers", () => {
     expect(anyRemainingVoidInSuit("S", "Me", trick, actualVoid, false)).toBe(true);
   });
 
+  it("treats remaining players as not all void when Me is still to act", () => {
+    const actualVoid = createVoidGrid();
+    actualVoid.Left.H = true;
+    actualVoid.Right.H = true;
+    const trick = [makePlay("Across", "H")] as PlayT[];
+    expect(remainingPlayersVoidInSuit("H", "Left", trick, actualVoid, false)).toBe(false);
+  });
+
   it("treats remaining self as a void when includeMe is true", () => {
     const actualVoid = createVoidGrid();
     const trick = [makePlay("Left", "H")] as PlayT[];

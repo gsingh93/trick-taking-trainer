@@ -79,4 +79,45 @@ describe("winIntent", () => {
     expect(result.warning).toBe("This card can be trumped");
     expect(result.trumpThreats).toEqual(["Left"]);
   });
+
+  it("combines honor and trump warnings when both apply", () => {
+    const card: CardT = { suit: "H", rank: 11, id: "H11" };
+    const trick: PlayT[] = [{ seat: "Me", card }];
+    const actualVoid = createVoidGrid();
+    actualVoid.Left.H = true;
+    actualVoid.Left.S = false;
+    const result = evaluateWinIntent({
+      card,
+      trickHistory: [],
+      trick,
+      hand: [],
+      trump: { enabled: true, suit: "S", mustBreak: true } as TrumpConfig,
+      winIntentWarnTrump: true,
+      winIntentWarnHonorsOnly: true,
+      actualVoid,
+    });
+    expect(result.warning).toBe("This card can be beaten by a higher card or trump");
+    expect(result.trumpThreats).toEqual(["Left"]);
+  });
+
+  it("returns no warning when higher ranks are already played", () => {
+    const card: CardT = { suit: "H", rank: 11, id: "H11" };
+    const trick: PlayT[] = [
+      { seat: "Left", card: { suit: "H", rank: 14, id: "H14" } },
+      { seat: "Across", card: { suit: "H", rank: 13, id: "H13" } },
+      { seat: "Right", card: { suit: "H", rank: 12, id: "H12" } },
+    ];
+    const result = evaluateWinIntent({
+      card,
+      trickHistory: [],
+      trick,
+      hand: [{ suit: "H", rank: 11, id: "H11" }],
+      trump: { enabled: false, suit: "S", mustBreak: true },
+      winIntentWarnTrump: false,
+      winIntentWarnHonorsOnly: true,
+      actualVoid: createVoidGrid(),
+    });
+    expect(result.warning).toBeNull();
+    expect(result.higherRanks).toEqual([]);
+  });
 });

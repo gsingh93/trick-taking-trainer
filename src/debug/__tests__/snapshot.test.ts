@@ -104,6 +104,30 @@ describe("parseSnapshotText", () => {
     expect(result.error).toBe("Bids section must include numeric values or '?'.");
   });
 
+  it("rejects unknown seat labels", () => {
+    const invalidSeat = baseSnapshot.replace("West: 2", "Foo: 2");
+    const result = parseSnapshotText(invalidSeat, seatLabels, true);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toBe("Bids section has an unknown seat label.");
+  });
+
+  it("rejects invalid trump suit tokens", () => {
+    const invalidTrump = baseSnapshot.replace("Trump: ♠ (broken)", "Trump: X (broken)");
+    const result = parseSnapshotText(invalidTrump, seatLabels, true);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toBe('Trump must look like "♠ (broken)" or "♠ (not broken)".');
+  });
+
+  it("parses a no-trump snapshot", () => {
+    const noTrump = baseSnapshot.replace("Trump: ♠ (broken)", "Trump: None");
+    const result = parseSnapshotText(noTrump, seatLabels, true);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.trump.enabled).toBe(false);
+  });
+
   it("fails when the header is missing", () => {
     const result = parseSnapshotText("Seed: 1", seatLabels, true);
     expect(result.ok).toBe(false);

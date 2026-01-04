@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { determineTrickWinner, isLegalPlay } from "../rules";
+import { determineTrickWinner, isLegalPlay, trickLeadSuit } from "../rules";
 import type { CardT, PlayT, TrumpConfig } from "../types";
 
 describe("rules", () => {
@@ -89,6 +89,21 @@ describe("rules", () => {
       { seat: "Right", card: { suit: "S", rank: 3, id: "S3" } },
     ];
     expect(determineTrickWinner(trick, trump)).toBe("Right");
+  });
+
+  it("keeps the earlier winner when off-suit cards differ", () => {
+    const trump: TrumpConfig = { enabled: false, suit: "S", mustBreak: true };
+    const trick: PlayT[] = [
+      { seat: "Me", card: { suit: "H", rank: 10, id: "H10" } },
+      { seat: "Left", card: { suit: "D", rank: 14, id: "D14" } },
+      { seat: "Across", card: { suit: "C", rank: 13, id: "C13" } },
+      { seat: "Right", card: { suit: "H", rank: 9, id: "H9" } },
+    ];
+    expect(determineTrickWinner(trick, trump)).toBe("Me");
+  });
+
+  it("returns null when there is no lead", () => {
+    expect(trickLeadSuit([])).toBeNull();
   });
 
   it("allows leading trump when hand is all trump", () => {
