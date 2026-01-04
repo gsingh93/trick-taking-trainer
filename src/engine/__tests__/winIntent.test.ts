@@ -120,4 +120,43 @@ describe("winIntent", () => {
     expect(result.warning).toBeNull();
     expect(result.higherRanks).toEqual([]);
   });
+
+  it("does not warn about trump when remaining players are not void in lead suit", () => {
+    const card: CardT = { suit: "H", rank: 12, id: "H12" };
+    const trick: PlayT[] = [{ seat: "Me", card }];
+    const actualVoid = createVoidGrid();
+    const result = evaluateWinIntent({
+      card,
+      trickHistory: [],
+      trick,
+      hand: [],
+      trump: { enabled: true, suit: "S", mustBreak: true } as TrumpConfig,
+      winIntentWarnTrump: true,
+      winIntentWarnHonorsOnly: true,
+      actualVoid,
+    });
+    expect(result.warning).toBe("This card can be beaten by a higher card");
+    expect(result.trumpThreats).toEqual([]);
+  });
+
+  it("returns null when no honor or trump warnings apply", () => {
+    const card: CardT = { suit: "H", rank: 14, id: "H14" };
+    const trick: PlayT[] = [{ seat: "Me", card }];
+    const actualVoid = createVoidGrid();
+    actualVoid.Left.H = true;
+    actualVoid.Left.S = true;
+    const result = evaluateWinIntent({
+      card,
+      trickHistory: [],
+      trick,
+      hand: [],
+      trump: { enabled: true, suit: "S", mustBreak: true } as TrumpConfig,
+      winIntentWarnTrump: true,
+      winIntentWarnHonorsOnly: true,
+      actualVoid,
+    });
+    expect(result.warning).toBeNull();
+    expect(result.higherRanks).toEqual([]);
+    expect(result.trumpThreats).toEqual([]);
+  });
 });

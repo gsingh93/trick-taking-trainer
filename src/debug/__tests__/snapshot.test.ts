@@ -117,7 +117,23 @@ describe("parseSnapshotText", () => {
     const result = parseSnapshotText(invalidTrump, seatLabels, true);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error).toBe('Trump must look like "♠ (broken)" or "♠ (not broken)".');
+    expect(result.error).toBe("Trump suit is invalid.");
+  });
+
+  it("rejects invalid current trick card tokens", () => {
+    const invalidTrick = baseSnapshot.replace("Current Trick:\n  (none)", "Current Trick:\n  West: 1♠");
+    const result = parseSnapshotText(invalidTrick, seatLabels, true);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toBe("Current Trick cards must be formatted like A♠.");
+  });
+
+  it("rejects unknown seat labels in the hands section", () => {
+    const invalidHand = baseSnapshot.replace("West: 2♠", "Foo: 2♠");
+    const result = parseSnapshotText(invalidHand, seatLabels, true);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toBe("Hands section has an unknown seat label.");
   });
 
   it("parses a no-trump snapshot", () => {

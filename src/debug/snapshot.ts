@@ -137,7 +137,7 @@ export function parseSnapshotText(
   let parsedTrump: TrumpConfig = { enabled: false, suit: "S", mustBreak };
   let parsedTrumpBroken = false;
   if (trumpValue.toLowerCase() !== "none") {
-    const match = trumpValue.match(/([♠♥♦♣SHDC])\s*\((broken|not broken)\)/i);
+    const match = trumpValue.match(/(\S)\s*\((broken|not broken)\)/i);
     if (!match) {
       return { ok: false, error: 'Trump must look like "♠ (broken)" or "♠ (not broken)".' };
     }
