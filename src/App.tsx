@@ -509,11 +509,13 @@ export default function App() {
   }, [isViewingHistory, viewedTrickIndex, viewedTrickStep, trickHistory, dealSeed, trump]);
 
   const displayHands = historySnapshot?.hands ?? hands;
+  const displayLeader = historySnapshot?.leader ?? leader;
   const displayTurn = historySnapshot?.turn ?? turn;
   const displayTricksWon = historySnapshot?.tricksWon ?? tricksWon;
   const displayTrick = historySnapshot?.trick ?? trick;
   const displayTrickNo = historySnapshot?.trickNo ?? trickNo;
   const displayHandComplete = historySnapshot?.handComplete ?? handComplete;
+  const displayTrumpBroken = historySnapshot?.trumpBroken ?? game.trumpBroken;
   const displayTrickWinner = useMemo<Seat | null>(() => {
     if (displayTrick.length !== 4) return null;
     return determineTrickWinner(displayTrick, trump);
@@ -1557,26 +1559,26 @@ export default function App() {
   }, [hands, trump]);
 
   const trumpStatus = trump.enabled
-    ? `${suitGlyph(trump.suit)} (${game.trumpBroken ? "broken" : "not broken"})`
+    ? `${suitGlyph(trump.suit)} (${displayTrumpBroken ? "broken" : "not broken"})`
     : "None";
   const buildSnapshotText = () => {
     const formatHandLine = (seat: Seat) =>
-      sortHand(hands[seat], suitOrder, sortAscending)
+      sortHand(displayHands[seat], suitOrder, sortAscending)
         .map((card) => `${rankGlyph(card.rank)}${suitGlyph(card.suit)}`)
         .join(" ");
     const bidLine = (seat: Seat) => (bidState?.bids[seat] != null ? bidState.bids[seat] : "?");
     const lines = [
       "Trick Taking Trainer Snapshot",
       `Seed: ${dealSeed}`,
-      `Trick: ${trickNo}`,
-      `Leader: ${seatLabels[leader]}`,
+      `Trick: ${displayTrickNo}`,
+      `Leader: ${seatLabels[displayLeader]}`,
       `Trump: ${trumpStatus}`,
       "",
       "Bids:",
       ...SEATS.map((seat) => `  ${seatLabels[seat]}: ${bidLine(seat)}`),
       "",
       "Tricks Won:",
-      ...SEATS.map((seat) => `  ${seatLabels[seat]}: ${tricksWon[seat]}`),
+      ...SEATS.map((seat) => `  ${seatLabels[seat]}: ${displayTricksWon[seat]}`),
       "",
       "Hands:",
       ...SEATS.map((seat) => `  ${seatLabels[seat]}: ${formatHandLine(seat)}`),
