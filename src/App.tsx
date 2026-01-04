@@ -1064,6 +1064,7 @@ export default function App() {
             trump,
             tricksWon,
             bid: bidState?.bids[turn] ?? null,
+            actualVoid,
           })
         : chooseCardToPlay(hands[turn], legal);
     if (!decision) return;

@@ -1,4 +1,6 @@
 import { compareCardsInTrick, isTrump, trickLeadSuit } from "../rules";
+import { createVoidGrid, type VoidGrid } from "../state";
+import { SEATS } from "../types";
 import type { CardT, PlayT, Seat, Suit, TrumpConfig } from "../types";
 
 export type BidAiContext = {
@@ -10,6 +12,7 @@ export type BidAiContext = {
   trump: TrumpConfig;
   tricksWon: Record<Seat, number>;
   bid: number | null;
+  actualVoid?: VoidGrid;
 };
 
 export function chooseCardToPlayForBid(
@@ -43,7 +46,13 @@ export function chooseCardToPlayForBid(
     if (highestLosing) {
       return { cardId: highestLosing.id };
     }
-    if (ctx.trick.length === 3) {
+    if (
+      ctx.trick.length === 3 ||
+      (ctx.trump.enabled &&
+        leadSuit &&
+        remainingOpponentsVoidInSuit(leadSuit, ctx.seat, ctx.trick, ctx.actualVoid) &&
+        remainingOpponentsVoidInSuit(ctx.trump.suit, ctx.seat, ctx.trick, ctx.actualVoid))
+    ) {
       const highest = highestCard(legalCards, ctx.trump, countSuits(ctx.hand), rng);
       return { cardId: highest.id };
     }
@@ -89,6 +98,23 @@ function countSuits(hand: CardT[]): Record<Suit, number> {
   const counts: Record<Suit, number> = { S: 0, H: 0, D: 0, C: 0 };
   for (const c of hand) counts[c.suit] += 1;
   return counts;
+}
+
+function remainingOpponentsVoidInSuit(
+  suit: Suit,
+  currentSeat: Seat,
+  trick: PlayT[],
+  actualVoid: VoidGrid = createVoidGrid()
+): boolean {
+  const playedSeats = new Set(trick.map((t) => t.seat));
+  const remaining = SEATS.filter((seat) => seat !== currentSeat && !playedSeats.has(seat));
+  if (!remaining.length) return false;
+  if (remaining.includes("Me")) return false;
+  for (const seat of remaining) {
+    if (seat === "Me") return false;
+    if (!actualVoid[seat][suit]) return false;
+  }
+  return true;
 }
 
 function lowestCard(cards: CardT[], trump: TrumpConfig): CardT {

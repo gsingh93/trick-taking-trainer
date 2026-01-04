@@ -5,6 +5,7 @@ import { canAdvanceTrick, canPlayCard } from "../flow";
 import { chooseCardToPlayForBid } from "../ai/bidFocus";
 import { estimateBid } from "../ai/bidHeuristic";
 import type { CardT, TrumpConfig } from "../types";
+import { createVoidGrid } from "../state";
 
 describe("ai", () => {
   it("returns null when no legal cards exist", () => {
@@ -200,6 +201,32 @@ describe("ai", () => {
         trump: { enabled: true, suit: "S", mustBreak: true },
         tricksWon: { Left: 2, Across: 0, Right: 0, Me: 0 },
         bid: 2,
+      },
+      () => 0
+    );
+    expect(decision?.cardId).toBe("S12");
+  });
+
+  it("dumps the highest card early when remaining opponents are void in lead and trump", () => {
+    const actualVoid = createVoidGrid();
+    actualVoid.Right.S = true;
+    const decision = chooseCardToPlayForBid(
+      {
+        seat: "Me",
+        hand: [
+          { suit: "S", rank: 10, id: "S10" },
+          { suit: "S", rank: 12, id: "S12" },
+        ],
+        legalIds: new Set(["S10", "S12"]),
+        trick: [
+          { seat: "Left", card: { suit: "S", rank: 2, id: "S2" } },
+          { seat: "Across", card: { suit: "S", rank: 3, id: "S3" } },
+        ],
+        leader: "Left",
+        trump: { enabled: true, suit: "S", mustBreak: true },
+        tricksWon: { Left: 0, Across: 0, Right: 0, Me: 2 },
+        bid: 2,
+        actualVoid,
       },
       () => 0
     );
