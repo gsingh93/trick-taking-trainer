@@ -1747,16 +1747,17 @@ export default function App() {
         setSnapshotError("Bids section has an unknown seat label.");
         return;
       }
-      const value = Number(valuePart.trim());
+      const trimmedValue = valuePart.trim();
+      if (trimmedValue === "?") {
+        bids[seat] = null;
+        continue;
+      }
+      const value = Number(trimmedValue);
       if (!Number.isFinite(value)) {
-        setSnapshotError("Bids section must include numeric values.");
+        setSnapshotError("Bids section must include numeric values or '?'.");
         return;
       }
       bids[seat] = value;
-    }
-    if (Object.values(bids).some((value) => value == null)) {
-      setSnapshotError("Bids section must include all four seats.");
-      return;
     }
 
     const tricksWonParsed = { Left: 0, Across: 0, Right: 0, Me: 0 } as Record<Seat, number>;
@@ -1817,11 +1818,18 @@ export default function App() {
     }
 
     const allHandsEmpty = SEATS.every((seat) => handsParsed[seat].length === 0);
+    const bidOrder = buildBidOrder("Me");
+    const nextIndex = bidOrder.findIndex((seat) => bids[seat] == null);
     const nextBidState = {
-      order: buildBidOrder("Me"),
-      index: 4,
+      order: bidOrder,
+      index: nextIndex === -1 ? bidOrder.length : nextIndex,
       bids,
-      revealed: { Left: true, Across: true, Right: true, Me: true },
+      revealed: {
+        Left: bids.Left != null,
+        Across: bids.Across != null,
+        Right: bids.Right != null,
+        Me: bids.Me != null,
+      },
     } satisfies BidState;
 
     setSnapshotError(null);
