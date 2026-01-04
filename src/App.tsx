@@ -1649,7 +1649,8 @@ export default function App() {
               ...SEATS.map((seat) => `  ${seatLabels[seat]}: ${formatHandLine(seat)}`),
               "",
             ];
-            const blob = new Blob([lines.join("\n")], { type: "text/plain" });
+            const text = lines.join("\n");
+            const blob = new Blob([text], { type: "text/plain" });
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
@@ -1661,6 +1662,50 @@ export default function App() {
           }}
         >
           Download snapshot
+        </Button>
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={async () => {
+            const formatHandLine = (seat: Seat) =>
+              sortHand(hands[seat], suitOrder, sortAscending)
+                .map((card) => `${rankGlyph(card.rank)}${suitGlyph(card.suit)}`)
+                .join(" ");
+            const bidLine = (seat: Seat) => (bidState?.bids[seat] != null ? bidState.bids[seat] : "?");
+            const lines = [
+              "Trick Taking Trainer Snapshot",
+              `Seed: ${dealSeed}`,
+              `Trick: ${trickNo}`,
+              `Leader: ${seatLabels[leader]}`,
+              "",
+              "Bids:",
+              ...SEATS.map((seat) => `  ${seatLabels[seat]}: ${bidLine(seat)}`),
+              "",
+              "Tricks Won:",
+              ...SEATS.map((seat) => `  ${seatLabels[seat]}: ${tricksWon[seat]}`),
+              "",
+              "Hands:",
+              ...SEATS.map((seat) => `  ${seatLabels[seat]}: ${formatHandLine(seat)}`),
+              "",
+            ];
+            const text = lines.join("\n");
+            if (navigator.clipboard?.writeText) {
+              await navigator.clipboard.writeText(text);
+              return;
+            }
+            const textarea = document.createElement("textarea");
+            textarea.value = text;
+            textarea.style.position = "fixed";
+            textarea.style.top = "-1000px";
+            textarea.style.left = "-1000px";
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            document.execCommand("copy");
+            textarea.remove();
+          }}
+        >
+          Copy snapshot
         </Button>
         <Button
           variant={debugAutoPlay ? "default" : "outline"}
