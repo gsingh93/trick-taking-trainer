@@ -8,6 +8,7 @@ export type BidAiContext = {
   hand: CardT[];
   legalIds: Set<string>;
   trick: PlayT[];
+  trickHistory?: PlayT[][];
   leader: Seat;
   trump: TrumpConfig;
   tricksWon: Record<Seat, number>;
@@ -35,15 +36,16 @@ export function chooseCardToPlayForBid(
       const winning = lowestWinningCard(legalCards, ctx.trick, ctx.trump);
       if (winning) {
         const willCompleteBid = ctx.tricksWon[ctx.seat] + 1 >= (ctx.bid ?? 0);
+        const highestWin = highestWinningCard(legalCards, ctx.trick, ctx.trump) ?? winning;
         const safeToWin =
           ctx.trick.length === 3 ||
           (ctx.trump.enabled &&
             leadSuit &&
             remainingOpponentsVoidInSuit(leadSuit, ctx.seat, ctx.trick, ctx.actualVoid) &&
-            remainingOpponentsVoidInSuit(ctx.trump.suit, ctx.seat, ctx.trick, ctx.actualVoid));
+            remainingOpponentsVoidInSuit(ctx.trump.suit, ctx.seat, ctx.trick, ctx.actualVoid)) ||
+          canSafelyWinWithHonors(highestWin, ctx);
         if (willCompleteBid && safeToWin) {
-          const highestWin = highestWinningCard(legalCards, ctx.trick, ctx.trump);
-          return { cardId: (highestWin ?? winning).id };
+          return { cardId: highestWin.id };
         }
         const offTrumpWinning = lowestWinningCard(
           legalCards.filter((c) => !isTrump(c, ctx.trump)),
@@ -283,4 +285,43 @@ function lowestWinningCard(cards: CardT[], trick: PlayT[], trump: TrumpConfig): 
     }
   }
   return bestWin;
+}
+
+function canSafelyWinWithHonors(card: CardT, ctx: BidAiContext): boolean {
+  if (!ctx.trick.length) return false;
+  const leadSuit = trickLeadSuit(ctx.trick);
+  if (!leadSuit) return false;
+
+  const known = new Set<string>();
+  const history = ctx.trickHistory ?? [];
+  for (const trick of history) {
+    for (const play of trick) known.add(play.card.id);
+  }
+  for (const play of ctx.trick) known.add(play.card.id);
+  for (const held of ctx.hand) known.add(held.id);
+
+  const higherRanks = (rank: number) =>
+    Array.from({ length: 14 - rank }, (_, i) => rank + 1 + i).filter((r) => r <= 14);
+  const hasUnknownHigher = (suit: Suit, rank: number) => {
+    for (const r of higherRanks(rank)) {
+      const id = `${suit}${r}`;
+      if (!known.has(id)) return true;
+    }
+    return false;
+  };
+
+  if (ctx.trump.enabled && card.suit === ctx.trump.suit) {
+    return !hasUnknownHigher(card.suit, card.rank);
+  }
+
+  if (card.suit === leadSuit && !hasUnknownHigher(card.suit, card.rank)) {
+    if (!ctx.trump.enabled) return true;
+    for (let r = 2; r <= 14; r += 1) {
+      const id = `${ctx.trump.suit}${r}`;
+      if (!known.has(id)) return false;
+    }
+    return true;
+  }
+
+  return false;
 }

@@ -231,6 +231,37 @@ describe("ai", () => {
     expect(decision?.cardId).toBe("S10");
   });
 
+  it("uses honor history to safely win and shed a high card", () => {
+    const decision = chooseCardToPlayForBid(
+      {
+        seat: "Left",
+        hand: [
+          { suit: "S", rank: 6, id: "S6" },
+          { suit: "S", rank: 10, id: "S10" },
+        ],
+        legalIds: new Set(["S6", "S10"]),
+        trick: [
+          { seat: "Across", card: { suit: "S", rank: 5, id: "S5" } },
+          { seat: "Right", card: { suit: "S", rank: 4, id: "S4" } },
+        ],
+        trickHistory: [
+          [
+            { seat: "Me", card: { suit: "S", rank: 14, id: "S14" } },
+            { seat: "Left", card: { suit: "S", rank: 13, id: "S13" } },
+            { seat: "Across", card: { suit: "S", rank: 12, id: "S12" } },
+            { seat: "Right", card: { suit: "S", rank: 11, id: "S11" } },
+          ],
+        ],
+        leader: "Across",
+        trump: { enabled: true, suit: "S", mustBreak: true },
+        tricksWon: { Left: 2, Across: 0, Right: 0, Me: 0 },
+        bid: 3,
+      },
+      () => 0
+    );
+    expect(decision?.cardId).toBe("S10");
+  });
+
   it("dumps the highest card when forced to win as last to act", () => {
     const decision = chooseCardToPlayForBid(
       {

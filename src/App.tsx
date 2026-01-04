@@ -1062,6 +1062,7 @@ export default function App() {
             hand: hands[turn],
             legalIds: legal,
             trick,
+            trickHistory,
             leader,
             trump,
             tricksWon,
