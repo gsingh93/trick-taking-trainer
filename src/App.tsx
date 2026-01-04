@@ -34,6 +34,7 @@ import {
 } from "@/engine/state";
 import {
   currentBidder,
+  buildBidOrder,
   initBidState,
   isBiddingComplete,
   submitBid,
@@ -49,6 +50,7 @@ import {
   type Seat,
   type Rank,
   type CardT,
+  type Hands,
   type PlayT,
   type TrumpConfig,
 } from "@/engine/types";
@@ -1580,6 +1582,7 @@ export default function App() {
       `Seed: ${dealSeed}`,
       `Trick: ${displayTrickNo}`,
       `Leader: ${seatLabels[displayLeader]}`,
+      `Turn: ${seatLabels[displayTurn]}`,
       `Trump: ${trumpStatus}`,
       "",
       "Bids:",
@@ -1596,6 +1599,251 @@ export default function App() {
       "",
     ];
     return lines.join("\n");
+  };
+
+  const [snapshotInput, setSnapshotInput] = useState("");
+  const [snapshotError, setSnapshotError] = useState<string | null>(null);
+
+  const parseSeatLabel = (value: string): Seat | null => {
+    const trimmed = value.trim();
+    const entries = Object.entries(seatLabels) as [Seat, string][];
+    for (const [seat, label] of entries) {
+      if (label.toLowerCase() === trimmed.toLowerCase()) return seat;
+    }
+    return null;
+  };
+
+  const parseSnapshotSuit = (value: string): Suit | null => {
+    const trimmed = value.trim();
+    switch (trimmed) {
+      case "♠":
+      case "S":
+        return "S";
+      case "♥":
+      case "H":
+        return "H";
+      case "♦":
+      case "D":
+        return "D";
+      case "♣":
+      case "C":
+        return "C";
+      default:
+        return null;
+    }
+  };
+
+  const parseCardToken = (token: string): CardT | null => {
+    if (!token) return null;
+    const suitChar = token.slice(-1);
+    const rankStr = token.slice(0, -1);
+    const suit = parseSnapshotSuit(suitChar);
+    if (!suit) return null;
+    let rank: Rank | null = null;
+    switch (rankStr.toUpperCase()) {
+      case "A":
+        rank = 14;
+        break;
+      case "K":
+        rank = 13;
+        break;
+      case "Q":
+        rank = 12;
+        break;
+      case "J":
+        rank = 11;
+        break;
+      default: {
+        const parsed = Number(rankStr);
+        if (Number.isFinite(parsed) && parsed >= 2 && parsed <= 10) {
+          rank = parsed as Rank;
+        }
+        break;
+      }
+    }
+    if (!rank) return null;
+    return { suit, rank, id: `${suit}${rank}` };
+  };
+
+  const loadSnapshot = () => {
+    const lines = snapshotInput.split("\n").map((line) => line.trimEnd());
+    if (!lines.length || lines[0].trim() !== "Trick Taking Trainer Snapshot") {
+      setSnapshotError("Missing snapshot header.");
+      return;
+    }
+
+    const findLine = (prefix: string) => lines.find((line) => line.startsWith(prefix));
+    const seedLine = findLine("Seed:");
+    const trickLine = findLine("Trick:");
+    const leaderLine = findLine("Leader:");
+    const turnLine = findLine("Turn:");
+    const trumpLine = findLine("Trump:");
+
+    if (!seedLine || !trickLine || !leaderLine || !turnLine || !trumpLine) {
+      setSnapshotError("Snapshot is missing Seed, Trick, Leader, Turn, or Trump.");
+      return;
+    }
+
+    const seedValue = Number(seedLine.split(":")[1]?.trim());
+    const trickValue = Number(trickLine.split(":")[1]?.trim());
+    const leaderValue = parseSeatLabel(leaderLine.split(":")[1] ?? "");
+    const turnValue = parseSeatLabel(turnLine.split(":")[1] ?? "");
+    const trumpValue = trumpLine.split(":")[1]?.trim() ?? "";
+
+    if (!Number.isFinite(seedValue) || seedValue < 0) {
+      setSnapshotError("Seed must be a valid non-negative number.");
+      return;
+    }
+    if (!Number.isFinite(trickValue) || trickValue < 1) {
+      setSnapshotError("Trick must be a positive number.");
+      return;
+    }
+    if (!leaderValue || !turnValue) {
+      setSnapshotError("Leader or Turn does not match current seat labels.");
+      return;
+    }
+
+    let parsedTrump: TrumpConfig = { enabled: false, suit: "S", mustBreak: true };
+    let parsedTrumpBroken = false;
+    if (trumpValue.toLowerCase() !== "none") {
+      const match = trumpValue.match(/([♠♥♦♣SHDC])\s*\((broken|not broken)\)/i);
+      if (!match) {
+        setSnapshotError('Trump must look like "♠ (broken)" or "♠ (not broken)".');
+        return;
+      }
+      const suit = parseSnapshotSuit(match[1]);
+      if (!suit) {
+        setSnapshotError("Trump suit is invalid.");
+        return;
+      }
+      parsedTrump = { enabled: true, suit, mustBreak: trump.mustBreak };
+      parsedTrumpBroken = match[2].toLowerCase() === "broken";
+    }
+
+    const parseSectionLines = (header: string) => {
+      const start = lines.findIndex((line) => line.trim() === header);
+      if (start < 0) return [];
+      const out: string[] = [];
+      for (let i = start + 1; i < lines.length; i += 1) {
+        const line = lines[i];
+        if (!line.trim()) break;
+        out.push(line);
+      }
+      return out;
+    };
+
+    const bids = { Left: null, Across: null, Right: null, Me: null } as Record<Seat, number | null>;
+    for (const line of parseSectionLines("Bids:")) {
+      const [labelPart, valuePart] = line.split(":");
+      if (!valuePart) continue;
+      const seat = parseSeatLabel(labelPart.replace("-", "").trim());
+      if (!seat) {
+        setSnapshotError("Bids section has an unknown seat label.");
+        return;
+      }
+      const value = Number(valuePart.trim());
+      if (!Number.isFinite(value)) {
+        setSnapshotError("Bids section must include numeric values.");
+        return;
+      }
+      bids[seat] = value;
+    }
+    if (Object.values(bids).some((value) => value == null)) {
+      setSnapshotError("Bids section must include all four seats.");
+      return;
+    }
+
+    const tricksWonParsed = { Left: 0, Across: 0, Right: 0, Me: 0 } as Record<Seat, number>;
+    for (const line of parseSectionLines("Tricks Won:")) {
+      const [labelPart, valuePart] = line.split(":");
+      if (!valuePart) continue;
+      const seat = parseSeatLabel(labelPart.replace("-", "").trim());
+      if (!seat) {
+        setSnapshotError("Tricks Won section has an unknown seat label.");
+        return;
+      }
+      const value = Number(valuePart.trim());
+      if (!Number.isFinite(value)) {
+        setSnapshotError("Tricks Won values must be numeric.");
+        return;
+      }
+      tricksWonParsed[seat] = value;
+    }
+
+    const trickParsed: PlayT[] = [];
+    for (const line of parseSectionLines("Current Trick:")) {
+      if (line.trim() === "(none)") break;
+      const [labelPart, cardPart] = line.split(":");
+      if (!cardPart) continue;
+      const seat = parseSeatLabel(labelPart.replace("-", "").trim());
+      if (!seat) {
+        setSnapshotError("Current Trick section has an unknown seat label.");
+        return;
+      }
+      const card = parseCardToken(cardPart.trim());
+      if (!card) {
+        setSnapshotError("Current Trick cards must be formatted like A♠.");
+        return;
+      }
+      trickParsed.push({ seat, card });
+    }
+
+    const handsParsed = { Left: [], Across: [], Right: [], Me: [] } as Hands;
+    for (const line of parseSectionLines("Hands:")) {
+      const [labelPart, cardsPart] = line.split(":");
+      if (!cardsPart) continue;
+      const seat = parseSeatLabel(labelPart.replace("-", "").trim());
+      if (!seat) {
+        setSnapshotError("Hands section has an unknown seat label.");
+        return;
+      }
+      const tokens = cardsPart.trim().split(/\s+/).filter(Boolean);
+      const cards: CardT[] = [];
+      for (const token of tokens) {
+        const card = parseCardToken(token);
+        if (!card) {
+          setSnapshotError("Hands must list cards like A♠.");
+          return;
+        }
+        cards.push(card);
+      }
+      handsParsed[seat] = cards;
+    }
+
+    const allHandsEmpty = SEATS.every((seat) => handsParsed[seat].length === 0);
+    const nextBidState = {
+      order: buildBidOrder("Me"),
+      index: 4,
+      bids,
+      revealed: { Left: true, Across: true, Right: true, Me: true },
+    } satisfies BidState;
+
+    setSnapshotError(null);
+    setViewedTrickIndex(null);
+    setViewedTrickStep(0);
+    setLeadPromptActive(false);
+    setSuitCountPromptActive(false);
+    setPendingIntentCard(null);
+    setIntentWarning(null);
+    setIntentDetails([]);
+    setPeekPrompt(null);
+    setAwaitContinue(false);
+    setBidState(nextBidState);
+    setDealSeed(Math.floor(seedValue) >>> 0);
+    setTrump(parsedTrump);
+    setGame({
+      hands: handsParsed,
+      tricksWon: tricksWonParsed,
+      leader: leaderValue,
+      turn: turnValue,
+      trick: trickParsed,
+      trickHistory: [],
+      trickNo: trickValue,
+      handComplete: allHandsEmpty || trickValue > 13,
+      trumpBroken: parsedTrumpBroken,
+      trickStartLeader: leaderValue,
+      trickStartTurn: leaderValue,
+    });
   };
 
   const debugCard = import.meta.env.DEV ? (
@@ -1707,6 +1955,24 @@ export default function App() {
         >
           Copy snapshot
         </Button>
+        <div className="space-y-2 rounded-md border border-dashed p-2">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Load snapshot
+          </div>
+          <textarea
+            value={snapshotInput}
+            onChange={(event) => {
+              setSnapshotInput(event.target.value);
+              if (snapshotError) setSnapshotError(null);
+            }}
+            placeholder="Paste snapshot text here"
+            className="h-28 w-full resize-none rounded-md border border-input bg-background px-2 py-1 text-xs text-foreground shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+          {snapshotError ? <div className="text-xs text-destructive">{snapshotError}</div> : null}
+          <Button variant="outline" className="w-full" onClick={loadSnapshot}>
+            Load snapshot
+          </Button>
+        </div>
         <Button
           variant={debugAutoPlay ? "default" : "outline"}
           className="w-full"
