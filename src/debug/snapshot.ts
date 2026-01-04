@@ -22,6 +22,7 @@ type SnapshotParseFailure = {
 };
 
 export type SnapshotParseResult = SnapshotParseSuccess | SnapshotParseFailure;
+export type SnapshotData = SnapshotParseSuccess["value"];
 
 function parseSeatLabel(value: string, seatLabels: Record<Seat, string>): Seat | null {
   const trimmed = value.trim();
