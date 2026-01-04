@@ -9,6 +9,14 @@ const srcPath = decodeURIComponent(
 export default defineConfig(({ command }) => ({
   base: command === "build" ? "/trick-taking-trainer/" : "/",
   plugins: [react()],
+  test: {
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "html", "json-summary"],
+      reportsDirectory: "coverage",
+      exclude: ["dist/**", "node_modules/**"],
+    },
+  },
   resolve: {
     alias: {
       "@": srcPath,
