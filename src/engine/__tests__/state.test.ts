@@ -214,6 +214,29 @@ describe("state", () => {
     expect(replay.trickNo).toBe(1);
   });
 
+  it("replayStateFromHistory advances to next trick without pausing", () => {
+    const trump: TrumpConfig = { enabled: false, suit: "S", mustBreak: true };
+    const history: PlayT[][] = [
+      [
+        { seat: "Me", card: { suit: "H", rank: 10, id: "H10" } },
+        { seat: "Left", card: { suit: "H", rank: 12, id: "H12" } },
+        { seat: "Across", card: { suit: "H", rank: 3, id: "H3" } },
+        { seat: "Right", card: { suit: "H", rank: 14, id: "H14" } },
+      ],
+    ];
+    const replay = replayStateFromHistory(history, 1, trump, false);
+    expect(replay.awaitContinue).toBe(false);
+    expect(replay.trick).toHaveLength(0);
+    expect(replay.trickNo).toBe(2);
+  });
+
+  it("replayStateFromHistory keeps trick one-based when no tricks are complete", () => {
+    const trump: TrumpConfig = { enabled: false, suit: "S", mustBreak: true };
+    const replay = replayStateFromHistory([], 1, trump, false);
+    expect(replay.trickNo).toBe(1);
+    expect(replay.trick).toHaveLength(0);
+  });
+
   it("buildHistorySnapshot marks awaitContinue when the trick is completed", () => {
     const trump: TrumpConfig = { enabled: false, suit: "S", mustBreak: true };
     const history: PlayT[][] = [
@@ -227,6 +250,20 @@ describe("state", () => {
     const snapshot = buildHistorySnapshot(history, 0, 4, 1, trump);
     expect(snapshot.awaitContinue).toBe(true);
     expect(snapshot.historySlice).toHaveLength(1);
+  });
+
+  it("replayStateFromHistory returns last trick when the hand is complete", () => {
+    const trump: TrumpConfig = { enabled: false, suit: "S", mustBreak: true };
+    const history: PlayT[][] = Array.from({ length: 13 }, (_, i) => [
+      { seat: "Me", card: { suit: "H", rank: 10, id: `H10-${i}` } },
+      { seat: "Left", card: { suit: "H", rank: 12, id: `H12-${i}` } },
+      { seat: "Across", card: { suit: "H", rank: 3, id: `H3-${i}` } },
+      { seat: "Right", card: { suit: "H", rank: 14, id: `H14-${i}` } },
+    ]);
+    const replay = replayStateFromHistory(history, 1, trump, false);
+    expect(replay.handComplete).toBe(true);
+    expect(replay.trickNo).toBe(13);
+    expect(replay.trick).toEqual(history[12]);
   });
 
   it("computeLegalBySeat and isPlayLegal agree on legality", () => {
@@ -257,6 +294,19 @@ describe("state", () => {
     };
     const legal = computeLegalBySeat(state, trump);
     expect(legal.Me.has("S2")).toBe(false);
+  });
+
+  it("shouldPromptSuitCount returns null when the trick has no lead", () => {
+    expect(shouldPromptSuitCount([], [])).toBeNull();
+  });
+
+  it("shouldPromptSuitCount returns null when everyone follows suit", () => {
+    const trick: PlayT[] = [
+      { seat: "Me", card: { suit: "H", rank: 9, id: "H9" } },
+      { seat: "Left", card: { suit: "H", rank: 2, id: "H2" } },
+      { seat: "Across", card: { suit: "H", rank: 3, id: "H3" } },
+    ];
+    expect(shouldPromptSuitCount([], trick)).toBeNull();
   });
 
   it("isPlayLegal rejects off-suit when following is possible", () => {

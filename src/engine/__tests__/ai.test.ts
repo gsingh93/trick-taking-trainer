@@ -160,6 +160,107 @@ describe("ai", () => {
     expect(decision?.cardId).toBe("H3");
   });
 
+  it("leads the shortest non-trump suit when it needs tricks", () => {
+    const decision = chooseCardToPlayForBid(
+      {
+        seat: "Left",
+        hand: [
+          { suit: "H", rank: 2, id: "H2" },
+          { suit: "D", rank: 3, id: "D3" },
+          { suit: "D", rank: 9, id: "D9" },
+          { suit: "S", rank: 5, id: "S5" },
+        ],
+        legalIds: new Set(["H2", "D3", "D9", "S5"]),
+        trick: [],
+        leader: "Left",
+        trump: { enabled: true, suit: "S", mustBreak: true },
+        tricksWon: { Left: 0, Across: 0, Right: 0, Me: 0 },
+        bid: 2,
+      },
+      () => 0
+    );
+    expect(decision?.cardId).toBe("H2");
+  });
+
+  it("leads the highest card in the strongest non-trump suit when not short", () => {
+    const decision = chooseCardToPlayForBid(
+      {
+        seat: "Left",
+        hand: [
+          { suit: "H", rank: 9, id: "H9" },
+          { suit: "H", rank: 12, id: "H12" },
+          { suit: "H", rank: 3, id: "H3" },
+          { suit: "D", rank: 11, id: "D11" },
+          { suit: "D", rank: 10, id: "D10" },
+          { suit: "D", rank: 4, id: "D4" },
+          { suit: "C", rank: 2, id: "C2" },
+          { suit: "C", rank: 3, id: "C3" },
+          { suit: "C", rank: 4, id: "C4" },
+          { suit: "S", rank: 5, id: "S5" },
+        ],
+        legalIds: new Set([
+          "H9",
+          "H12",
+          "H3",
+          "D11",
+          "D10",
+          "D4",
+          "C2",
+          "C3",
+          "C4",
+          "S5",
+        ]),
+        trick: [],
+        leader: "Left",
+        trump: { enabled: true, suit: "S", mustBreak: true },
+        tricksWon: { Left: 0, Across: 0, Right: 0, Me: 0 },
+        bid: 2,
+      },
+      () => 0
+    );
+    expect(decision?.cardId).toBe("H12");
+  });
+
+  it("leads the highest trump when only trump remains and it holds the ace", () => {
+    const decision = chooseCardToPlayForBid(
+      {
+        seat: "Left",
+        hand: [
+          { suit: "S", rank: 14, id: "S14" },
+          { suit: "S", rank: 2, id: "S2" },
+        ],
+        legalIds: new Set(["S14", "S2"]),
+        trick: [],
+        leader: "Left",
+        trump: { enabled: true, suit: "S", mustBreak: true },
+        tricksWon: { Left: 0, Across: 0, Right: 0, Me: 0 },
+        bid: 1,
+      },
+      () => 0
+    );
+    expect(decision?.cardId).toBe("S14");
+  });
+
+  it("leads the lowest trump when only trump remains without the ace", () => {
+    const decision = chooseCardToPlayForBid(
+      {
+        seat: "Left",
+        hand: [
+          { suit: "S", rank: 12, id: "S12" },
+          { suit: "S", rank: 3, id: "S3" },
+        ],
+        legalIds: new Set(["S12", "S3"]),
+        trick: [],
+        leader: "Left",
+        trump: { enabled: true, suit: "S", mustBreak: true },
+        tricksWon: { Left: 0, Across: 0, Right: 0, Me: 0 },
+        bid: 1,
+      },
+      () => 0
+    );
+    expect(decision?.cardId).toBe("S3");
+  });
+
   it("dumps the highest losing card when it has met the bid", () => {
     const decision = chooseCardToPlayForBid(
       {
@@ -260,6 +361,158 @@ describe("ai", () => {
       () => 0
     );
     expect(decision?.cardId).toBe("S10");
+  });
+
+  it("falls back to lowest winning card when honors are still unknown", () => {
+    const decision = chooseCardToPlayForBid(
+      {
+        seat: "Left",
+        hand: [
+          { suit: "S", rank: 6, id: "S6" },
+          { suit: "S", rank: 10, id: "S10" },
+        ],
+        legalIds: new Set(["S6", "S10"]),
+        trick: [
+          { seat: "Across", card: { suit: "S", rank: 5, id: "S5" } },
+          { seat: "Right", card: { suit: "S", rank: 4, id: "S4" } },
+        ],
+        trickHistory: [
+          [
+            { seat: "Me", card: { suit: "S", rank: 14, id: "S14" } },
+            { seat: "Left", card: { suit: "S", rank: 13, id: "S13" } },
+            { seat: "Across", card: { suit: "S", rank: 12, id: "S12" } },
+            { seat: "Right", card: { suit: "S", rank: 11, id: "S11" } },
+          ],
+        ],
+        leader: "Across",
+        trump: { enabled: true, suit: "S", mustBreak: true },
+        tricksWon: { Left: 0, Across: 0, Right: 0, Me: 0 },
+        bid: 2,
+      },
+      () => 0
+    );
+    expect(decision?.cardId).toBe("S6");
+  });
+
+  it("treats trump honors as unsafe when higher trump is unknown", () => {
+    const decision = chooseCardToPlayForBid(
+      {
+        seat: "Left",
+        hand: [
+          { suit: "S", rank: 6, id: "S6" },
+          { suit: "S", rank: 10, id: "S10" },
+        ],
+        legalIds: new Set(["S6", "S10"]),
+        trick: [
+          { seat: "Across", card: { suit: "S", rank: 5, id: "S5" } },
+          { seat: "Right", card: { suit: "S", rank: 4, id: "S4" } },
+        ],
+        trickHistory: [
+          [
+            { seat: "Me", card: { suit: "S", rank: 14, id: "S14" } },
+            { seat: "Left", card: { suit: "S", rank: 13, id: "S13" } },
+            { seat: "Across", card: { suit: "S", rank: 12, id: "S12" } },
+          ],
+        ],
+        leader: "Across",
+        trump: { enabled: true, suit: "S", mustBreak: true },
+        tricksWon: { Left: 1, Across: 0, Right: 0, Me: 0 },
+        bid: 2,
+      },
+      () => 0
+    );
+    expect(decision?.cardId).toBe("S6");
+  });
+
+  it("treats lead-suit honors as unsafe when higher lead cards are unknown", () => {
+    const decision = chooseCardToPlayForBid(
+      {
+        seat: "Left",
+        hand: [
+          { suit: "H", rank: 10, id: "H10" },
+          { suit: "H", rank: 6, id: "H6" },
+        ],
+        legalIds: new Set(["H6", "H10"]),
+        trick: [
+          { seat: "Across", card: { suit: "H", rank: 5, id: "H5" } },
+          { seat: "Right", card: { suit: "H", rank: 4, id: "H4" } },
+        ],
+        trickHistory: [
+          [
+            { seat: "Me", card: { suit: "H", rank: 14, id: "H14" } },
+            { seat: "Left", card: { suit: "H", rank: 13, id: "H13" } },
+          ],
+        ],
+        leader: "Across",
+        trump: { enabled: false, suit: "S", mustBreak: true },
+        tricksWon: { Left: 1, Across: 0, Right: 0, Me: 0 },
+        bid: 2,
+      },
+      () => 0
+    );
+    expect(decision?.cardId).toBe("H6");
+  });
+
+  it("treats lead-suit honors as unsafe when trump cards are still unknown", () => {
+    const decision = chooseCardToPlayForBid(
+      {
+        seat: "Left",
+        hand: [
+          { suit: "H", rank: 10, id: "H10" },
+          { suit: "H", rank: 6, id: "H6" },
+        ],
+        legalIds: new Set(["H6", "H10"]),
+        trick: [
+          { seat: "Across", card: { suit: "H", rank: 5, id: "H5" } },
+          { seat: "Right", card: { suit: "H", rank: 4, id: "H4" } },
+        ],
+        trickHistory: [
+          [
+            { seat: "Me", card: { suit: "H", rank: 14, id: "H14" } },
+            { seat: "Left", card: { suit: "H", rank: 13, id: "H13" } },
+            { seat: "Across", card: { suit: "H", rank: 12, id: "H12" } },
+            { seat: "Right", card: { suit: "H", rank: 11, id: "H11" } },
+          ],
+        ],
+        leader: "Across",
+        trump: { enabled: true, suit: "S", mustBreak: true },
+        tricksWon: { Left: 1, Across: 0, Right: 0, Me: 0 },
+        bid: 2,
+      },
+      () => 0
+    );
+    expect(decision?.cardId).toBe("H6");
+  });
+
+  it("treats off-suit cards as unsafe for honor-safe wins", () => {
+    const decision = chooseCardToPlayForBid(
+      {
+        seat: "Left",
+        hand: [
+          { suit: "D", rank: 12, id: "D12" },
+          { suit: "D", rank: 2, id: "D2" },
+        ],
+        legalIds: new Set(["D12", "D2"]),
+        trick: [
+          { seat: "Across", card: { suit: "H", rank: 10, id: "H10" } },
+          { seat: "Right", card: { suit: "H", rank: 9, id: "H9" } },
+        ],
+        trickHistory: [
+          [
+            { seat: "Me", card: { suit: "D", rank: 14, id: "D14" } },
+            { seat: "Left", card: { suit: "D", rank: 13, id: "D13" } },
+            { seat: "Across", card: { suit: "D", rank: 11, id: "D11" } },
+            { seat: "Right", card: { suit: "D", rank: 10, id: "D10" } },
+          ],
+        ],
+        leader: "Across",
+        trump: { enabled: false, suit: "S", mustBreak: true },
+        tricksWon: { Left: 1, Across: 0, Right: 0, Me: 0 },
+        bid: 2,
+      },
+      () => 0
+    );
+    expect(decision?.cardId).toBe("D2");
   });
 
   it("dumps the highest card when forced to win as last to act", () => {
