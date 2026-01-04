@@ -289,6 +289,43 @@ describe("state", () => {
     expect(replay.trick).toEqual(history[12]);
   });
 
+  it("replayStateFromHistory returns last completed trick when pausing between tricks", () => {
+    const trump: TrumpConfig = { enabled: false, suit: "S", mustBreak: true };
+    const history: PlayT[][] = [
+      [
+        { seat: "Me", card: { suit: "H", rank: 10, id: "H10" } },
+        { seat: "Left", card: { suit: "H", rank: 12, id: "H12" } },
+        { seat: "Across", card: { suit: "H", rank: 3, id: "H3" } },
+        { seat: "Right", card: { suit: "H", rank: 14, id: "H14" } },
+      ],
+      [
+        { seat: "Right", card: { suit: "D", rank: 10, id: "D10" } },
+        { seat: "Me", card: { suit: "D", rank: 9, id: "D9" } },
+        { seat: "Left", card: { suit: "D", rank: 8, id: "D8" } },
+        { seat: "Across", card: { suit: "D", rank: 7, id: "D7" } },
+      ],
+    ];
+    const replay = replayStateFromHistory(history, 1, trump, true);
+    expect(replay.awaitContinue).toBe(true);
+    expect(replay.trick).toEqual(history[1]);
+    expect(replay.trickNo).toBe(2);
+  });
+
+  it("shouldPromptSuitCount returns the lead suit when first off-suit occurs", () => {
+    const history: PlayT[][] = [
+      [
+        { seat: "Me", card: { suit: "S", rank: 10, id: "S10" } },
+        { seat: "Left", card: { suit: "S", rank: 2, id: "S2" } },
+      ],
+    ];
+    const trick: PlayT[] = [
+      { seat: "Me", card: { suit: "D", rank: 9, id: "D9" } },
+      { seat: "Left", card: { suit: "D", rank: 2, id: "D2" } },
+      { seat: "Across", card: { suit: "H", rank: 3, id: "H3" } },
+    ];
+    expect(shouldPromptSuitCount(history, trick)).toBe("D");
+  });
+
   it("computeLegalBySeat and isPlayLegal agree on legality", () => {
     const trump: TrumpConfig = { enabled: false, suit: "S", mustBreak: true };
     const base = initGameState(1);

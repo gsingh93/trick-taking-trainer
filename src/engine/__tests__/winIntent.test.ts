@@ -159,4 +159,40 @@ describe("winIntent", () => {
     expect(result.higherRanks).toEqual([]);
     expect(result.trumpThreats).toEqual([]);
   });
+
+  it("warns about higher ranks when honors-only is off and ranks remain", () => {
+    const card: CardT = { suit: "D", rank: 8, id: "D8" };
+    const result = evaluateWinIntent({
+      card,
+      trickHistory: [],
+      trick: [],
+      hand: [],
+      trump: { enabled: false, suit: "S", mustBreak: true },
+      winIntentWarnTrump: false,
+      winIntentWarnHonorsOnly: false,
+      actualVoid: createVoidGrid(),
+    });
+    expect(result.warning).toBe("This card can be beaten by a higher card");
+    expect(result.higherRanks.length).toBeGreaterThan(0);
+  });
+
+  it("does not warn when honors-only is on and no higher honors remain", () => {
+    const card: CardT = { suit: "C", rank: 12, id: "C12" };
+    const trickHistory: PlayT[][] = [
+      [{ seat: "Me", card: { suit: "C", rank: 14, id: "C14" } }],
+      [{ seat: "Left", card: { suit: "C", rank: 13, id: "C13" } }],
+    ];
+    const result = evaluateWinIntent({
+      card,
+      trickHistory,
+      trick: [],
+      hand: [],
+      trump: { enabled: false, suit: "S", mustBreak: true },
+      winIntentWarnTrump: false,
+      winIntentWarnHonorsOnly: true,
+      actualVoid: createVoidGrid(),
+    });
+    expect(result.warning).toBeNull();
+    expect(result.higherRanks).toEqual([]);
+  });
 });
