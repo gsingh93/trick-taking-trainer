@@ -42,19 +42,21 @@ export function chooseCardToPlayForBid(
         return { cardId: (offTrumpWinning ?? winning).id };
       }
     }
-    const highestLosing = highestLosingCard(legalCards, ctx.trick, ctx.trump);
-    if (highestLosing) {
-      return { cardId: highestLosing.id };
-    }
-    if (
-      ctx.trick.length === 3 ||
-      (ctx.trump.enabled &&
-        leadSuit &&
-        remainingOpponentsVoidInSuit(leadSuit, ctx.seat, ctx.trick, ctx.actualVoid) &&
-        remainingOpponentsVoidInSuit(ctx.trump.suit, ctx.seat, ctx.trick, ctx.actualVoid))
-    ) {
-      const highest = highestCard(legalCards, ctx.trump, countSuits(ctx.hand), rng);
-      return { cardId: highest.id };
+    if (!needsTricks) {
+      const highestLosing = highestLosingCard(legalCards, ctx.trick, ctx.trump);
+      if (highestLosing) {
+        return { cardId: highestLosing.id };
+      }
+      if (
+        ctx.trick.length === 3 ||
+        (ctx.trump.enabled &&
+          leadSuit &&
+          remainingOpponentsVoidInSuit(leadSuit, ctx.seat, ctx.trick, ctx.actualVoid) &&
+          remainingOpponentsVoidInSuit(ctx.trump.suit, ctx.seat, ctx.trick, ctx.actualVoid))
+      ) {
+        const highest = highestCard(legalCards, ctx.trump, countSuits(ctx.hand), rng);
+        return { cardId: highest.id };
+      }
     }
     const lowest = lowestCard(legalCards, ctx.trump);
     return { cardId: lowest.id };
