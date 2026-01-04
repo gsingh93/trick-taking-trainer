@@ -1805,6 +1805,8 @@ export default function App() {
                       {renderLabeled("Trump leftover sacrifices", breakdown.trump.leftover)}
                       {renderLabeled("Short-suit bonus", breakdown.trump.shortBonus.toFixed(1))}
                       {renderLabeled("Short-suit bonus applied", breakdown.trump.shortBonusApplied.toFixed(1))}
+                      {renderLabeled("Remaining trump", breakdown.trump.remainingTrump.toFixed(1))}
+                      {renderLabeled("Remaining trump bonus", breakdown.trump.remainingTrumpBonus.toFixed(1))}
                       {renderLabeled("Singletons", breakdown.trump.singletons)}
                       {renderLabeled("Doubletons", breakdown.trump.doubletons)}
                     </div>

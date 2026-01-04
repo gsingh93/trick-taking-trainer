@@ -7,7 +7,8 @@ import type { CardT, Rank, Suit, TrumpConfig } from "../types";
  *     to draw higher missing honors. If you're one sacrifice short, count +0.5.
  * - For the trump suit, treat 10+ as honors and apply the same sacrifice logic.
  *   Short-suit bonuses (singletons +1.5, doubletons +1) are applied first and
- *   consume trump sacrifices before counting trump honor winners.
+ *   consume trump sacrifices before counting trump honor winners. After that,
+ *   add a bonus of (remainingTrump - 3) when you still hold many non-winners.
  * - For non-trump suits, cap the suit contribution when trump is enabled:
  *   - 4 cards or fewer: cap 3
  *   - 5 cards: cap 2
@@ -104,6 +105,8 @@ export type BidBreakdown = {
     leftover: number;
     shortBonus: number;
     shortBonusApplied: number;
+    remainingTrump: number;
+    remainingTrumpBonus: number;
     singletons: number;
     doubletons: number;
   };
@@ -185,7 +188,9 @@ export function buildBidBreakdown(hand: CardT[], trump: TrumpConfig): BidBreakdo
       TRUMP_HONORS,
       trumpSacrifices - shortBonusApplied
     );
-    total += trumpScore.points + shortBonusApplied;
+    const remainingTrump = suitCards[trump.suit].length - trumpScore.points - shortBonusApplied;
+    const remainingTrumpBonus = Math.max(0, remainingTrump - 3);
+    total += trumpScore.points + shortBonusApplied + remainingTrumpBonus;
     // Leftover low trump after supporting honors and short-suit bonus.
     trumpLeftover = Math.max(0, trumpScore.sacrifices - shortBonusApplied);
     trumpInfo = {
@@ -198,6 +203,8 @@ export function buildBidBreakdown(hand: CardT[], trump: TrumpConfig): BidBreakdo
       leftover: trumpLeftover,
       shortBonus,
       shortBonusApplied,
+      remainingTrump,
+      remainingTrumpBonus,
       singletons,
       doubletons,
     };
