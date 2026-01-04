@@ -1556,6 +1556,35 @@ export default function App() {
     );
   }, [hands, trump]);
 
+  const trumpStatus = trump.enabled
+    ? `${suitGlyph(trump.suit)} (${game.trumpBroken ? "broken" : "not broken"})`
+    : "None";
+  const buildSnapshotText = () => {
+    const formatHandLine = (seat: Seat) =>
+      sortHand(hands[seat], suitOrder, sortAscending)
+        .map((card) => `${rankGlyph(card.rank)}${suitGlyph(card.suit)}`)
+        .join(" ");
+    const bidLine = (seat: Seat) => (bidState?.bids[seat] != null ? bidState.bids[seat] : "?");
+    const lines = [
+      "Trick Taking Trainer Snapshot",
+      `Seed: ${dealSeed}`,
+      `Trick: ${trickNo}`,
+      `Leader: ${seatLabels[leader]}`,
+      `Trump: ${trumpStatus}`,
+      "",
+      "Bids:",
+      ...SEATS.map((seat) => `  ${seatLabels[seat]}: ${bidLine(seat)}`),
+      "",
+      "Tricks Won:",
+      ...SEATS.map((seat) => `  ${seatLabels[seat]}: ${tricksWon[seat]}`),
+      "",
+      "Hands:",
+      ...SEATS.map((seat) => `  ${seatLabels[seat]}: ${formatHandLine(seat)}`),
+      "",
+    ];
+    return lines.join("\n");
+  };
+
   const debugCard = import.meta.env.DEV ? (
     <div className="rounded-lg border bg-card p-3 text-sm shadow-sm">
       <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Debug</div>
@@ -1628,32 +1657,7 @@ export default function App() {
           variant="outline"
           className="w-full"
           onClick={() => {
-            const formatHandLine = (seat: Seat) =>
-              sortHand(hands[seat], suitOrder, sortAscending)
-                .map((card) => `${rankGlyph(card.rank)}${suitGlyph(card.suit)}`)
-                .join(" ");
-            const bidLine = (seat: Seat) => (bidState?.bids[seat] != null ? bidState.bids[seat] : "?");
-            const trumpStatus = trump.enabled
-              ? `${suitGlyph(trump.suit)} (${game.trumpBroken ? "broken" : "not broken"})`
-              : "None";
-            const lines = [
-              "Trick Taking Trainer Snapshot",
-              `Seed: ${dealSeed}`,
-              `Trick: ${trickNo}`,
-              `Leader: ${seatLabels[leader]}`,
-              `Trump: ${trumpStatus}`,
-              "",
-              "Bids:",
-              ...SEATS.map((seat) => `  ${seatLabels[seat]}: ${bidLine(seat)}`),
-              "",
-              "Tricks Won:",
-              ...SEATS.map((seat) => `  ${seatLabels[seat]}: ${tricksWon[seat]}`),
-              "",
-              "Hands:",
-              ...SEATS.map((seat) => `  ${seatLabels[seat]}: ${formatHandLine(seat)}`),
-              "",
-            ];
-            const text = lines.join("\n");
+            const text = buildSnapshotText();
             const blob = new Blob([text], { type: "text/plain" });
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
@@ -1671,32 +1675,7 @@ export default function App() {
           variant="outline"
           className="w-full"
           onClick={async () => {
-            const formatHandLine = (seat: Seat) =>
-              sortHand(hands[seat], suitOrder, sortAscending)
-                .map((card) => `${rankGlyph(card.rank)}${suitGlyph(card.suit)}`)
-                .join(" ");
-            const bidLine = (seat: Seat) => (bidState?.bids[seat] != null ? bidState.bids[seat] : "?");
-            const trumpStatus = trump.enabled
-              ? `${suitGlyph(trump.suit)} (${game.trumpBroken ? "broken" : "not broken"})`
-              : "None";
-            const lines = [
-              "Trick Taking Trainer Snapshot",
-              `Seed: ${dealSeed}`,
-              `Trick: ${trickNo}`,
-              `Leader: ${seatLabels[leader]}`,
-              `Trump: ${trumpStatus}`,
-              "",
-              "Bids:",
-              ...SEATS.map((seat) => `  ${seatLabels[seat]}: ${bidLine(seat)}`),
-              "",
-              "Tricks Won:",
-              ...SEATS.map((seat) => `  ${seatLabels[seat]}: ${tricksWon[seat]}`),
-              "",
-              "Hands:",
-              ...SEATS.map((seat) => `  ${seatLabels[seat]}: ${formatHandLine(seat)}`),
-              "",
-            ];
-            const text = lines.join("\n");
+            const text = buildSnapshotText();
             if (navigator.clipboard?.writeText) {
               await navigator.clipboard.writeText(text);
               return;
