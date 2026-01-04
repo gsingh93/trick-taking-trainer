@@ -39,6 +39,14 @@ export function chooseCardToPlayForBid(
         return { cardId: (offTrumpWinning ?? winning).id };
       }
     }
+    const highestLosing = highestLosingCard(legalCards, ctx.trick, ctx.trump);
+    if (highestLosing) {
+      return { cardId: highestLosing.id };
+    }
+    if (ctx.trick.length === 3) {
+      const highest = highestCard(legalCards, ctx.trump, countSuits(ctx.hand), rng);
+      return { cardId: highest.id };
+    }
     const lowest = lowestCard(legalCards, ctx.trump);
     return { cardId: lowest.id };
   }
@@ -158,6 +166,30 @@ function winScore(card: CardT, trump: TrumpConfig, suitCounts: Record<Suit, numb
 
 function loseScore(card: CardT, trump: TrumpConfig): number {
   return card.rank + (isTrump(card, trump) ? 20 : 0);
+}
+
+function highestLosingCard(cards: CardT[], trick: PlayT[], trump: TrumpConfig): CardT | null {
+  if (trick.length === 0) return null;
+  const leadSuit = trickLeadSuit(trick);
+  if (!leadSuit) return null;
+  let currentBest = trick[0].card;
+  for (let i = 1; i < trick.length; i++) {
+    const challenger = trick[i].card;
+    if (compareCardsInTrick(challenger, currentBest, leadSuit, trump) === 1) {
+      currentBest = challenger;
+    }
+  }
+  let best: CardT | null = null;
+  let bestScore = Number.NEGATIVE_INFINITY;
+  for (const card of cards) {
+    if (compareCardsInTrick(card, currentBest, leadSuit, trump) === 1) continue;
+    const score = loseScore(card, trump);
+    if (!best || score > bestScore) {
+      best = card;
+      bestScore = score;
+    }
+  }
+  return best;
 }
 
 function lowestWinningCard(cards: CardT[], trick: PlayT[], trump: TrumpConfig): CardT | null {

@@ -159,6 +159,53 @@ describe("ai", () => {
     expect(decision?.cardId).toBe("H3");
   });
 
+  it("dumps the highest losing card when it has met the bid", () => {
+    const decision = chooseCardToPlayForBid(
+      {
+        seat: "Left",
+        hand: [
+          { suit: "S", rank: 7, id: "S7" },
+          { suit: "S", rank: 10, id: "S10" },
+        ],
+        legalIds: new Set(["S7", "S10"]),
+        trick: [
+          { seat: "Across", card: { suit: "S", rank: 14, id: "S14" } },
+          { seat: "Right", card: { suit: "S", rank: 9, id: "S9" } },
+        ],
+        leader: "Across",
+        trump: { enabled: true, suit: "S", mustBreak: true },
+        tricksWon: { Left: 3, Across: 0, Right: 0, Me: 0 },
+        bid: 3,
+      },
+      () => 0
+    );
+    expect(decision?.cardId).toBe("S10");
+  });
+
+  it("dumps the highest card when forced to win as last to act", () => {
+    const decision = chooseCardToPlayForBid(
+      {
+        seat: "Left",
+        hand: [
+          { suit: "S", rank: 11, id: "S11" },
+          { suit: "S", rank: 12, id: "S12" },
+        ],
+        legalIds: new Set(["S11", "S12"]),
+        trick: [
+          { seat: "Across", card: { suit: "S", rank: 9, id: "S9" } },
+          { seat: "Right", card: { suit: "S", rank: 10, id: "S10" } },
+          { seat: "Me", card: { suit: "S", rank: 8, id: "S8" } },
+        ],
+        leader: "Across",
+        trump: { enabled: true, suit: "S", mustBreak: true },
+        tricksWon: { Left: 2, Across: 0, Right: 0, Me: 0 },
+        bid: 2,
+      },
+      () => 0
+    );
+    expect(decision?.cardId).toBe("S12");
+  });
+
   it("estimates higher bids for stronger hands", () => {
     const strong: CardT[] = [
       { suit: "S", rank: 14, id: "S14" },
