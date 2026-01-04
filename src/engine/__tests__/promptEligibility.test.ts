@@ -163,6 +163,18 @@ describe("shouldPromptWinIntent", () => {
     expect(shouldPromptWinIntent(args)).toBe(false);
   });
 
+  it("returns false when a later trick card overtakes the lead", () => {
+    const args = {
+      ...baseWinIntentArgs(),
+      card: makeCard("H", 10, "H10"),
+      trick: [
+        makePlay("Left", makeCard("H", 9, "H9")),
+        makePlay("Across", makeCard("H", 12, "H12")),
+      ],
+    };
+    expect(shouldPromptWinIntent(args)).toBe(false);
+  });
+
   it("returns false when remaining players are all void in the suit", () => {
     const actualVoid = createVoidGrid();
     actualVoid.Across.H = true;

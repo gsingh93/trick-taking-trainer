@@ -64,6 +64,46 @@ describe("parseSnapshotText", () => {
     expect(result.value.bids.Left).toBeNull();
   });
 
+  it("rejects invalid trump formatting", () => {
+    const invalidTrump = baseSnapshot.replace("Trump: ♠ (broken)", "Trump: Spades");
+    const result = parseSnapshotText(invalidTrump, seatLabels, true);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toBe('Trump must look like "♠ (broken)" or "♠ (not broken)".');
+  });
+
+  it("rejects invalid seed values", () => {
+    const invalidSeed = baseSnapshot.replace("Seed: 1", "Seed: -5");
+    const result = parseSnapshotText(invalidSeed, seatLabels, true);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toBe("Seed must be a valid non-negative number.");
+  });
+
+  it("rejects invalid trick values", () => {
+    const invalidTrick = baseSnapshot.replace("Trick: 2", "Trick: 0");
+    const result = parseSnapshotText(invalidTrick, seatLabels, true);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toBe("Trick must be a positive number.");
+  });
+
+  it("rejects invalid card tokens", () => {
+    const invalidHand = baseSnapshot.replace("West: 2♠", "West: 1♠");
+    const result = parseSnapshotText(invalidHand, seatLabels, true);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toBe("Hands must list cards like A♠.");
+  });
+
+  it("rejects invalid bids", () => {
+    const invalidBid = baseSnapshot.replace("West: 2", "West: X");
+    const result = parseSnapshotText(invalidBid, seatLabels, true);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toBe("Bids section must include numeric values or '?'.");
+  });
+
   it("fails when the header is missing", () => {
     const result = parseSnapshotText("Seed: 1", seatLabels, true);
     expect(result.ok).toBe(false);
