@@ -502,6 +502,7 @@ export default function App() {
 
   const isViewingHistory =
     viewedTrickIndex != null && viewedTrickIndex >= 0 && viewedTrickIndex < trickHistory.length;
+  const displayBidResult = isViewingHistory ? null : bidResultDisplay;
   const historySnapshot = useMemo(() => {
     if (!isViewingHistory || viewedTrickIndex == null) return null;
     return buildHistorySnapshot(trickHistory, viewedTrickIndex, viewedTrickStep, dealSeed, trump);
@@ -1448,7 +1449,7 @@ export default function App() {
       displayTrickNo={displayTrickNo}
       trickNo={trickNo}
       bidDisplay={bidDisplay}
-      bidResultDisplay={bidResultDisplay}
+      bidResultDisplay={displayBidResult}
       shownHands={shownHands}
       toggleRevealSeat={toggleRevealSeat}
       modeOpenHandVerify={modeOpenHandVerify}
