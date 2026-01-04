@@ -207,6 +207,30 @@ describe("ai", () => {
     expect(decision?.cardId).toBe("S6");
   });
 
+  it("uses the highest winning card when it safely completes the bid", () => {
+    const decision = chooseCardToPlayForBid(
+      {
+        seat: "Left",
+        hand: [
+          { suit: "S", rank: 6, id: "S6" },
+          { suit: "S", rank: 10, id: "S10" },
+        ],
+        legalIds: new Set(["S6", "S10"]),
+        trick: [
+          { seat: "Across", card: { suit: "C", rank: 6, id: "C6" } },
+          { seat: "Right", card: { suit: "C", rank: 4, id: "C4" } },
+          { seat: "Me", card: { suit: "S", rank: 12, id: "S12" } },
+        ],
+        leader: "Across",
+        trump: { enabled: true, suit: "S", mustBreak: true },
+        tricksWon: { Left: 2, Across: 0, Right: 0, Me: 0 },
+        bid: 3,
+      },
+      () => 0
+    );
+    expect(decision?.cardId).toBe("S10");
+  });
+
   it("dumps the highest card when forced to win as last to act", () => {
     const decision = chooseCardToPlayForBid(
       {

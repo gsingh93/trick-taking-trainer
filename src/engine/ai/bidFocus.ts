@@ -34,6 +34,17 @@ export function chooseCardToPlayForBid(
     if (needsTricks) {
       const winning = lowestWinningCard(legalCards, ctx.trick, ctx.trump);
       if (winning) {
+        const willCompleteBid = ctx.tricksWon[ctx.seat] + 1 >= (ctx.bid ?? 0);
+        const safeToWin =
+          ctx.trick.length === 3 ||
+          (ctx.trump.enabled &&
+            leadSuit &&
+            remainingOpponentsVoidInSuit(leadSuit, ctx.seat, ctx.trick, ctx.actualVoid) &&
+            remainingOpponentsVoidInSuit(ctx.trump.suit, ctx.seat, ctx.trick, ctx.actualVoid));
+        if (willCompleteBid && safeToWin) {
+          const highestWin = highestWinningCard(legalCards, ctx.trick, ctx.trump);
+          return { cardId: (highestWin ?? winning).id };
+        }
         const offTrumpWinning = lowestWinningCard(
           legalCards.filter((c) => !isTrump(c, ctx.trump)),
           ctx.trick,
@@ -218,6 +229,33 @@ function highestLosingCard(cards: CardT[], trick: PlayT[], trump: TrumpConfig): 
     }
   }
   return best;
+}
+
+function highestWinningCard(cards: CardT[], trick: PlayT[], trump: TrumpConfig): CardT | null {
+  if (trick.length === 0) return null;
+  const leadSuit = trickLeadSuit(trick);
+  if (!leadSuit) return null;
+
+  let currentBest = trick[0].card;
+  for (let i = 1; i < trick.length; i++) {
+    const challenger = trick[i].card;
+    if (compareCardsInTrick(challenger, currentBest, leadSuit, trump) === 1) {
+      currentBest = challenger;
+    }
+  }
+
+  let bestWin: CardT | null = null;
+  for (const card of cards) {
+    if (compareCardsInTrick(card, currentBest, leadSuit, trump) !== 1) continue;
+    if (!bestWin) {
+      bestWin = card;
+      continue;
+    }
+    if (compareCardsInTrick(card, bestWin, leadSuit, trump) === 1) {
+      bestWin = card;
+    }
+  }
+  return bestWin;
 }
 
 function lowestWinningCard(cards: CardT[], trick: PlayT[], trump: TrumpConfig): CardT | null {
