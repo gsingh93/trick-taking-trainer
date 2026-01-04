@@ -219,7 +219,7 @@ describe("ai", () => {
         trick: [
           { seat: "Across", card: { suit: "C", rank: 6, id: "C6" } },
           { seat: "Right", card: { suit: "C", rank: 4, id: "C4" } },
-          { seat: "Me", card: { suit: "S", rank: 12, id: "S12" } },
+          { seat: "Me", card: { suit: "S", rank: 2, id: "S2" } },
         ],
         leader: "Across",
         trump: { enabled: true, suit: "S", mustBreak: true },
