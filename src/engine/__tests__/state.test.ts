@@ -230,6 +230,29 @@ describe("state", () => {
     expect(replay.trickNo).toBe(2);
   });
 
+  it("replayStateFromHistory advances and preserves leader after multiple tricks", () => {
+    const trump: TrumpConfig = { enabled: false, suit: "S", mustBreak: true };
+    const history: PlayT[][] = [
+      [
+        { seat: "Me", card: { suit: "H", rank: 10, id: "H10" } },
+        { seat: "Left", card: { suit: "H", rank: 12, id: "H12" } },
+        { seat: "Across", card: { suit: "H", rank: 3, id: "H3" } },
+        { seat: "Right", card: { suit: "H", rank: 14, id: "H14" } },
+      ],
+      [
+        { seat: "Right", card: { suit: "D", rank: 10, id: "D10" } },
+        { seat: "Me", card: { suit: "D", rank: 9, id: "D9" } },
+        { seat: "Left", card: { suit: "D", rank: 8, id: "D8" } },
+        { seat: "Across", card: { suit: "D", rank: 7, id: "D7" } },
+      ],
+    ];
+    const replay = replayStateFromHistory(history, 1, trump, false);
+    expect(replay.awaitContinue).toBe(false);
+    expect(replay.trick).toHaveLength(0);
+    expect(replay.trickNo).toBe(3);
+    expect(replay.leader).toBe("Right");
+  });
+
   it("replayStateFromHistory keeps trick one-based when no tricks are complete", () => {
     const trump: TrumpConfig = { enabled: false, suit: "S", mustBreak: true };
     const replay = replayStateFromHistory([], 1, trump, false);

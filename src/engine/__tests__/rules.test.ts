@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { determineTrickWinner, isLegalPlay, trickLeadSuit } from "../rules";
+import { compareCardsInTrick, determineTrickWinner, isLegalPlay, trickLeadSuit } from "../rules";
 import type { CardT, PlayT, TrumpConfig } from "../types";
 
 describe("rules", () => {
@@ -104,6 +104,22 @@ describe("rules", () => {
 
   it("returns null when there is no lead", () => {
     expect(trickLeadSuit([])).toBeNull();
+  });
+
+  it("treats trump as higher than lead suit in comparisons", () => {
+    const trump: TrumpConfig = { enabled: true, suit: "S", mustBreak: true };
+    const leadSuit = "H";
+    const leadCard: CardT = { suit: "H", rank: 14, id: "H14" };
+    const trumpCard: CardT = { suit: "S", rank: 2, id: "S2" };
+    expect(compareCardsInTrick(trumpCard, leadCard, leadSuit, trump)).toBe(1);
+  });
+
+  it("treats off-suit as lower than lead when no trump", () => {
+    const trump: TrumpConfig = { enabled: false, suit: "S", mustBreak: true };
+    const leadSuit = "H";
+    const leadCard: CardT = { suit: "H", rank: 10, id: "H10" };
+    const offSuit: CardT = { suit: "D", rank: 14, id: "D14" };
+    expect(compareCardsInTrick(offSuit, leadCard, leadSuit, trump)).toBe(-1);
   });
 
   it("allows leading trump when hand is all trump", () => {
