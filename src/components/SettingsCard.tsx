@@ -409,20 +409,6 @@ export function SettingsCard(props: SettingsCardProps) {
         disabled: !aiEnabled,
         className: !aiEnabled ? "opacity-50" : "",
       },
-      {
-        key: "pause-before",
-        label: "Pause before next trick",
-        checked: pauseBeforeNextTrick,
-        onCheckedChange: setPauseBeforeNextTrick,
-      },
-      {
-        key: "first-seat-random",
-        label: "Randomize first leader",
-        checked: firstSeatRandom,
-        onCheckedChange: setFirstSeatRandom,
-        disabled: firstSeatLocked,
-        className: firstSeatLocked ? "opacity-50" : "",
-      },
     ] satisfies SwitchRow[],
     aiSelects: [
       {
@@ -445,6 +431,24 @@ export function SettingsCard(props: SettingsCardProps) {
           </Select>
         ),
       },
+    ] satisfies SelectRow[],
+    leader: [
+      {
+        key: "first-seat-random",
+        label: "Randomize first leader",
+        checked: firstSeatRandom,
+        onCheckedChange: setFirstSeatRandom,
+        disabled: firstSeatLocked,
+        className: firstSeatLocked ? "opacity-50" : "",
+      },
+      {
+        key: "pause-before",
+        label: "Pause before next trick",
+        checked: pauseBeforeNextTrick,
+        onCheckedChange: setPauseBeforeNextTrick,
+      },
+    ] satisfies SwitchRow[],
+    leaderSelects: [
       {
         key: "first-seat",
         label: "First leader",
@@ -649,10 +653,14 @@ export function SettingsCard(props: SettingsCardProps) {
         <div className="h-1" />
         <CardTitle>Gameplay &amp; UI Settings</CardTitle>
 
+        {settingsRows.leaderSelects.map(renderSelectRow)}
+        {settingsRows.leader.map(renderSwitchRow)}
+
+        <Separator />
+
         {settingsRows.ai.slice(0, 1).map(renderSwitchRow)}
         {settingsRows.aiSelects.map(renderSelectRow)}
-
-        {settingsRows.ai.slice(1, 2).map(renderSwitchRow)}
+        {settingsRows.ai.slice(1).map(renderSwitchRow)}
 
         <div className={"grid grid-cols-[minmax(0,1fr)_auto] gap-2 " + (!aiEnabled ? "opacity-50" : "")}>
           <span className="text-sm">AI delay (ms)</span>
