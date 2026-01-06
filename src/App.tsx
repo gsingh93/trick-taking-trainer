@@ -941,13 +941,14 @@ export default function App() {
     });
   }
 
-  function resolveTrickAfterDelay() {
+  function resolveTrickAfterDelay(completedTrick: PlayT[], historyBeforeTrick: PlayT[][]) {
     setIsResolving(true);
     cancelResolveTimer();
     const promptSuit =
-      suitCountPromptEnabled && !isViewingHistory ? shouldPromptSuitCount(trickHistory, trick) : null;
-    const filteredPromptSuit =
-      promptSuit && suitCountPromptSuits.includes(promptSuit) ? promptSuit : null;
+      suitCountPromptEnabled && !isViewingHistory
+        ? shouldPromptSuitCount(historyBeforeTrick, completedTrick)
+        : null;
+    const filteredPromptSuit = promptSuit && suitCountPromptSuits.includes(promptSuit) ? promptSuit : null;
 
     const resolveDelay = debugAutoPlay ? 0 : aiDelayMs;
     resolveTimerRef.current = window.setTimeout(() => {
@@ -1065,7 +1066,7 @@ export default function App() {
     }
 
     // Final card played: keep the trick visible, then resolve after the configured delay.
-    resolveTrickAfterDelay();
+    resolveTrickAfterDelay(nextTrick, trickHistory);
   }
 
   function resetTrickOnly() {
