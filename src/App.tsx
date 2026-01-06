@@ -1,12 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { chooseCardToPlay } from "@/engine/ai/random";
 import { shouldRunAi } from "@/engine/ai/logic";
 import { canAdvanceTrick, canPlayCard } from "@/engine/flow";
@@ -14,7 +7,7 @@ import { chooseCardToPlayForBid } from "@/engine/ai/bidFocus";
 import { buildBidBreakdown, estimateBid } from "@/engine/ai/bidHeuristic";
 import { remainingHonorsInSuit } from "@/engine/training";
 import { evaluateWinIntent } from "@/engine/winIntent";
-import { trickLeadSuit, determineTrickWinner } from "@/engine/rules";
+import { determineTrickWinner } from "@/engine/rules";
 import { getVoidPromptLead, shouldPromptWinIntent } from "@/engine/prompts";
 import { buildDeck, createRng, dealNewHands } from "@/engine/deck";
 import {
@@ -54,13 +47,14 @@ import {
   type TrumpConfig,
 } from "@/engine/types";
 import { RefreshCw, Moon, Sun } from "lucide-react";
-import { rankGlyph, suitColorClass, suitGlyph } from "@/ui/cardUtils";
+import { rankGlyph, suitGlyph } from "@/ui/cardUtils";
 import { SettingsCard } from "@/components/SettingsCard";
 import { TrickHistoryCard } from "@/components/TrickHistoryCard";
 import { TableCard } from "@/components/TableCard";
 import { HelpCard } from "@/components/HelpCard";
 import { DebugPanel } from "@/components/DebugPanel";
 import { SeedInput } from "@/components/SeedInput";
+import { PromptOverlays } from "@/components/PromptOverlays";
 import { buildSnapshotText, type SnapshotData } from "@/debug/snapshot";
 
 /**
@@ -220,26 +214,6 @@ function formatWinIntentDetails(args: {
     details.push(`Trump threat: an opponent may trump with ${suitGlyph(trumpSuit)}${who}`);
   }
   return details;
-}
-
-function formatOrdinal(value: number): string {
-  const abs = Math.abs(value);
-  const mod100 = abs % 100;
-  if (mod100 >= 11 && mod100 <= 13) return `${value}th`;
-  switch (abs % 10) {
-    case 1:
-      return `${value}st`;
-    case 2:
-      return `${value}nd`;
-    case 3:
-      return `${value}rd`;
-    default:
-      return `${value}th`;
-  }
-}
-
-function formatCardCount(value: number): string {
-  return `${value} ${value === 1 ? "card" : "cards"}`;
 }
 
 function createVoidSelections(): VoidSelections {
@@ -1274,283 +1248,9 @@ export default function App() {
     setPeekPrompt((current) => (current === promptId ? null : promptId));
   };
 
-  const handlePeekClick = (promptId: "bid" | "suit" | "void" | "intent") => {
+  const handlePeekToggle = (promptId: "bid" | "suit" | "void" | "intent") => {
     if (supportsHover) return;
     togglePeekPrompt(promptId);
-  };
-
-  const renderBidPrompt = () => {
-    if (!biddingActive || !bidState) return null;
-    if (isBiddingComplete(bidState)) return null;
-    const bidder = currentBidder(bidState);
-    if (bidder !== "Me") {
-      return (
-        <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40">
-          <div className="w-[200px] rounded-lg border bg-card px-3 py-3 text-sm shadow-lg">
-            <div className="text-sm font-medium">Waiting for other bids</div>
-          </div>
-        </div>
-      );
-    }
-    return (
-      <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40">
-        <div className="w-[170px] space-y-3 rounded-lg border bg-card px-3 py-3 text-sm shadow-lg">
-          <div className="text-sm font-medium">Enter your bid</div>
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-            <Select value={bidInput} onValueChange={(v) => setBidInput(v)}>
-              <SelectTrigger className="h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: 14 }, (_, i) => String(i)).map((n) => (
-                  <SelectItem key={n} value={n}>
-                    {n}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              className="bg-emerald-600 text-white hover:bg-emerald-700"
-              onClick={() => submitBidForSeat("Me", Number(bidInput))}
-            >
-              Bid
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderSuitCountPrompt = () => {
-    if (!suitCountPromptEnabled || !suitCountPromptActive) return null;
-    const suitLeadCount = suitCountPromptSuit
-      ? trickHistory.filter((t) => trickLeadSuit(t) === suitCountPromptSuit).length
-      : 0;
-    const offSuitCount = trickHistory.reduce((sum, t) => {
-      const lead = trickLeadSuit(t);
-      if (!lead) return sum;
-      const offSuit = t.filter((play) => play.card.suit !== lead).length;
-      return sum + offSuit;
-    }, 0);
-    const isPeeking = peekPrompt === "suit";
-    const hoverPeekClass = supportsHover ? " peer-hover:pointer-events-none peer-hover:opacity-20" : "";
-    return (
-      <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40">
-        <div className="flex flex-col items-center gap-2">
-          <button
-            type="button"
-            className="peer order-2 cursor-pointer rounded-full border bg-background/80 px-2 py-0.5 text-[10px] text-foreground/70"
-            onClick={() => handlePeekClick("suit")}
-          >
-            {supportsHover ? "Hover to peek" : isPeeking ? "Tap to unpeek" : "Tap to peek"}
-          </button>
-          <div
-            className={
-              "order-1 w-[220px] space-y-3 rounded-lg border bg-card px-3 py-3 text-sm shadow-lg transition-opacity" +
-              hoverPeekClass +
-              (isPeeking ? " pointer-events-none opacity-20" : "")
-            }
-          >
-            <div className="text-sm font-medium">
-              How many{" "}
-              <span className={suitCountPromptSuit ? suitColorClass(suitCountPromptSuit, suitStyleMode) : undefined}>
-                {suitCountPromptSuit ? suitGlyph(suitCountPromptSuit) : "cards"}
-              </span>{" "}
-              remain outside your hand?
-            </div>
-            <Select
-              value={suitCountAnswer}
-              onValueChange={(v) => {
-                setSuitCountAnswer(v);
-                setSuitCountMismatch(false);
-              }}
-            >
-              <SelectTrigger className="h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: 14 }, (_, i) => String(i)).map((n) => (
-                  <SelectItem key={n} value={n}>
-                    {n}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {suitCountMismatch ? <div className="text-xs text-destructive">Suit count is incorrect</div> : null}
-            <details className="rounded-md border border-dashed px-2 py-1 text-xs text-muted-foreground">
-              <summary className="cursor-pointer select-none font-medium text-foreground">Hint</summary>
-              <div className="mt-1">
-                This is the {formatOrdinal(suitLeadCount)} time this suit has been led and this hand{" "}
-                {formatCardCount(offSuitCount)} {offSuitCount === 1 ? "was" : "were"} played off-suit.
-                This gives an upper bound on the number of cards left in this suit.
-              </div>
-            </details>
-            <div className="flex gap-2">
-              <Button
-                className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
-                onClick={resumeAfterSuitCountPrompt}
-              >
-                Resume
-              </Button>
-              <Button variant="outline" className="flex-1" onClick={skipSuitCountPrompt}>
-                Skip
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderVoidPrompt = () => {
-    if (!voidTrackingEnabled || !leadPromptActive || !leadPromptSuit) return null;
-    if (isViewingHistory) return null;
-    const isPeeking = peekPrompt === "void";
-    const hoverPeekClass = supportsHover ? " peer-hover:pointer-events-none peer-hover:opacity-20" : "";
-    return (
-      <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40">
-        <div className="flex flex-col items-center gap-2">
-          <button
-            type="button"
-            className="peer order-2 cursor-pointer rounded-full border bg-background/80 px-2 py-0.5 text-[10px] text-foreground/70"
-            onClick={() => handlePeekClick("void")}
-          >
-            {supportsHover ? "Hover to peek" : isPeeking ? "Tap to unpeek" : "Tap to peek"}
-          </button>
-          <div
-            className={
-              "order-1 w-[240px] space-y-3 rounded-lg border bg-card px-3 py-3 text-sm shadow-lg transition-opacity" +
-              hoverPeekClass +
-              (isPeeking ? " pointer-events-none opacity-20" : "")
-            }
-          >
-            <div className="text-sm font-medium">Which opponents are void in the lead suit?</div>
-            <div className={"text-sm " + suitColorClass(leadPromptSuit, suitStyleMode)}>
-              Lead suit: {suitGlyph(leadPromptSuit)}
-            </div>
-            <div className="grid grid-cols-3 grid-rows-3 place-items-center gap-2 text-xs">
-              {(
-                [
-                  { seat: "Across", col: 2, row: 1 },
-                  { seat: "Left", col: 1, row: 2 },
-                  { seat: "Right", col: 3, row: 2 },
-                ] as const
-              ).map(({ seat, col, row }) => {
-                const isLeader = leadPromptLeader === seat;
-                const mismatch = leadMismatch[seat];
-                const disabled = isLeader;
-                return (
-                  <label
-                    key={seat}
-                    className={
-                      "flex flex-col items-center gap-1 rounded-md border px-2 py-1 " +
-                      (mismatch ? "border-destructive" : "border-border") +
-                      (disabled ? " opacity-60" : "")
-                    }
-                    style={{ gridColumn: col, gridRow: row }}
-                  >
-                    <span>{seatLabels[seat]}</span>
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4"
-                      checked={leadSelections[seat]}
-                      onChange={() => toggleLeadSelection(seat)}
-                      disabled={disabled}
-                    />
-                  </label>
-                );
-              })}
-            </div>
-            {leadWarning ? <div className="text-xs text-destructive">{leadWarning}</div> : null}
-            <div className="flex gap-2">
-              <Button
-                className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
-                onClick={resumeAfterLeadPrompt}
-                disabled={isResolving || awaitContinue}
-              >
-                Resume
-              </Button>
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={skipLeadPrompt}
-                disabled={isResolving || awaitContinue}
-              >
-                Skip
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderWinIntentPrompt = () => {
-    if (!pendingIntentCard) return null;
-    const isPeeking = peekPrompt === "intent";
-    const hoverPeekClass = supportsHover ? " peer-hover:pointer-events-none peer-hover:opacity-20" : "";
-    return (
-      <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40">
-        <div className="flex flex-col items-center gap-2">
-          <button
-            type="button"
-            className="peer order-2 cursor-pointer rounded-full border bg-background/80 px-2 py-0.5 text-[10px] text-foreground/70"
-            onClick={() => handlePeekClick("intent")}
-          >
-            {supportsHover ? "Hover to peek" : isPeeking ? "Tap to unpeek" : "Tap to peek"}
-          </button>
-          <div
-            className={
-              "order-1 w-[200px] space-y-3 rounded-lg border bg-card px-3 py-3 text-sm shadow-lg transition-opacity" +
-              hoverPeekClass +
-              (isPeeking ? " pointer-events-none opacity-20" : "")
-            }
-          >
-            {!intentWarning ? (
-              <>
-                <div className="text-sm font-medium">Do you intend to win this trick?</div>
-                <div className="flex gap-2">
-                  <Button
-                    className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
-                    onClick={() => handleWinIntentDecision(true)}
-                  >
-                    Yes
-                  </Button>
-                  <Button variant="outline" className="flex-1" onClick={() => handleWinIntentDecision(false)}>
-                    No
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="text-sm font-medium text-destructive">{intentWarning}</div>
-                {intentDetails.length ? (
-                  <details className="rounded-md border border-dashed px-2 py-1 text-xs text-muted-foreground">
-                    <summary className="cursor-pointer select-none font-medium text-foreground">Details</summary>
-                    <div className="mt-1 space-y-1">
-                      {intentDetails.map((line) => (
-                        <div key={line}>{line}</div>
-                      ))}
-                    </div>
-                  </details>
-                ) : null}
-                <div className="flex gap-2">
-                  <Button
-                    className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
-                    onClick={confirmIntentPlay}
-                  >
-                    Play
-                  </Button>
-                  <Button variant="outline" className="flex-1" onClick={cancelIntentPrompt}>
-                    Cancel
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    );
   };
 
   const canAdvance = canAdvanceTrick({ awaitContinue, handComplete, isViewingHistory });
@@ -1598,10 +1298,51 @@ export default function App() {
       canAdvance={canAdvance}
       onAdvanceTrick={handleAdvanceTrick}
       onResetTrick={resetTrickOnly}
-      bidPrompt={renderBidPrompt()}
-      voidPrompt={renderVoidPrompt()}
-      suitCountPrompt={renderSuitCountPrompt()}
-      winIntentPrompt={renderWinIntentPrompt()}
+      promptOverlays={
+        <PromptOverlays
+          biddingActive={biddingActive}
+          bidStateActive={!!bidState}
+          biddingComplete={!!biddingComplete}
+          currentBidder={bidState ? currentBidder(bidState) : null}
+          bidInput={bidInput}
+          setBidInput={setBidInput}
+          onSubmitBid={(bid) => submitBidForSeat("Me", bid)}
+          suitCountPromptEnabled={suitCountPromptEnabled}
+          suitCountPromptActive={suitCountPromptActive}
+          suitCountPromptSuit={suitCountPromptSuit}
+          suitCountAnswer={suitCountAnswer}
+          setSuitCountAnswer={setSuitCountAnswer}
+          suitCountMismatch={suitCountMismatch}
+          setSuitCountMismatch={setSuitCountMismatch}
+          onResumeSuitCount={resumeAfterSuitCountPrompt}
+          onSkipSuitCount={skipSuitCountPrompt}
+          trickHistory={trickHistory}
+          suitStyleMode={suitStyleMode}
+          supportsHover={supportsHover}
+          peekPrompt={peekPrompt}
+          onPeekToggle={handlePeekToggle}
+          voidTrackingEnabled={voidTrackingEnabled}
+          leadPromptActive={leadPromptActive}
+          leadPromptSuit={leadPromptSuit}
+          leadPromptLeader={leadPromptLeader}
+          leadSelections={leadSelections}
+          leadMismatch={leadMismatch}
+          leadWarning={leadWarning}
+          onToggleLeadSelection={toggleLeadSelection}
+          onResumeLeadPrompt={resumeAfterLeadPrompt}
+          onSkipLeadPrompt={skipLeadPrompt}
+          seatLabels={seatLabels}
+          isResolving={isResolving}
+          awaitContinue={awaitContinue}
+          isViewingHistory={isViewingHistory}
+          pendingIntentCard={pendingIntentCard}
+          intentWarning={intentWarning}
+          intentDetails={intentDetails}
+          onIntentDecision={handleWinIntentDecision}
+          onConfirmIntentPlay={confirmIntentPlay}
+          onCancelIntentPrompt={cancelIntentPrompt}
+        />
+      }
     />
   );
 

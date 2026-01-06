@@ -248,10 +248,7 @@ type TableCardProps = {
   canAdvance: boolean;
   onAdvanceTrick: () => void;
   onResetTrick: () => void;
-  bidPrompt: ReactNode;
-  voidPrompt: ReactNode;
-  suitCountPrompt: ReactNode;
-  winIntentPrompt: ReactNode;
+  promptOverlays: ReactNode;
 };
 
 export function TableCard(props: TableCardProps) {
@@ -282,10 +279,7 @@ export function TableCard(props: TableCardProps) {
     canAdvance,
     onAdvanceTrick,
     onResetTrick,
-    bidPrompt,
-    voidPrompt,
-    suitCountPrompt,
-    winIntentPrompt,
+    promptOverlays,
   } = props;
 
   const playCardBox = "h-[35%] aspect-[5/7]";
@@ -435,10 +429,7 @@ export function TableCard(props: TableCardProps) {
               ) : null}
             </div>
 
-            {bidPrompt}
-            {voidPrompt}
-            {suitCountPrompt}
-            {winIntentPrompt}
+            {promptOverlays}
           </div>
           </div>
 
