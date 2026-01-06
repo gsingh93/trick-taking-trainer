@@ -1,5 +1,5 @@
 import type { Dispatch, ReactNode, SetStateAction } from "react";
-import type { Rank, Suit, TrumpConfig } from "@/engine/types";
+import type { Rank, Seat, Suit, TrumpConfig } from "@/engine/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
@@ -146,6 +146,11 @@ type SettingsCardProps = {
   pauseBeforeNextTrick: boolean;
   setPauseBeforeNextTrick: (value: boolean) => void;
   handInProgress: boolean;
+  firstSeat: Seat;
+  setFirstSeat: (value: Seat) => void;
+  firstSeatRandom: boolean;
+  setFirstSeatRandom: (value: boolean) => void;
+  firstSeatLocked: boolean;
   trump: TrumpConfig;
   setTrump: Dispatch<SetStateAction<TrumpConfig>>;
   suitOrderMode: "bridge" | "poker";
@@ -156,6 +161,7 @@ type SettingsCardProps = {
   setSortAscending: (value: boolean) => void;
   seatLabelMode: "relative" | "compass";
   setSeatLabelMode: (value: "relative" | "compass") => void;
+  seatLabels: Record<Seat, string>;
   suits: Suit[];
 };
 
@@ -200,6 +206,11 @@ export function SettingsCard(props: SettingsCardProps) {
     pauseBeforeNextTrick,
     setPauseBeforeNextTrick,
     handInProgress,
+    firstSeat,
+    setFirstSeat,
+    firstSeatRandom,
+    setFirstSeatRandom,
+    firstSeatLocked,
     trump,
     setTrump,
     suitOrderMode,
@@ -210,6 +221,7 @@ export function SettingsCard(props: SettingsCardProps) {
     setSortAscending,
     seatLabelMode,
     setSeatLabelMode,
+    seatLabels,
     suits,
   } = props;
 
@@ -403,6 +415,14 @@ export function SettingsCard(props: SettingsCardProps) {
         checked: pauseBeforeNextTrick,
         onCheckedChange: setPauseBeforeNextTrick,
       },
+      {
+        key: "first-seat-random",
+        label: "Randomize first leader",
+        checked: firstSeatRandom,
+        onCheckedChange: setFirstSeatRandom,
+        disabled: firstSeatLocked,
+        className: firstSeatLocked ? "opacity-50" : "",
+      },
     ] satisfies SwitchRow[],
     aiSelects: [
       {
@@ -421,6 +441,28 @@ export function SettingsCard(props: SettingsCardProps) {
             <SelectContent>
               <SelectItem value="random">Random</SelectItem>
               <SelectItem value="bidding">Bidding</SelectItem>
+            </SelectContent>
+          </Select>
+        ),
+      },
+      {
+        key: "first-seat",
+        label: "First leader",
+        className: firstSeatLocked || firstSeatRandom ? "opacity-50" : "",
+        select: (
+          <Select
+            value={firstSeat}
+            onValueChange={(v) => setFirstSeat(v as Seat)}
+            disabled={firstSeatLocked || firstSeatRandom}
+          >
+            <SelectTrigger className="h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Me">{seatLabels.Me}</SelectItem>
+              <SelectItem value="Left">{seatLabels.Left}</SelectItem>
+              <SelectItem value="Across">{seatLabels.Across}</SelectItem>
+              <SelectItem value="Right">{seatLabels.Right}</SelectItem>
             </SelectContent>
           </Select>
         ),

@@ -101,6 +101,8 @@ type Settings = {
   pauseBeforeNextTrick: boolean;
   aiPlayMe: boolean;
   seatLabelMode: "relative" | "compass";
+  firstSeat: Seat;
+  firstSeatRandom: boolean;
   winIntentPromptEnabled: boolean;
   winIntentWarnTrump: boolean;
   winIntentWarnHonorsOnly: boolean;
@@ -154,6 +156,12 @@ function loadSettings(): Partial<Settings> {
     if (typeof data.aiPlayMe === "boolean") next.aiPlayMe = data.aiPlayMe;
     if (data.seatLabelMode === "relative" || data.seatLabelMode === "compass") {
       next.seatLabelMode = data.seatLabelMode;
+    }
+    if (typeof data.firstSeat === "string" && SEATS.includes(data.firstSeat as Seat)) {
+      next.firstSeat = data.firstSeat as Seat;
+    }
+    if (typeof data.firstSeatRandom === "boolean") {
+      next.firstSeatRandom = data.firstSeatRandom;
     }
     if (typeof data.winIntentPromptEnabled === "boolean") {
       next.winIntentPromptEnabled = data.winIntentPromptEnabled;
@@ -231,10 +239,17 @@ function createVoidSelections(): VoidSelections {
   return { Left: false, Across: false, Right: false };
 }
 
+function pickFirstSeat(preferred: Seat, randomize: boolean): Seat {
+  if (!randomize) return preferred;
+  return SEATS[Math.floor(Math.random() * SEATS.length)];
+}
 
 export default function App() {
   const initialSettings = useMemo(() => loadSettings(), []);
   const initialSeed = initialSettings.dealSeed ?? Math.floor(Math.random() * 1_000_000_000);
+  const initialFirstSeat = initialSettings.firstSeat ?? "Me";
+  const initialFirstSeatRandom = initialSettings.firstSeatRandom ?? false;
+  const initialPickedSeat = pickFirstSeat(initialFirstSeat, initialFirstSeatRandom);
 
   const [modeOpenHandVerify, setModeOpenHandVerify] = useState(
     () => initialSettings.modeOpenHandVerify ?? false
@@ -306,6 +321,14 @@ export default function App() {
   const [seatLabelMode, setSeatLabelMode] = useState<"relative" | "compass">(
     () => initialSettings.seatLabelMode ?? "compass"
   );
+  const [firstSeat, setFirstSeat] = useState<Seat>(() => initialPickedSeat);
+  const [firstSeatPreference, setFirstSeatPreference] = useState<Seat>(() => initialFirstSeat);
+  const [firstSeatRandom, setFirstSeatRandom] = useState(() => initialFirstSeatRandom);
+  const firstSeatConfigRef = useRef({
+    preference: initialFirstSeat,
+    random: initialFirstSeatRandom,
+    dealSeed: initialSeed,
+  });
   const [awaitContinue, setAwaitContinue] = useState(false);
 
   const [trump, setTrump] = useState<TrumpConfig>(() => {
@@ -321,7 +344,16 @@ export default function App() {
   const [dealSeed, setDealSeed] = useState(() => initialSeed);
   const [seedInput, setSeedInput] = useState(() => initialSettings.seedInput ?? String(initialSeed));
   const [seedError, setSeedError] = useState<string | null>(null);
-  const [game, setGame] = useState<GameState>(() => initGameState(initialSeed));
+  const [game, setGame] = useState<GameState>(() => {
+    const base = initGameState(initialSeed);
+    return {
+      ...base,
+      leader: initialPickedSeat,
+      turn: initialPickedSeat,
+      trickStartLeader: initialPickedSeat,
+      trickStartTurn: initialPickedSeat,
+    };
+  });
   const [viewedTrickIndex, setViewedTrickIndex] = useState<number | null>(null);
   const [viewedTrickStep, setViewedTrickStep] = useState(0);
   const [historyPlaying, setHistoryPlaying] = useState(false);
@@ -369,6 +401,7 @@ export default function App() {
   const activeAiMode = handInProgress ? aiModeLocked : aiMode;
   const biddingActive = activeAiMode === "bidding";
   const biddingComplete = !biddingActive || (bidState && isBiddingComplete(bidState));
+  const firstSeatLocked = biddingActive ? !!biddingComplete : handInProgress;
   const bidResults = useMemo(() => {
     if (!bidState || !biddingComplete) return null;
     return evaluateExactBids(bidState.bids, tricksWon);
@@ -457,6 +490,8 @@ export default function App() {
       pauseBeforeNextTrick,
       aiPlayMe,
       seatLabelMode,
+      firstSeat: firstSeatPreference,
+      firstSeatRandom,
       winIntentPromptEnabled,
       winIntentWarnTrump,
       winIntentWarnHonorsOnly,
@@ -490,6 +525,8 @@ export default function App() {
     pauseBeforeNextTrick,
     aiPlayMe,
     seatLabelMode,
+    firstSeatPreference,
+    firstSeatRandom,
     winIntentPromptEnabled,
     winIntentWarnTrump,
     winIntentWarnHonorsOnly,
@@ -549,12 +586,58 @@ export default function App() {
 
   useEffect(() => {
     if (biddingActive) {
-      setBidState((prev) => prev ?? initBidState("Me"));
+      setBidState((prev) => prev ?? initBidState(firstSeat));
       setBidInput("0");
     } else if (bidState) {
       setBidState(null);
     }
-  }, [biddingActive, bidState]);
+  }, [biddingActive, bidState, firstSeat]);
+
+  useEffect(() => {
+    if (firstSeatLocked) return;
+    const prevConfig = firstSeatConfigRef.current;
+    const configChanged =
+      prevConfig.preference !== firstSeatPreference ||
+      prevConfig.random !== firstSeatRandom ||
+      prevConfig.dealSeed !== dealSeed;
+    let nextSeat = firstSeat;
+    if (firstSeatRandom) {
+      nextSeat = configChanged ? pickFirstSeat(firstSeatPreference, true) : firstSeat;
+    } else {
+      nextSeat = firstSeatPreference;
+    }
+    setFirstSeat(nextSeat);
+    if (!handInProgress && trick.length === 0) {
+      setGame((g) => ({
+        ...g,
+        leader: nextSeat,
+        turn: nextSeat,
+        trickStartLeader: nextSeat,
+        trickStartTurn: nextSeat,
+      }));
+    }
+    if (biddingActive && bidState && !biddingComplete && configChanged) {
+      // Changing the first bidder mid-bidding restarts the bidding sequence.
+      setBidState(initBidState(nextSeat));
+      setBidInput("0");
+    }
+    firstSeatConfigRef.current = {
+      preference: firstSeatPreference,
+      random: firstSeatRandom,
+      dealSeed,
+    };
+  }, [
+    firstSeatPreference,
+    firstSeatRandom,
+    dealSeed,
+    firstSeat,
+    firstSeatLocked,
+    handInProgress,
+    trick.length,
+    biddingActive,
+    biddingComplete,
+    bidState,
+  ]);
 
   useEffect(() => {
     if (viewedTrickIndex != null && viewedTrickIndex >= trickHistory.length) {
@@ -681,13 +764,22 @@ export default function App() {
 
   function resetForDeal(seed: number) {
     cancelResolveTimer();
+    const nextSeat = pickFirstSeat(firstSeatPreference, firstSeatRandom);
     setDealSeed(seed);
     setSeedInput(String(seed));
-    setGame(initGameState(seed));
+    setFirstSeat(nextSeat);
+    const base = initGameState(seed);
+    setGame({
+      ...base,
+      leader: nextSeat,
+      turn: nextSeat,
+      trickStartLeader: nextSeat,
+      trickStartTurn: nextSeat,
+    });
     setViewedTrickIndex(null);
     setViewedTrickStep(0);
     setHistoryPlaying(false);
-    setBidState(aiMode === "bidding" ? initBidState("Me") : null);
+    setBidState(aiMode === "bidding" ? initBidState(nextSeat) : null);
     setBidInput("0");
     resetWinIntentPrompt();
     resetVoidPrompt();
@@ -1171,7 +1263,17 @@ export default function App() {
 
   const renderBidPrompt = () => {
     if (!biddingActive || !bidState) return null;
-    if (currentBidder(bidState) !== "Me" || isBiddingComplete(bidState)) return null;
+    if (isBiddingComplete(bidState)) return null;
+    const bidder = currentBidder(bidState);
+    if (bidder !== "Me") {
+      return (
+        <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40">
+          <div className="w-[200px] rounded-lg border bg-card px-3 py-3 text-sm shadow-lg">
+            <div className="text-sm font-medium">Waiting for other bids</div>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40">
         <div className="w-[170px] space-y-3 rounded-lg border bg-card px-3 py-3 text-sm shadow-lg">
@@ -1526,6 +1628,11 @@ export default function App() {
       pauseBeforeNextTrick={pauseBeforeNextTrick}
       setPauseBeforeNextTrick={setPauseBeforeNextTrick}
       handInProgress={handInProgress}
+      firstSeat={firstSeatPreference}
+      setFirstSeat={setFirstSeatPreference}
+      firstSeatRandom={firstSeatRandom}
+      setFirstSeatRandom={setFirstSeatRandom}
+      firstSeatLocked={firstSeatLocked}
       trump={trump}
       setTrump={setTrump}
       suitOrderMode={suitOrderMode}
@@ -1536,6 +1643,7 @@ export default function App() {
       setSortAscending={setSortAscending}
       seatLabelMode={seatLabelMode}
       setSeatLabelMode={setSeatLabelMode}
+      seatLabels={seatLabels}
       suits={SUITS}
     />
   );
