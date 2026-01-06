@@ -346,7 +346,7 @@ export function TableCard(props: TableCardProps) {
               showReveal
               isRevealed={shownHands.Across}
               onToggleReveal={() => toggleRevealSeat("Across")}
-              disableReveal={modeOpenHandVerify || isViewingHistory}
+              disableReveal={modeOpenHandVerify}
             >
               {shownHands.Across ? (
                 <HandRow
@@ -377,7 +377,7 @@ export function TableCard(props: TableCardProps) {
               showReveal
               isRevealed={shownHands.Left}
               onToggleReveal={() => toggleRevealSeat("Left")}
-              disableReveal={modeOpenHandVerify || isViewingHistory}
+              disableReveal={modeOpenHandVerify}
             >
               {shownHands.Left ? (
                 <HandCol
@@ -455,7 +455,7 @@ export function TableCard(props: TableCardProps) {
               showReveal
               isRevealed={shownHands.Right}
               onToggleReveal={() => toggleRevealSeat("Right")}
-              disableReveal={modeOpenHandVerify || isViewingHistory}
+              disableReveal={modeOpenHandVerify}
             >
               {shownHands.Right ? (
                 <HandCol
