@@ -947,6 +947,7 @@ export default function App() {
         trickNo,
         winIntentPromptEnabled,
         winIntentMinRank,
+        winIntentWarnHonorsOnly,
         aiPlayMe,
         honorRemainingBySuit,
         hands,

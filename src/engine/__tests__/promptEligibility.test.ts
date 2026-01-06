@@ -95,6 +95,7 @@ function baseWinIntentArgs(): WinIntentEligibilityArgs {
     trickNo: 2,
     winIntentPromptEnabled: true,
     winIntentMinRank: 10,
+    winIntentWarnHonorsOnly: true,
     aiPlayMe: false,
     honorRemainingBySuit,
     hands: buildHands([makeCard("H", 12, "H12")]),
@@ -144,6 +145,43 @@ describe("shouldPromptWinIntent", () => {
       ...baseWinIntentArgs(),
       card: makeCard("H", 10, "H10"),
       hands: buildHands([
+        makeCard("H", 10, "H10"),
+        makeCard("H", 11, "H11"),
+        makeCard("H", 12, "H12"),
+        makeCard("H", 13, "H13"),
+        makeCard("H", 14, "H14"),
+      ]),
+    };
+    expect(shouldPromptWinIntent(args)).toBe(false);
+  });
+
+  it("returns true when honors are held but higher non-honors remain", () => {
+    const args = {
+      ...baseWinIntentArgs(),
+      card: makeCard("H", 9, "H9"),
+      winIntentWarnHonorsOnly: false,
+      winIntentMinRank: 9 as Rank,
+      trick: [makePlay("Left", makeCard("H", 5, "H5"))],
+      hands: buildHands([
+        makeCard("H", 9, "H9"),
+        makeCard("H", 11, "H11"),
+        makeCard("H", 12, "H12"),
+        makeCard("H", 13, "H13"),
+        makeCard("H", 14, "H14"),
+      ]),
+    };
+    expect(shouldPromptWinIntent(args)).toBe(true);
+  });
+
+  it("returns false when higher cards are all in hand with non-honor warnings", () => {
+    const args = {
+      ...baseWinIntentArgs(),
+      card: makeCard("H", 9, "H9"),
+      winIntentWarnHonorsOnly: false,
+      winIntentMinRank: 9 as Rank,
+      trick: [makePlay("Left", makeCard("H", 5, "H5"))],
+      hands: buildHands([
+        makeCard("H", 9, "H9"),
         makeCard("H", 10, "H10"),
         makeCard("H", 11, "H11"),
         makeCard("H", 12, "H12"),

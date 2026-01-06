@@ -51,6 +51,7 @@ export type WinIntentEligibilityArgs = {
   trickNo: number;
   winIntentPromptEnabled: boolean;
   winIntentMinRank: Rank;
+  winIntentWarnHonorsOnly: boolean;
   aiPlayMe: boolean;
   honorRemainingBySuit: Record<Suit, Rank[]>;
   hands: Record<Seat, CardT[]>;
@@ -77,6 +78,15 @@ function higherHonorsAllInHand(
   if (!remaining.length) return false;
   const handRanks = new Set(hand.filter((c) => c.suit === suit).map((c) => c.rank));
   return remaining.every((r) => handRanks.has(r));
+}
+
+function higherCardsAllInHand(card: CardT, suit: Suit, hand: CardT[]): boolean {
+  if (card.rank >= 14) return false;
+  const handRanks = new Set(hand.filter((c) => c.suit === suit).map((c) => c.rank));
+  for (let r = card.rank + 1; r <= 14; r += 1) {
+    if (!handRanks.has(r as Rank)) return false;
+  }
+  return true;
 }
 
 function alreadyLosingTrick(card: CardT, suit: Suit, trick: PlayT[], trump: TrumpConfig): boolean {
@@ -109,8 +119,14 @@ export function shouldPromptWinIntent(args: WinIntentEligibilityArgs): boolean {
   }
   // Don't prompt when all higher honors have already appeared this trick.
   if (currentTrickHasAllHigherHonors(args.card, leadSuit, args.trick)) return false;
-  // Don't prompt when any remaining higher honors are already in hand.
-  if (higherHonorsAllInHand(args.card, leadSuit, args.honorRemainingBySuit, args.hands.Me)) return false;
+  // Don't prompt when warning only about honors and all higher honors are already in hand.
+  if (
+    args.winIntentWarnHonorsOnly &&
+    higherHonorsAllInHand(args.card, leadSuit, args.honorRemainingBySuit, args.hands.Me)
+  ) {
+    return false;
+  }
+  if (!args.winIntentWarnHonorsOnly && higherCardsAllInHand(args.card, leadSuit, args.hands.Me)) return false;
   // If we're already losing, the prompt isn't useful.
   if (alreadyLosingTrick(args.card, leadSuit, args.trick, args.trump)) return false;
   // If everyone left is void, we can't be beaten in-suit.
