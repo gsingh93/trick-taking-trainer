@@ -53,7 +53,7 @@ import {
   type PlayT,
   type TrumpConfig,
 } from "@/engine/types";
-import { RefreshCw, Moon, Sun } from "lucide-react";
+import { RefreshCw, Moon, Sun, ChevronDown } from "lucide-react";
 import { rankGlyph, suitColorClass, suitGlyph } from "@/ui/cardUtils";
 import { SettingsCard } from "@/components/SettingsCard";
 import { TrickHistoryCard } from "@/components/TrickHistoryCard";
@@ -83,6 +83,7 @@ const SETTINGS_KEY = "trick-taking-trainer:settings";
 type Settings = {
   dealSeed: number;
   seedInput: string;
+  seedHistory: number[];
   modeOpenHandVerify: boolean;
   voidTrackingEnabled: boolean;
   voidTrackingSuits: Suit[];
@@ -121,6 +122,11 @@ function loadSettings(): Partial<Settings> {
       next.dealSeed = Math.floor(data.dealSeed) >>> 0;
     }
     if (typeof data.seedInput === "string") next.seedInput = data.seedInput;
+    if (Array.isArray(data.seedHistory)) {
+      next.seedHistory = data.seedHistory.filter(
+        (value): value is number => typeof value === "number" && Number.isFinite(value)
+      );
+    }
     if (typeof data.modeOpenHandVerify === "boolean") next.modeOpenHandVerify = data.modeOpenHandVerify;
     if (typeof data.voidTrackingEnabled === "boolean") next.voidTrackingEnabled = data.voidTrackingEnabled;
     if (Array.isArray(data.voidTrackingSuits)) {
@@ -343,6 +349,13 @@ export default function App() {
 
   const [dealSeed, setDealSeed] = useState(() => initialSeed);
   const [seedInput, setSeedInput] = useState(() => initialSettings.seedInput ?? String(initialSeed));
+  const [seedHistory, setSeedHistory] = useState<number[]>(() => {
+    const initial = initialSettings.seedHistory ?? [];
+    const next = initial.filter((value) => Number.isFinite(value) && value >= 0);
+    return next.slice(0, 10);
+  });
+  const [seedMenuOpen, setSeedMenuOpen] = useState(false);
+  const seedMenuRef = useRef<HTMLDivElement | null>(null);
   const [seedError, setSeedError] = useState<string | null>(null);
   const [game, setGame] = useState<GameState>(() => {
     const base = initGameState(initialSeed);
@@ -469,9 +482,22 @@ export default function App() {
   }, [actualVoid]);
 
   useEffect(() => {
+    if (!seedMenuOpen) return;
+    const handleClick = (event: MouseEvent) => {
+      if (!seedMenuRef.current) return;
+      if (!seedMenuRef.current.contains(event.target as Node)) {
+        setSeedMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [seedMenuOpen]);
+
+  useEffect(() => {
     const settings: Settings = {
       dealSeed,
       seedInput,
+      seedHistory,
       modeOpenHandVerify,
       voidTrackingEnabled,
       voidTrackingSuits,
@@ -507,6 +533,7 @@ export default function App() {
   }, [
     dealSeed,
     seedInput,
+    seedHistory,
     modeOpenHandVerify,
     voidTrackingEnabled,
     voidTrackingSuits,
@@ -767,6 +794,10 @@ export default function App() {
     const nextSeat = pickFirstSeat(firstSeatPreference, firstSeatRandom);
     setDealSeed(seed);
     setSeedInput(String(seed));
+    setSeedHistory((prev) => {
+      const next = [seed, ...prev.filter((value) => value !== seed)];
+      return next.slice(0, 10);
+    });
     setFirstSeat(nextSeat);
     const base = initGameState(seed);
     setGame({
@@ -1854,20 +1885,57 @@ export default function App() {
                 <div className="flex flex-col">
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">Seed</span>
-                    <input
-                      type="number"
-                      min={0}
-                      step={1}
-                      value={seedInput}
-                      onChange={(e) => {
-                        setSeedInput(e.target.value);
-                        setSeedError(null);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") applySeedFromInput();
-                      }}
-                      className="h-8 w-32 rounded-md border bg-background px-2 text-xs"
-                    />
+                    <div className="relative" ref={seedMenuRef}>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={seedInput}
+                        onChange={(e) => {
+                          setSeedInput(e.target.value);
+                          setSeedError(null);
+                        }}
+                        onFocus={() => {
+                          if (seedHistory.length) setSeedMenuOpen(true);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") applySeedFromInput();
+                          if (e.key === "Escape") setSeedMenuOpen(false);
+                        }}
+                        className="h-8 w-32 rounded-md border bg-background px-2 pr-6 text-xs"
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground"
+                        onClick={() => setSeedMenuOpen((open) => !open)}
+                        aria-label="Toggle seed history"
+                      >
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </button>
+                      {seedMenuOpen ? (
+                        <div className="absolute z-10 mt-1 w-full rounded-md border bg-background text-xs shadow">
+                          {seedHistory.length ? (
+                            <div className="max-h-40 overflow-auto py-1">
+                              {seedHistory.map((seed) => (
+                                <button
+                                  key={seed}
+                                  type="button"
+                                  className="block w-full px-2 py-1 text-left hover:bg-accent"
+                                  onClick={() => {
+                                    setSeedInput(String(seed));
+                                    setSeedError(null);
+                                    setSeedMenuOpen(false);
+                                  }}
+                                >
+                                  {seed}
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="px-2 py-1 text-muted-foreground">No recent seeds</div>
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
                     <Button type="button" variant="outline" size="sm" onClick={applySeedFromInput}>
                       Apply
                     </Button>
