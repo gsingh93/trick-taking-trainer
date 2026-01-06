@@ -170,6 +170,16 @@ describe("state", () => {
     expect(shouldPromptSuitCount([], trick, { skipIfSelfOffSuit: true, selfSeat: "Me" })).toBe("H");
   });
 
+  it("shouldPromptSuitCount skips when Me later discards off-suit in the trick", () => {
+    const trick: PlayT[] = [
+      { seat: "Left", card: { suit: "H", rank: 10, id: "H10" } },
+      { seat: "Across", card: { suit: "S", rank: 2, id: "S2" } },
+      { seat: "Me", card: { suit: "D", rank: 3, id: "D3" } },
+      { seat: "Right", card: { suit: "H", rank: 4, id: "H4" } },
+    ];
+    expect(shouldPromptSuitCount([], trick, { skipIfSelfOffSuit: true, selfSeat: "Me" })).toBeNull();
+  });
+
   it("shouldPromptSuitCount skips if the suit already had an off-suit", () => {
     const history: PlayT[][] = [
       [

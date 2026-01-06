@@ -284,8 +284,10 @@ export function shouldPromptSuitCount(
   if (!hasOffSuit(trick)) return null;
   if (historyHasOffSuitForSuit(trickHistory, lead)) return null;
   if (opts?.skipIfSelfOffSuit && opts.selfSeat) {
-    const firstOffSuit = trick.find((play, idx) => idx > 0 && play.card.suit !== lead);
-    if (firstOffSuit?.seat === opts.selfSeat) return null;
+    const selfOffSuit = trick.some(
+      (play, idx) => idx > 0 && play.seat === opts.selfSeat && play.card.suit !== lead
+    );
+    if (selfOffSuit) return null;
   }
   return lead;
 }
