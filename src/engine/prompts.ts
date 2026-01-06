@@ -27,8 +27,9 @@ export function getVoidPromptLead(args: VoidPromptEligibilityArgs): { leadSeat: 
   if (!args.voidTrackingSuits.includes(leadSuit)) return null;
   if (args.voidPromptSkipLowImpact) {
     const lastSeat = nextSeat(nextSeat(nextSeat(leadSeat)));
-    // If we're last and can't follow suit or trump, void info won't change our play.
+    // If we're last, the void prompt won't change our decision.
     if (lastSeat === "Me") return null;
+    // Otherwise, skip when we can't follow suit and have no trump.
     const hasLeadSuit = canFollowSuit(args.hands.Me, leadSuit);
     const hasTrump = args.hands.Me.some((card) => isTrump(card, args.trump));
     if (!hasLeadSuit && !hasTrump) return null;
