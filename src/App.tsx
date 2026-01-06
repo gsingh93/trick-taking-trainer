@@ -14,7 +14,7 @@ import { chooseCardToPlayForBid } from "@/engine/ai/bidFocus";
 import { buildBidBreakdown, estimateBid } from "@/engine/ai/bidHeuristic";
 import { remainingHonorsInSuit } from "@/engine/training";
 import { evaluateWinIntent } from "@/engine/winIntent";
-import { trickLeadSuit, determineTrickWinner, sortHand } from "@/engine/rules";
+import { trickLeadSuit, determineTrickWinner } from "@/engine/rules";
 import { getVoidPromptLead, shouldPromptWinIntent } from "@/engine/prompts";
 import { buildDeck, createRng, dealNewHands } from "@/engine/deck";
 import {
@@ -61,7 +61,7 @@ import { TableCard } from "@/components/TableCard";
 import { HelpCard } from "@/components/HelpCard";
 import { DebugPanel } from "@/components/DebugPanel";
 import { SeedInput } from "@/components/SeedInput";
-import type { SnapshotData } from "@/debug/snapshot";
+import { buildSnapshotText, type SnapshotData } from "@/debug/snapshot";
 
 /**
  * Generic trick engine (v1)
@@ -1695,45 +1695,22 @@ export default function App() {
     );
   }, [hands, trump]);
 
-  const trumpStatus = trump.enabled
-    ? `${suitGlyph(trump.suit)} (${displayTrumpBroken ? "broken" : "not broken"})`
-    : "None";
-  const buildSnapshotText = () => {
-    const formatHandLine = (seat: Seat) =>
-      sortHand(displayHands[seat], suitOrder, sortAscending)
-        .map((card) => `${rankGlyph(card.rank)}${suitGlyph(card.suit)}`)
-        .join(" ");
-    const bidLine = (seat: Seat) => (bidState?.bids[seat] != null ? bidState.bids[seat] : "?");
-    const trickLines =
-      displayTrick.length === 0
-        ? ["  (none)"]
-        : displayTrick.map(
-            (play) =>
-              `  ${seatLabels[play.seat]}: ${rankGlyph(play.card.rank)}${suitGlyph(play.card.suit)}`
-          );
-    const lines = [
-      "Trick Taking Trainer Snapshot",
-      `Seed: ${dealSeed}`,
-      `Trick: ${displayTrickNo}`,
-      `Leader: ${seatLabels[displayLeader]}`,
-      `Turn: ${seatLabels[displayTurn]}`,
-      `Trump: ${trumpStatus}`,
-      "",
-      "Bids:",
-      ...SEATS.map((seat) => `  ${seatLabels[seat]}: ${bidLine(seat)}`),
-      "",
-      "Tricks Won:",
-      ...SEATS.map((seat) => `  ${seatLabels[seat]}: ${displayTricksWon[seat]}`),
-      "",
-      "Current Trick:",
-      ...trickLines,
-      "",
-      "Hands:",
-      ...SEATS.map((seat) => `  ${seatLabels[seat]}: ${formatHandLine(seat)}`),
-      "",
-    ];
-    return lines.join("\n");
-  };
+  const buildSnapshotTextPayload = () =>
+    buildSnapshotText({
+      seed: dealSeed,
+      trickNo: displayTrickNo,
+      leader: displayLeader,
+      turn: displayTurn,
+      trump,
+      trumpBroken: displayTrumpBroken,
+      bids: bidState?.bids ?? { Left: null, Across: null, Right: null, Me: null },
+      tricksWon: displayTricksWon,
+      trick: displayTrick,
+      hands: displayHands,
+      seatLabels,
+      suitOrder,
+      sortAscending,
+    });
 
   const applySnapshot = (snapshot: SnapshotData) => {
     const allHandsEmpty = SEATS.every((seat) => snapshot.hands[seat].length === 0);
@@ -1826,7 +1803,7 @@ export default function App() {
         setIntentDetails([]);
         setPeekPrompt(null);
       }}
-      buildSnapshotText={buildSnapshotText}
+      buildSnapshotText={buildSnapshotTextPayload}
       snapshotFileName={`trick-taking-trainer-${dealSeed}-trick-${trickNo}.txt`}
       onApplySnapshot={applySnapshot}
       seatLabels={seatLabels}

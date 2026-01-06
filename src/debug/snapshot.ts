@@ -1,4 +1,6 @@
 import type { CardT, Hands, PlayT, Rank, Seat, Suit, TrumpConfig } from "@/engine/types";
+import { sortHand } from "@/engine/rules";
+import { rankGlyph, suitGlyph } from "@/ui/cardUtils";
 
 type SnapshotParseSuccess = {
   ok: true;
@@ -23,6 +25,21 @@ type SnapshotParseFailure = {
 
 export type SnapshotParseResult = SnapshotParseSuccess | SnapshotParseFailure;
 export type SnapshotData = SnapshotParseSuccess["value"];
+export type SnapshotBuildArgs = {
+  seed: number;
+  trickNo: number;
+  leader: Seat;
+  turn: Seat;
+  trump: TrumpConfig;
+  trumpBroken: boolean;
+  bids: Record<Seat, number | null>;
+  tricksWon: Record<Seat, number>;
+  trick: PlayT[];
+  hands: Hands;
+  seatLabels: Record<Seat, string>;
+  suitOrder: Suit[];
+  sortAscending: boolean;
+};
 
 function parseSeatLabel(value: string, seatLabels: Record<Seat, string>): Seat | null {
   const trimmed = value.trim();
@@ -235,4 +252,60 @@ export function parseSnapshotText(
       hands,
     },
   };
+}
+
+export function buildSnapshotText(args: SnapshotBuildArgs): string {
+  const {
+    seed,
+    trickNo,
+    leader,
+    turn,
+    trump,
+    trumpBroken,
+    bids,
+    tricksWon,
+    trick,
+    hands,
+    seatLabels,
+    suitOrder,
+    sortAscending,
+  } = args;
+  const formatHandLine = (seat: Seat) =>
+    sortHand(hands[seat], suitOrder, sortAscending)
+      .map((card) => `${rankGlyph(card.rank)}${suitGlyph(card.suit)}`)
+      .join(" ");
+  const bidLine = (seat: Seat) => (bids[seat] != null ? bids[seat] : "?");
+  const trickLines =
+    trick.length === 0
+      ? ["  (none)"]
+      : trick.map(
+          (play) => `  ${seatLabels[play.seat]}: ${rankGlyph(play.card.rank)}${suitGlyph(play.card.suit)}`
+        );
+  const trumpStatus = trump.enabled
+    ? `${suitGlyph(trump.suit)} (${trumpBroken ? "broken" : "not broken"})`
+    : "None";
+  const lines = [
+    "Trick Taking Trainer Snapshot",
+    `Seed: ${seed}`,
+    `Trick: ${trickNo}`,
+    `Leader: ${seatLabels[leader]}`,
+    `Turn: ${seatLabels[turn]}`,
+    `Trump: ${trumpStatus}`,
+    "",
+    "Bids:",
+    ...Object.keys(bids).map((seat) => `  ${seatLabels[seat as Seat]}: ${bidLine(seat as Seat)}`),
+    "",
+    "Tricks Won:",
+    ...Object.keys(tricksWon).map(
+      (seat) => `  ${seatLabels[seat as Seat]}: ${tricksWon[seat as Seat]}`
+    ),
+    "",
+    "Current Trick:",
+    ...trickLines,
+    "",
+    "Hands:",
+    ...Object.keys(hands).map((seat) => `  ${seatLabels[seat as Seat]}: ${formatHandLine(seat as Seat)}`),
+    "",
+  ];
+  return lines.join("\n");
 }
