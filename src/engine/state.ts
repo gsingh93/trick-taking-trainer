@@ -274,11 +274,19 @@ function historyHasOffSuitForSuit(trickHistory: PlayT[][], suit: Suit): boolean 
   });
 }
 
-export function shouldPromptSuitCount(trickHistory: PlayT[][], trick: PlayT[]): Suit | null {
+export function shouldPromptSuitCount(
+  trickHistory: PlayT[][],
+  trick: PlayT[],
+  opts?: { skipIfSelfOffSuit?: boolean; selfSeat?: Seat }
+): Suit | null {
   const lead = trickLeadSuit(trick);
   if (!lead) return null;
   if (!hasOffSuit(trick)) return null;
   if (historyHasOffSuitForSuit(trickHistory, lead)) return null;
+  if (opts?.skipIfSelfOffSuit && opts.selfSeat) {
+    const firstOffSuit = trick.find((play, idx) => idx > 0 && play.card.suit !== lead);
+    if (firstOffSuit?.seat === opts.selfSeat) return null;
+  }
   return lead;
 }
 

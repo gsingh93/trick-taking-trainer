@@ -86,6 +86,7 @@ type Settings = {
   darkMode: boolean;
   suitCountPromptEnabled: boolean;
   suitCountPromptSuits: Suit[];
+  suitCountSkipSelfOffSuit: boolean;
   checkErrorsEnabled: boolean;
   voidPromptScope: "global" | "per-suit";
   suitOrderMode: "bridge" | "poker";
@@ -134,6 +135,9 @@ function loadSettings(): Partial<Settings> {
     if (typeof data.suitCountPromptEnabled === "boolean") next.suitCountPromptEnabled = data.suitCountPromptEnabled;
     if (Array.isArray(data.suitCountPromptSuits)) {
       next.suitCountPromptSuits = data.suitCountPromptSuits.filter((s): s is Suit => SUITS.includes(s as Suit));
+    }
+    if (typeof data.suitCountSkipSelfOffSuit === "boolean") {
+      next.suitCountSkipSelfOffSuit = data.suitCountSkipSelfOffSuit;
     }
     if (typeof data.checkErrorsEnabled === "boolean") next.checkErrorsEnabled = data.checkErrorsEnabled;
     if (data.voidPromptScope === "global" || data.voidPromptScope === "per-suit") {
@@ -251,6 +255,9 @@ export default function App() {
   );
   const [suitCountPromptSuits, setSuitCountPromptSuits] = useState<Suit[]>(
     () => initialSettings.suitCountPromptSuits ?? [...SUITS]
+  );
+  const [suitCountSkipSelfOffSuit, setSuitCountSkipSelfOffSuit] = useState(
+    () => initialSettings.suitCountSkipSelfOffSuit ?? false
   );
   const [checkErrorsEnabled, setCheckErrorsEnabled] = useState(
     () => initialSettings.checkErrorsEnabled ?? true
@@ -466,6 +473,7 @@ export default function App() {
       darkMode,
       suitCountPromptEnabled,
       suitCountPromptSuits,
+      suitCountSkipSelfOffSuit,
       checkErrorsEnabled,
       voidPromptScope,
       suitOrderMode,
@@ -502,6 +510,7 @@ export default function App() {
     darkMode,
     suitCountPromptEnabled,
     suitCountPromptSuits,
+    suitCountSkipSelfOffSuit,
     checkErrorsEnabled,
     voidPromptScope,
     suitOrderMode,
@@ -946,7 +955,10 @@ export default function App() {
     cancelResolveTimer();
     const promptSuit =
       suitCountPromptEnabled && !isViewingHistory
-        ? shouldPromptSuitCount(historyBeforeTrick, completedTrick)
+        ? shouldPromptSuitCount(historyBeforeTrick, completedTrick, {
+            skipIfSelfOffSuit: suitCountSkipSelfOffSuit,
+            selfSeat: "Me",
+          })
         : null;
     const filteredPromptSuit = promptSuit && suitCountPromptSuits.includes(promptSuit) ? promptSuit : null;
 
@@ -1365,6 +1377,8 @@ export default function App() {
       setSuitCountPromptEnabled={setSuitCountPromptEnabled}
       suitCountPromptSuits={suitCountPromptSuits}
       toggleSuitCountPromptSuit={(s) => toggleSuitSelection(setSuitCountPromptSuits, s)}
+      suitCountSkipSelfOffSuit={suitCountSkipSelfOffSuit}
+      setSuitCountSkipSelfOffSuit={setSuitCountSkipSelfOffSuit}
       winIntentPromptEnabled={winIntentPromptEnabled}
       setWinIntentPromptEnabled={setWinIntentPromptEnabled}
       winIntentMinRank={winIntentMinRank}

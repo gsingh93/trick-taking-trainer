@@ -123,6 +123,8 @@ type SettingsCardProps = {
   setSuitCountPromptEnabled: (value: boolean) => void;
   suitCountPromptSuits: Suit[];
   toggleSuitCountPromptSuit: (suit: Suit) => void;
+  suitCountSkipSelfOffSuit: boolean;
+  setSuitCountSkipSelfOffSuit: (value: boolean) => void;
   winIntentPromptEnabled: boolean;
   setWinIntentPromptEnabled: (value: boolean) => void;
   winIntentMinRank: Rank;
@@ -183,6 +185,8 @@ export function SettingsCard(props: SettingsCardProps) {
     setSuitCountPromptEnabled,
     suitCountPromptSuits,
     toggleSuitCountPromptSuit,
+    suitCountSkipSelfOffSuit,
+    setSuitCountSkipSelfOffSuit,
     winIntentPromptEnabled,
     setWinIntentPromptEnabled,
     winIntentMinRank,
@@ -303,6 +307,15 @@ export function SettingsCard(props: SettingsCardProps) {
         checked: suitCountPromptEnabled,
         onCheckedChange: setSuitCountPromptEnabled,
         tooltip: "After the first off-suit in a suit, ask how many of that suit remain outside your hand",
+      },
+      {
+        key: "suit-count-skip-self",
+        label: "Skip if I'm off-suit",
+        checked: suitCountSkipSelfOffSuit,
+        onCheckedChange: setSuitCountSkipSelfOffSuit,
+        disabled: !suitCountPromptEnabled,
+        className: !suitCountPromptEnabled ? "opacity-50" : "",
+        tooltip: "Skip the prompt when you are the first player to discard off-suit in that suit",
       },
     ] satisfies SwitchRow[],
     suitCountSuitFilter: [

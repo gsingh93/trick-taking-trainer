@@ -150,6 +150,26 @@ describe("state", () => {
     expect(shouldPromptSuitCount([], trick)).toBe("H");
   });
 
+  it("shouldPromptSuitCount skips when Me is first off-suit and skip is enabled", () => {
+    const trick: PlayT[] = [
+      { seat: "Left", card: { suit: "H", rank: 10, id: "H10" } },
+      { seat: "Me", card: { suit: "S", rank: 2, id: "S2" } },
+      { seat: "Across", card: { suit: "H", rank: 3, id: "H3" } },
+      { seat: "Right", card: { suit: "H", rank: 4, id: "H4" } },
+    ];
+    expect(shouldPromptSuitCount([], trick, { skipIfSelfOffSuit: true, selfSeat: "Me" })).toBeNull();
+  });
+
+  it("shouldPromptSuitCount still prompts when skip is enabled but an opponent is first off-suit", () => {
+    const trick: PlayT[] = [
+      { seat: "Me", card: { suit: "H", rank: 10, id: "H10" } },
+      { seat: "Left", card: { suit: "S", rank: 2, id: "S2" } },
+      { seat: "Across", card: { suit: "H", rank: 3, id: "H3" } },
+      { seat: "Right", card: { suit: "H", rank: 4, id: "H4" } },
+    ];
+    expect(shouldPromptSuitCount([], trick, { skipIfSelfOffSuit: true, selfSeat: "Me" })).toBe("H");
+  });
+
   it("shouldPromptSuitCount skips if the suit already had an off-suit", () => {
     const history: PlayT[][] = [
       [
