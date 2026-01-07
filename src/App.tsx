@@ -313,6 +313,7 @@ export default function App() {
   );
   const [bidState, setBidState] = useState<BidState | null>(null);
   const [bidInput, setBidInput] = useState("0");
+  const lastSuggestedBidRef = useRef<number | null>(null);
   const [peekPrompt, setPeekPrompt] = useState<null | "bid" | "suit" | "void" | "intent">(null);
   const [supportsHover, setSupportsHover] = useState(true);
   const [winIntentPromptEnabled, setWinIntentPromptEnabled] = useState(
@@ -420,6 +421,7 @@ export default function App() {
   const biddingActive = activeAiMode === "bidding";
   const biddingComplete = !biddingActive || (bidState && isBiddingComplete(bidState));
   const firstSeatLocked = biddingActive ? !!biddingComplete : handInProgress;
+  const activeBidder = bidState ? currentBidder(bidState) : null;
   const bidResults = useMemo(() => {
     if (!bidState || !biddingComplete) return null;
     return evaluateExactBids(bidState.bids, tricksWon);
@@ -631,10 +633,26 @@ export default function App() {
     if (biddingActive) {
       setBidState((prev) => prev ?? initBidState(firstSeat));
       setBidInput("0");
+      lastSuggestedBidRef.current = null;
     } else if (bidState) {
       setBidState(null);
+      lastSuggestedBidRef.current = null;
     }
   }, [biddingActive, bidState, firstSeat]);
+
+  useEffect(() => {
+    if (!biddingActive || biddingComplete) return;
+    if (!aiPlayMe) return;
+    if (!bidState || activeBidder !== "Me") return;
+    if (bidState.bids.Me != null) return;
+    const suggested = estimateBid(hands.Me, trump);
+    const suggestedStr = String(suggested);
+    const lastSuggested = lastSuggestedBidRef.current;
+    const shouldUpdate = bidInput === "0" || bidInput === String(lastSuggested ?? "");
+    if (!shouldUpdate) return;
+    lastSuggestedBidRef.current = suggested;
+    setBidInput(suggestedStr);
+  }, [activeBidder, aiPlayMe, bidInput, bidState, biddingActive, biddingComplete, hands.Me, trump]);
 
   useEffect(() => {
     if (firstSeatLocked) return;
@@ -1434,7 +1452,7 @@ export default function App() {
           biddingActive={biddingActive}
           bidStateActive={!!bidState}
           biddingComplete={!!biddingComplete}
-          currentBidder={bidState ? currentBidder(bidState) : null}
+          currentBidder={activeBidder}
           bidInput={bidInput}
           setBidInput={setBidInput}
           onSubmitBid={(bid) => submitBidForSeat("Me", bid)}
