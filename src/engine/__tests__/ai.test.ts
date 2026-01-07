@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { chooseCardToPlay } from "../ai/random";
-import { shouldRunAi } from "../ai/logic";
+import { shouldRunAi, type AiDecisionContext, type AiSettings } from "../ai/logic";
 import { canAdvanceTrick, canPlayCard } from "../flow";
 import { chooseCardToPlayForBid } from "../ai/bidFocus";
 import { estimateBid } from "../ai/bidHeuristic";
@@ -8,6 +8,24 @@ import type { CardT, TrumpConfig } from "../types";
 import { createVoidGrid } from "../state";
 
 describe("ai", () => {
+  const baseContext: AiDecisionContext = {
+    biddingActive: false,
+    biddingComplete: true,
+    isResolving: false,
+    handComplete: false,
+    awaitContinue: false,
+    isViewingHistory: false,
+    turn: "Left",
+    leadPromptActive: false,
+    suitCountPromptActive: false,
+    trickLength: 1,
+    leader: "Left",
+  };
+  const baseSettings: AiSettings = {
+    enabled: true,
+    playMe: true,
+  };
+
   it("returns null when no legal cards exist", () => {
     const decision = chooseCardToPlay([{ id: "S2" }], new Set());
     expect(decision).toBeNull();
@@ -23,57 +41,24 @@ describe("ai", () => {
 
   it("blocks AI when bidding is active and incomplete", () => {
     const should = shouldRunAi({
-      aiEnabled: true,
-      biddingActive: true,
-      biddingComplete: false,
-      isResolving: false,
-      handComplete: false,
-      awaitContinue: false,
-      isViewingHistory: false,
-      turn: "Left",
-      aiPlayMe: false,
-      leadPromptActive: false,
-      suitCountPromptActive: false,
-      trickLength: 0,
-      leader: "Left",
+      context: { ...baseContext, biddingActive: true, biddingComplete: false, trickLength: 0 },
+      settings: { ...baseSettings, playMe: false },
     });
     expect(should).toBe(false);
   });
 
   it("allows AI when bidding is complete and other gates are clear", () => {
     const should = shouldRunAi({
-      aiEnabled: true,
-      biddingActive: true,
-      biddingComplete: true,
-      isResolving: false,
-      handComplete: false,
-      awaitContinue: false,
-      isViewingHistory: false,
-      turn: "Left",
-      aiPlayMe: false,
-      leadPromptActive: false,
-      suitCountPromptActive: false,
-      trickLength: 0,
-      leader: "Left",
+      context: { ...baseContext, biddingActive: true, biddingComplete: true, trickLength: 0 },
+      settings: { ...baseSettings, playMe: false },
     });
     expect(should).toBe(true);
   });
 
   it("blocks AI when it is my turn and aiPlayMe is off", () => {
     const should = shouldRunAi({
-      aiEnabled: true,
-      biddingActive: false,
-      biddingComplete: true,
-      isResolving: false,
-      handComplete: false,
-      awaitContinue: false,
-      isViewingHistory: false,
-      turn: "Me",
-      aiPlayMe: false,
-      leadPromptActive: false,
-      suitCountPromptActive: false,
-      trickLength: 1,
-      leader: "Me",
+      context: { ...baseContext, turn: "Me", leader: "Me" },
+      settings: { ...baseSettings, playMe: false },
     });
     expect(should).toBe(false);
   });
@@ -81,53 +66,20 @@ describe("ai", () => {
   it("blocks AI when awaiting continue or resolving or history view is active", () => {
     expect(
       shouldRunAi({
-        aiEnabled: true,
-        biddingActive: false,
-        biddingComplete: true,
-        isResolving: true,
-        handComplete: false,
-        awaitContinue: false,
-        isViewingHistory: false,
-        turn: "Left",
-        aiPlayMe: true,
-        leadPromptActive: false,
-        suitCountPromptActive: false,
-        trickLength: 1,
-        leader: "Left",
+        context: { ...baseContext, isResolving: true },
+        settings: baseSettings,
       })
     ).toBe(false);
     expect(
       shouldRunAi({
-        aiEnabled: true,
-        biddingActive: false,
-        biddingComplete: true,
-        isResolving: false,
-        handComplete: false,
-        awaitContinue: true,
-        isViewingHistory: false,
-        turn: "Left",
-        aiPlayMe: true,
-        leadPromptActive: false,
-        suitCountPromptActive: false,
-        trickLength: 1,
-        leader: "Left",
+        context: { ...baseContext, awaitContinue: true },
+        settings: baseSettings,
       })
     ).toBe(false);
     expect(
       shouldRunAi({
-        aiEnabled: true,
-        biddingActive: false,
-        biddingComplete: true,
-        isResolving: false,
-        handComplete: false,
-        awaitContinue: false,
-        isViewingHistory: true,
-        turn: "Left",
-        aiPlayMe: true,
-        leadPromptActive: false,
-        suitCountPromptActive: false,
-        trickLength: 1,
-        leader: "Left",
+        context: { ...baseContext, isViewingHistory: true },
+        settings: baseSettings,
       })
     ).toBe(false);
   });
@@ -135,53 +87,20 @@ describe("ai", () => {
   it("blocks AI when prompts are active or when turn/leader mismatch at trick start", () => {
     expect(
       shouldRunAi({
-        aiEnabled: true,
-        biddingActive: false,
-        biddingComplete: true,
-        isResolving: false,
-        handComplete: false,
-        awaitContinue: false,
-        isViewingHistory: false,
-        turn: "Left",
-        aiPlayMe: true,
-        leadPromptActive: true,
-        suitCountPromptActive: false,
-        trickLength: 1,
-        leader: "Left",
+        context: { ...baseContext, leadPromptActive: true },
+        settings: baseSettings,
       })
     ).toBe(false);
     expect(
       shouldRunAi({
-        aiEnabled: true,
-        biddingActive: false,
-        biddingComplete: true,
-        isResolving: false,
-        handComplete: false,
-        awaitContinue: false,
-        isViewingHistory: false,
-        turn: "Left",
-        aiPlayMe: true,
-        leadPromptActive: false,
-        suitCountPromptActive: true,
-        trickLength: 1,
-        leader: "Left",
+        context: { ...baseContext, suitCountPromptActive: true },
+        settings: baseSettings,
       })
     ).toBe(false);
     expect(
       shouldRunAi({
-        aiEnabled: true,
-        biddingActive: false,
-        biddingComplete: true,
-        isResolving: false,
-        handComplete: false,
-        awaitContinue: false,
-        isViewingHistory: false,
-        turn: "Across",
-        aiPlayMe: true,
-        leadPromptActive: false,
-        suitCountPromptActive: false,
-        trickLength: 0,
-        leader: "Left",
+        context: { ...baseContext, turn: "Across", trickLength: 0, leader: "Left" },
+        settings: baseSettings,
       })
     ).toBe(false);
   });

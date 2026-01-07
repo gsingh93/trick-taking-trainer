@@ -1222,19 +1222,23 @@ export default function App() {
 
     if (
       !shouldRunAi({
-        aiEnabled: effectiveAiEnabled,
-        biddingActive,
-        biddingComplete: !!biddingComplete,
-        isResolving,
-        handComplete,
-        awaitContinue: effectiveAwaitContinue,
-        isViewingHistory,
-        turn,
-        aiPlayMe: effectiveAiPlayMe,
-        leadPromptActive: effectiveLeadPromptActive,
-        suitCountPromptActive: effectiveSuitCountPromptActive,
-        trickLength: trick.length,
-        leader,
+        context: {
+          biddingActive,
+          biddingComplete: !!biddingComplete,
+          isResolving,
+          handComplete,
+          awaitContinue: effectiveAwaitContinue,
+          isViewingHistory,
+          turn,
+          leadPromptActive: effectiveLeadPromptActive,
+          suitCountPromptActive: effectiveSuitCountPromptActive,
+          trickLength: trick.length,
+          leader,
+        },
+        settings: {
+          enabled: effectiveAiEnabled,
+          playMe: effectiveAiPlayMe,
+        },
       })
     ) {
       return;
