@@ -81,6 +81,24 @@ type VoidSelections = Record<Opp, boolean>;
 
 const SETTINGS_KEY = "trick-taking-trainer:settings";
 
+type BidResultDisplay = Record<Seat, { label: string; className: string }> | null;
+
+type HistoryViewContext = {
+  isViewingHistory: boolean;
+  snapshot: ReturnType<typeof buildHistorySnapshot> | null;
+  display: {
+    bidResult: BidResultDisplay;
+    hands: Record<Seat, CardT[]>;
+    leader: Seat;
+    turn: Seat;
+    tricksWon: Record<Seat, number>;
+    trick: PlayT[];
+    trickNo: number;
+    handComplete: boolean;
+    trumpBroken: boolean;
+  };
+};
+
 type Settings = {
   dealSeed: number;
   seedInput: string;
@@ -560,31 +578,37 @@ export default function App() {
 
   const isViewingHistory =
     viewedTrickIndex != null && viewedTrickIndex >= 0 && viewedTrickIndex < trickHistory.length;
-  const displayBidResult = isViewingHistory ? null : bidResultDisplay;
   const historySnapshot = useMemo(() => {
     if (!isViewingHistory || viewedTrickIndex == null) return null;
     return buildHistorySnapshot(trickHistory, viewedTrickIndex, viewedTrickStep, dealSeed, trump);
   }, [isViewingHistory, viewedTrickIndex, viewedTrickStep, trickHistory, dealSeed, trump]);
 
-  const displayHands = historySnapshot?.hands ?? hands;
-  const displayLeader = historySnapshot?.leader ?? leader;
-  const displayTurn = historySnapshot?.turn ?? turn;
-  const displayTricksWon = historySnapshot?.tricksWon ?? tricksWon;
-  const displayTrick = historySnapshot?.trick ?? trick;
-  const displayTrickNo = historySnapshot?.trickNo ?? trickNo;
-  const displayHandComplete = historySnapshot?.handComplete ?? handComplete;
-  const displayTrumpBroken = historySnapshot?.trumpBroken ?? game.trumpBroken;
+  const historyViewContext: HistoryViewContext = {
+    isViewingHistory,
+    snapshot: historySnapshot,
+    display: {
+      bidResult: isViewingHistory ? null : bidResultDisplay,
+      hands: historySnapshot?.hands ?? hands,
+      leader: historySnapshot?.leader ?? leader,
+      turn: historySnapshot?.turn ?? turn,
+      tricksWon: historySnapshot?.tricksWon ?? tricksWon,
+      trick: historySnapshot?.trick ?? trick,
+      trickNo: historySnapshot?.trickNo ?? trickNo,
+      handComplete: historySnapshot?.handComplete ?? handComplete,
+      trumpBroken: historySnapshot?.trumpBroken ?? game.trumpBroken,
+    },
+  };
   const displayTrickWinner = useMemo<Seat | null>(() => {
-    if (displayTrick.length !== 4) return null;
-    return determineTrickWinner(displayTrick, trump);
-  }, [displayTrick, trump]);
+    if (historyViewContext.display.trick.length !== 4) return null;
+    return determineTrickWinner(historyViewContext.display.trick, trump);
+  }, [historyViewContext.display.trick, trump]);
 
   const canPlay = canPlayCard({
     leadPromptActive,
     suitCountPromptActive,
     awaitContinue,
     handComplete,
-    isViewingHistory,
+    isViewingHistory: historyViewContext.isViewingHistory,
     biddingActive,
     biddingComplete: !!biddingComplete,
   }) && !pendingIntentCard;
@@ -1380,20 +1404,20 @@ export default function App() {
   const tableCard = (
     <TableCard
       seatLabels={seatLabels}
-      displayHands={displayHands}
-      displayTricksWon={displayTricksWon}
-      displayTurn={displayTurn}
-      displayHandComplete={displayHandComplete}
-      displayTrick={displayTrick}
+      displayHands={historyViewContext.display.hands}
+      displayTricksWon={historyViewContext.display.tricksWon}
+      displayTurn={historyViewContext.display.turn}
+      displayHandComplete={historyViewContext.display.handComplete}
+      displayTrick={historyViewContext.display.trick}
       displayTrickWinner={displayTrickWinner}
-      displayTrickNo={displayTrickNo}
+      displayTrickNo={historyViewContext.display.trickNo}
       trickNo={trickNo}
       bidDisplay={bidDisplay}
-      bidResultDisplay={displayBidResult}
+      bidResultDisplay={historyViewContext.display.bidResult}
       shownHands={shownHands}
       toggleRevealSeat={toggleRevealSeat}
       modeOpenHandVerify={modeOpenHandVerify}
-      isViewingHistory={isViewingHistory}
+      isViewingHistory={historyViewContext.isViewingHistory}
       legalBySeat={legalBySeat}
       onPlayCard={(s, c) => tryPlay(s, c, "human")}
       suitOrder={suitOrder}
@@ -1527,7 +1551,7 @@ export default function App() {
       setHistoryPlaying={setHistoryPlaying}
       resumeFromHistory={resumeFromHistory}
       seatLabels={seatLabels}
-      isViewingHistory={isViewingHistory}
+      isViewingHistory={historyViewContext.isViewingHistory}
       trump={trump}
       suitStyleMode={suitStyleMode}
     />
@@ -1548,15 +1572,15 @@ export default function App() {
   const buildSnapshotTextPayload = () =>
     buildSnapshotText({
       seed: dealSeed,
-      trickNo: displayTrickNo,
-      leader: displayLeader,
-      turn: displayTurn,
+      trickNo: historyViewContext.display.trickNo,
+      leader: historyViewContext.display.leader,
+      turn: historyViewContext.display.turn,
       trump,
-      trumpBroken: displayTrumpBroken,
+      trumpBroken: historyViewContext.display.trumpBroken,
       bids: bidState?.bids ?? { Left: null, Across: null, Right: null, Me: null },
-      tricksWon: displayTricksWon,
-      trick: displayTrick,
-      hands: displayHands,
+      tricksWon: historyViewContext.display.tricksWon,
+      trick: historyViewContext.display.trick,
+      hands: historyViewContext.display.hands,
       seatLabels,
       suitOrder,
       sortAscending,
