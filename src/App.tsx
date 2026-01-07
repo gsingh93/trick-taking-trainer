@@ -8,7 +8,12 @@ import { buildBidBreakdown, estimateBid } from "@/engine/ai/bidHeuristic";
 import { remainingHonorsInSuit } from "@/engine/training";
 import { evaluateWinIntent } from "@/engine/winIntent";
 import { determineTrickWinner } from "@/engine/rules";
-import { getVoidPromptLead, shouldPromptWinIntent } from "@/engine/prompts";
+import {
+  getVoidPromptLead,
+  shouldPromptWinIntent,
+  type PromptContext,
+  type VoidTrackingSettings,
+} from "@/engine/prompts";
 import { buildDeck, createRng, dealNewHands } from "@/engine/deck";
 import {
   initGameState,
@@ -710,18 +715,24 @@ export default function App() {
   }, [suitCountPromptActive, suitCountPromptSuit, suitCountPromptSuits]);
 
   useEffect(() => {
-    const leadInfo = getVoidPromptLead({
-      voidTrackingEnabled,
-      voidTrackingSuits,
-      voidPromptSkipLowImpact,
-      voidPromptOnlyWhenLeading,
-      voidPromptScope,
+    const promptContext: PromptContext = {
       trick,
       trickNo,
       hands,
       trump,
-      anyVoidObserved,
       actualVoid,
+    };
+    const settings: VoidTrackingSettings = {
+      enabled: voidTrackingEnabled,
+      suits: voidTrackingSuits,
+      skipLowImpact: voidPromptSkipLowImpact,
+      onlyWhenLeading: voidPromptOnlyWhenLeading,
+      promptScope: voidPromptScope,
+    };
+    const leadInfo = getVoidPromptLead({
+      context: promptContext,
+      settings,
+      anyVoidObserved,
     });
     if (!leadInfo) {
       if (leadPromptActive) resetVoidPrompt();
@@ -1106,18 +1117,23 @@ export default function App() {
       !pendingIntentCard &&
       !opts?.skipIntentPrompt &&
       shouldPromptWinIntent({
+        context: {
+          trick,
+          trickNo,
+          hands,
+          trump,
+          actualVoid,
+        },
         card,
         seat,
-        trick,
-        trickNo,
-        winIntentPromptEnabled,
-        winIntentMinRank,
-        winIntentWarnHonorsOnly,
         aiPlayMe,
         honorRemainingBySuit,
-        hands,
-        trump,
-        actualVoid,
+        settings: {
+          enabled: winIntentPromptEnabled,
+          minRank: winIntentMinRank,
+          warnHonorsOnly: winIntentWarnHonorsOnly,
+          warnTrump: winIntentWarnTrump,
+        },
       })
     ) {
       setPendingIntentCard(card);
