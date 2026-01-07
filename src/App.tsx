@@ -1765,6 +1765,7 @@ export default function App() {
               type="button"
               variant="outline"
               size="icon"
+              className="bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/60 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-200 dark:ring-emerald-400/30"
               aria-label={settingsOpen ? "Close settings panel" : "Open settings panel"}
               onClick={() => setSettingsOpen((value) => !value)}
             >
