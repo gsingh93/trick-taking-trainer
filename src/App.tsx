@@ -10,6 +10,7 @@ import { evaluateWinIntent } from "@/engine/winIntent";
 import { determineTrickWinner } from "@/engine/rules";
 import {
   getVoidPromptLead,
+  getSuitCountPromptSuit,
   shouldPromptWinIntent,
   type PromptContext,
   type VoidTrackingSettings,
@@ -26,7 +27,6 @@ import {
   computeActualVoid,
   isPlayLegal,
   isHandInProgress,
-  shouldPromptSuitCount,
   type GameState,
   type VoidGrid,
 } from "@/engine/state";
@@ -1032,14 +1032,20 @@ export default function App() {
   function resolveTrickAfterDelay(completedTrick: PlayT[], historyBeforeTrick: PlayT[][]) {
     setIsResolving(true);
     cancelResolveTimer();
-    const promptSuit =
-      suitCountPromptEnabled && !isViewingHistory
-        ? shouldPromptSuitCount(historyBeforeTrick, completedTrick, {
-            skipIfSelfOffSuit: suitCountSkipSelfOffSuit,
+    const promptSuit = isViewingHistory
+      ? null
+      : getSuitCountPromptSuit({
+          context: {
+            trickHistory: historyBeforeTrick,
+            trick: completedTrick,
             selfSeat: "Me",
-          })
-        : null;
-    const filteredPromptSuit = promptSuit && suitCountPromptSuits.includes(promptSuit) ? promptSuit : null;
+          },
+          settings: {
+            enabled: suitCountPromptEnabled,
+            suits: suitCountPromptSuits,
+            skipIfSelfOffSuit: suitCountSkipSelfOffSuit,
+          },
+        });
 
     const resolveDelay = debugAutoPlay ? 0 : aiDelayMs;
     resolveTimerRef.current = window.setTimeout(() => {
@@ -1052,9 +1058,9 @@ export default function App() {
 
       const nextState = resolvedState as GameState | null;
       if (!nextState) return;
-      if (filteredPromptSuit && !debugAutoPlay) {
+      if (promptSuit && !debugAutoPlay) {
         setSuitCountPromptActive(true);
-        setSuitCountPromptSuit(filteredPromptSuit);
+        setSuitCountPromptSuit(promptSuit);
         setSuitCountAnswer("0");
         setSuitCountMismatch(false);
         setIsResolving(false);

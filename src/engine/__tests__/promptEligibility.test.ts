@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import { createVoidGrid } from "../state";
 import {
   getVoidPromptLead,
+  getSuitCountPromptSuit,
   shouldPromptWinIntent,
   type PromptContext,
+  type SuitCountContext,
+  type SuitCountSettings,
   type VoidPromptEligibilityArgs,
   type VoidTrackingSettings,
   type WinIntentEligibilityArgs,
@@ -302,5 +305,39 @@ describe("shouldPromptWinIntent", () => {
   it("returns true for a normal mid-trick play above the threshold", () => {
     const args = baseWinIntentArgs();
     expect(shouldPromptWinIntent(args)).toBe(true);
+  });
+});
+
+function baseSuitCountArgs() {
+  const context: SuitCountContext = {
+    trickHistory: [],
+    trick: [
+      makePlay("Left", makeCard("H", 2, "H2")),
+      makePlay("Across", makeCard("C", 9, "C9")),
+    ],
+    selfSeat: "Me",
+  };
+  const settings: SuitCountSettings = {
+    enabled: true,
+    suits: ["S", "H", "D", "C"] as Suit[],
+    skipIfSelfOffSuit: false,
+  };
+  return { context, settings };
+}
+
+describe("getSuitCountPromptSuit", () => {
+  it("returns null when disabled", () => {
+    const args = { ...baseSuitCountArgs(), settings: { ...baseSuitCountArgs().settings, enabled: false } };
+    expect(getSuitCountPromptSuit(args)).toBeNull();
+  });
+
+  it("returns null when the suit is not tracked", () => {
+    const args = { ...baseSuitCountArgs(), settings: { ...baseSuitCountArgs().settings, suits: ["S"] as Suit[] } };
+    expect(getSuitCountPromptSuit(args)).toBeNull();
+  });
+
+  it("returns the lead suit when the first off-suit occurs", () => {
+    const args = baseSuitCountArgs();
+    expect(getSuitCountPromptSuit(args)).toBe("H");
   });
 });

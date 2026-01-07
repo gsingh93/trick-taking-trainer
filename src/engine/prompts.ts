@@ -1,4 +1,5 @@
 import { canFollowSuit, compareCardsInTrick, isTrump, nextSeat, trickLeadSuit } from "./rules";
+import { shouldPromptSuitCount } from "./state";
 import { OPPONENTS, type CardT, type PlayT, type Rank, type Seat, type Suit, type TrumpConfig } from "./types";
 import type { VoidGrid } from "./state";
 import { anyRemainingVoidInSuit, remainingPlayersVoidInSuit } from "./voids";
@@ -68,6 +69,30 @@ export type WinIntentEligibilityArgs = {
   honorRemainingBySuit: Record<Suit, Rank[]>;
   settings: WinIntentSettings;
 };
+
+export type SuitCountContext = {
+  trickHistory: PlayT[][];
+  trick: PlayT[];
+  selfSeat: Seat;
+};
+
+export type SuitCountSettings = {
+  enabled: boolean;
+  suits: Suit[];
+  skipIfSelfOffSuit: boolean;
+};
+
+export function getSuitCountPromptSuit(args: { context: SuitCountContext; settings: SuitCountSettings }): Suit | null {
+  const { context, settings } = args;
+  if (!settings.enabled) return null;
+  const promptSuit = shouldPromptSuitCount(context.trickHistory, context.trick, {
+    skipIfSelfOffSuit: settings.skipIfSelfOffSuit,
+    selfSeat: context.selfSeat,
+  });
+  if (!promptSuit) return null;
+  if (!settings.suits.includes(promptSuit)) return null;
+  return promptSuit;
+}
 
 
 function currentTrickHasAllHigherHonors(card: CardT, suit: Suit, trick: PlayT[]): boolean {
