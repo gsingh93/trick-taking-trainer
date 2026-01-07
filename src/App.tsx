@@ -931,8 +931,12 @@ export default function App() {
       const encoded = await encodeSharePayload(payload);
       const url = `${window.location.origin}${window.location.pathname}#state=${encoded}`;
       if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(url);
-        return;
+        try {
+          await navigator.clipboard.writeText(url);
+          return;
+        } catch {
+          // Fallback to execCommand below.
+        }
       }
       const textarea = document.createElement("textarea");
       textarea.value = url;
@@ -942,8 +946,11 @@ export default function App() {
       document.body.appendChild(textarea);
       textarea.focus();
       textarea.select();
-      document.execCommand("copy");
+      const ok = document.execCommand("copy");
       textarea.remove();
+      if (!ok) {
+        setShareError("Unable to copy share link");
+      }
     } catch {
       setShareError("Unable to build share link");
     }
