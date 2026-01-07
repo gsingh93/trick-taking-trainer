@@ -51,7 +51,7 @@ import {
   type PlayT,
   type TrumpConfig,
 } from "@/engine/types";
-import { RefreshCw, Moon, Sun, Link } from "lucide-react";
+import { RefreshCw, Moon, Sun, Link, Settings, X } from "lucide-react";
 import { rankGlyph, suitGlyph } from "@/ui/cardUtils";
 import { SettingsCard } from "@/components/SettingsCard";
 import { TrickHistoryCard } from "@/components/TrickHistoryCard";
@@ -129,6 +129,7 @@ type Settings = {
   winIntentWarnHonorsOnly: boolean;
   winIntentMinRank: Rank;
   voidPromptOnlyWhenLeading: boolean;
+  settingsOpen: boolean;
   trump: TrumpConfig;
 };
 
@@ -207,6 +208,9 @@ function loadSettings(): Partial<Settings> {
     }
     if (typeof data.voidPromptOnlyWhenLeading === "boolean") {
       next.voidPromptOnlyWhenLeading = data.voidPromptOnlyWhenLeading;
+    }
+    if (typeof data.settingsOpen === "boolean") {
+      next.settingsOpen = data.settingsOpen;
     }
     if (typeof data.trump === "object" && data.trump) {
       const t = data.trump as Record<string, unknown>;
@@ -316,6 +320,11 @@ export default function App() {
   const lastSuggestedBidRef = useRef<number | null>(null);
   const [peekPrompt, setPeekPrompt] = useState<null | "bid" | "suit" | "void" | "intent">(null);
   const [supportsHover, setSupportsHover] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(() => {
+    if (typeof initialSettings.settingsOpen === "boolean") return initialSettings.settingsOpen;
+    if (typeof window === "undefined") return true;
+    return window.matchMedia("(max-width: 767px)").matches ? false : true;
+  });
   const [winIntentPromptEnabled, setWinIntentPromptEnabled] = useState(
     () => initialSettings.winIntentPromptEnabled ?? false
   );
@@ -534,6 +543,7 @@ export default function App() {
       winIntentWarnHonorsOnly,
       winIntentMinRank,
       voidPromptOnlyWhenLeading,
+      settingsOpen,
       trump,
     };
     try {
@@ -571,6 +581,7 @@ export default function App() {
     winIntentWarnHonorsOnly,
     winIntentMinRank,
     voidPromptOnlyWhenLeading,
+    settingsOpen,
     trump,
   ]);
 
@@ -1576,6 +1587,28 @@ export default function App() {
   );
 
   const helpCard = <HelpCard />;
+  const settingsPanel = (
+    <div
+      className={
+        "fixed right-0 top-0 z-40 h-full w-[90vw] max-w-[420px] border-l bg-background shadow-lg transition-transform duration-200 " +
+        (settingsOpen ? "translate-x-0" : "translate-x-full")
+      }
+    >
+      <div className="flex items-center justify-between border-b px-3 py-2">
+        <div className="text-sm font-semibold">Settings</div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={() => setSettingsOpen(false)}
+          aria-label="Close settings panel"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+      <div className="h-full overflow-y-auto p-3">{settingsCard}</div>
+    </div>
+  );
 
   const bidBreakdowns = useMemo(() => {
     return SEATS.reduce(
@@ -1728,6 +1761,15 @@ export default function App() {
             >
               {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label={settingsOpen ? "Close settings panel" : "Open settings panel"}
+              onClick={() => setSettingsOpen((value) => !value)}
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
             <div className="space-y-2 rounded-lg border bg-card/50 p-3">
               <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Deal</div>
               <div className="flex flex-wrap items-start gap-2">
@@ -1770,17 +1812,11 @@ export default function App() {
               {trickHistoryCard}
             </div>
           </div>
-          <div className="grid grid-cols-1 items-start gap-6 min-[750px]:grid-cols-[minmax(0,1fr)_auto] min-[750px]:gap-1">
-            <div className="w-full">{helpCard}</div>
-            <div className="w-full min-[750px]:w-[330px] min-[750px]:justify-self-end">
-              <div className="space-y-4">
-                {settingsCard}
-              </div>
-            </div>
-          </div>
+          <div className="w-full">{helpCard}</div>
         </div>
       </div>
       {debugPanel}
+      {settingsPanel}
     </div>
   );
 }
