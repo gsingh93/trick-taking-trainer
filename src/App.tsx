@@ -46,7 +46,7 @@ import {
   type PlayT,
   type TrumpConfig,
 } from "@/engine/types";
-import { RefreshCw, Moon, Sun } from "lucide-react";
+import { RefreshCw, Moon, Sun, Link } from "lucide-react";
 import { rankGlyph, suitGlyph } from "@/ui/cardUtils";
 import { SettingsCard } from "@/components/SettingsCard";
 import { TrickHistoryCard } from "@/components/TrickHistoryCard";
@@ -56,6 +56,7 @@ import { DebugPanel } from "@/components/DebugPanel";
 import { SeedInput } from "@/components/SeedInput";
 import { PromptOverlays } from "@/components/PromptOverlays";
 import { buildSnapshotText, type SnapshotData } from "@/debug/snapshot";
+import { decodeSharePayload, encodeSharePayload, type SharePayload } from "@/debug/share";
 
 /**
  * Generic trick engine (v1)
@@ -337,6 +338,7 @@ export default function App() {
     return next.slice(0, 10);
   });
   const [seedError, setSeedError] = useState<string | null>(null);
+  const [shareError, setShareError] = useState<string | null>(null);
   const [game, setGame] = useState<GameState>(() => {
     const base = initGameState(initialSeed);
     return {
@@ -460,6 +462,21 @@ export default function App() {
   const anyVoidObserved = useMemo(() => {
     return OPPONENTS.some((o) => SUITS.some((s) => actualVoid[o][s]));
   }, [actualVoid]);
+
+  useEffect(() => {
+    let active = true;
+    const hash = window.location.hash;
+    if (!hash.startsWith("#state=")) return;
+    const encoded = hash.slice("#state=".length);
+    if (!encoded) return;
+    decodeSharePayload(encoded).then((payload) => {
+      if (!active || !payload) return;
+      applySharePayload(payload);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     const settings: Settings = {
@@ -815,6 +832,57 @@ export default function App() {
 
   function resetHand() {
     resetForDeal(dealSeed);
+  }
+
+  function applySharePayload(payload: SharePayload) {
+    cancelResolveTimer();
+    setDealSeed(payload.seed);
+    setSeedInput(String(payload.seed));
+    setGame(payload.game);
+    setBidState(payload.bidState);
+    setTrump(payload.trump);
+    setAiModeLocked(payload.aiMode);
+    setViewedTrickIndex(null);
+    setViewedTrickStep(0);
+    setHistoryPlaying(false);
+    resetWinIntentPrompt();
+    resetVoidPrompt();
+    resetSuitCountPrompt();
+    setReveal({ Left: false, Across: false, Right: false, Me: true });
+    setIsResolving(false);
+    setAwaitContinue(payload.game.trick.length === 4 && !payload.game.handComplete);
+  }
+
+  async function copyShareLink() {
+    setShareError(null);
+    const payload: SharePayload = {
+      v: 1,
+      seed: dealSeed,
+      aiMode: activeAiMode,
+      trump,
+      game,
+      bidState,
+    };
+    try {
+      const encoded = await encodeSharePayload(payload);
+      const url = `${window.location.origin}${window.location.pathname}#state=${encoded}`;
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        return;
+      }
+      const textarea = document.createElement("textarea");
+      textarea.value = url;
+      textarea.style.position = "fixed";
+      textarea.style.top = "-1000px";
+      textarea.style.left = "-1000px";
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      document.execCommand("copy");
+      textarea.remove();
+    } catch {
+      setShareError("Unable to build share link");
+    }
   }
 
   function toggleLeadSelection(o: Opp) {
@@ -1615,8 +1683,12 @@ export default function App() {
                     <Button type="button" variant="outline" size="sm" onClick={applySeedFromInput}>
                       Apply
                     </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={copyShareLink} aria-label="Copy share link">
+                      <Link className="h-4 w-4" />
+                    </Button>
                   </div>
                   {seedError ? <div className="mt-1 text-xs text-destructive">{seedError}</div> : null}
+                  {shareError ? <div className="mt-1 text-xs text-destructive">{shareError}</div> : null}
                 </div>
               </div>
             </div>
