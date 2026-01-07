@@ -1746,7 +1746,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-background p-3 sm:p-6">
       <div className="mx-auto max-w-6xl space-y-4 sm:space-y-6">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex w-full items-center justify-between sm:w-auto sm:gap-4">
             <div className="flex items-center gap-2">
               <span className="text-lg leading-none text-black dark:text-white">♠</span>
