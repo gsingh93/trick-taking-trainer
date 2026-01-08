@@ -62,6 +62,16 @@ import { SettingsPanel } from "@/components/SettingsPanel";
 import { buildSnapshotText, type SnapshotData } from "@/debug/snapshot";
 import { decodeSharePayload, encodeSharePayload, type SharePayload } from "@/debug/share";
 import { loadSettings, persistSettings, type Settings } from "@/state/settings";
+import {
+  createVoidSelections,
+  resetForDeal as resetDealState,
+  resetSuitCountPrompt as resetSuitCountPromptState,
+  resetVoidPrompt as resetVoidPromptState,
+  resetWinIntentPrompt as resetWinIntentPromptState,
+  type DealResetArgs,
+  type PromptResetters,
+  type VoidSelections,
+} from "@/state/promptState";
 
 /**
  * Generic trick engine (v1)
@@ -76,8 +86,6 @@ import { loadSettings, persistSettings, type Settings } from "@/state/settings";
  * - Returns played trick cards to their owners' hands
  * - Restores leader/turn to the state at the start of the trick
  */
-
-type VoidSelections = Record<Opp, boolean>;
 
 type BidResultDisplay = Record<Seat, { label: string; className: string }> | null;
 
@@ -116,10 +124,6 @@ function formatWinIntentDetails(args: {
     details.push(`Trump threat: an opponent may trump with ${suitGlyph(trumpSuit)}${who}`);
   }
   return details;
-}
-
-function createVoidSelections(): VoidSelections {
-  return { Left: false, Across: false, Right: false };
 }
 
 function pickFirstSeat(preferred: Seat, randomize: boolean): Seat {
@@ -684,57 +688,79 @@ export default function App() {
     }
   }
 
+  function promptResetters(): PromptResetters {
+    return {
+      setLeadPromptActive,
+      setLeadPromptSuit,
+      setLeadPromptLeader,
+      setLeadSelections,
+      setLeadMismatch,
+      setLeadWarning,
+      setSuitCountPromptActive,
+      setSuitCountPromptSuit,
+      setSuitCountAnswer,
+      setSuitCountMismatch,
+      setPendingIntentCard,
+      setIntentWarning,
+      setIntentDetails,
+    };
+  }
+
   function resetVoidPrompt() {
-    setLeadPromptActive(false);
-    setLeadPromptSuit(null);
-    setLeadPromptLeader(null);
-    setLeadSelections(createVoidSelections());
-    setLeadMismatch(createVoidSelections());
-    setLeadWarning(null);
+    resetVoidPromptState(promptResetters());
   }
 
   function resetSuitCountPrompt() {
-    setSuitCountPromptActive(false);
-    setSuitCountPromptSuit(null);
-    setSuitCountAnswer("0");
-    setSuitCountMismatch(false);
+    resetSuitCountPromptState(promptResetters());
   }
 
   function resetWinIntentPrompt() {
-    setPendingIntentCard(null);
-    setIntentWarning(null);
-    setIntentDetails([]);
+    resetWinIntentPromptState(promptResetters());
   }
 
   function resetForDeal(seed: number) {
     cancelResolveTimer();
     const nextSeat = pickFirstSeat(firstSeatPreference, firstSeatRandom);
-    setDealSeed(seed);
-    setSeedInput(String(seed));
+    const dealResetArgs: DealResetArgs = {
+      setDealSeed,
+      setSeedInput,
+      setSeedError,
+      setGame,
+      setBidState,
+      setLeadPromptActive,
+      setSuitCountPromptActive,
+      setPendingIntentCard,
+      setIntentWarning,
+      setIntentDetails,
+      setPeekPrompt,
+      setAwaitContinue,
+      setBidInput,
+      setReveal,
+      makeSeededGame: (nextSeed) => {
+        const base = initGameState(nextSeed);
+        return {
+          ...base,
+          leader: nextSeat,
+          turn: nextSeat,
+          trickStartLeader: nextSeat,
+          trickStartTurn: nextSeat,
+        };
+      },
+    };
+    resetDealState(seed, dealResetArgs);
     setSeedHistory((prev) => {
       const next = [seed, ...prev.filter((value) => value !== seed)];
       return next.slice(0, 10);
     });
     setFirstSeat(nextSeat);
-    const base = initGameState(seed);
-    setGame({
-      ...base,
-      leader: nextSeat,
-      turn: nextSeat,
-      trickStartLeader: nextSeat,
-      trickStartTurn: nextSeat,
-    });
     setViewedTrickIndex(null);
     setViewedTrickStep(0);
     setHistoryPlaying(false);
     setBidState(aiMode === "bidding" ? initBidState(nextSeat) : null);
-    setBidInput("0");
     resetWinIntentPrompt();
     resetVoidPrompt();
     resetSuitCountPrompt();
-    setReveal({ Left: false, Across: false, Right: false, Me: true });
     setIsResolving(false);
-    setAwaitContinue(false);
   }
 
   function parseSeed(value: string): number | null {
