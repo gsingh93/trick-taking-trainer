@@ -59,8 +59,8 @@ import { DebugPanel } from "@/components/DebugPanel";
 import { PromptOverlays } from "@/components/PromptOverlays";
 import { HeaderBar } from "@/components/HeaderBar";
 import { SettingsPanel } from "@/components/SettingsPanel";
-import { buildSnapshotText, type SnapshotData } from "@/debug/snapshot";
-import { decodeSharePayload, encodeSharePayload, type SharePayload } from "@/debug/share";
+import { type SnapshotData } from "@/debug/snapshot";
+import { decodeSharePayload, type SharePayload } from "@/debug/share";
 import { loadSettings, persistSettings, type Settings } from "@/state/settings";
 import {
   createVoidSelections,
@@ -72,6 +72,12 @@ import {
   type PromptResetters,
   type VoidSelections,
 } from "@/state/promptState";
+import {
+  applySharePayload as applySharePayloadState,
+  buildSnapshotTextPayload,
+  copyShareLink as copyShareLinkState,
+  type ShareApplyActions,
+} from "@/state/shareHelpers";
 
 /**
  * Generic trick engine (v1)
@@ -791,22 +797,25 @@ export default function App() {
   }
 
   function applySharePayload(payload: SharePayload) {
-    cancelResolveTimer();
-    setDealSeed(payload.seed);
-    setSeedInput(String(payload.seed));
-    setGame(payload.game);
-    setBidState(payload.bidState);
-    setTrump(payload.trump);
-    setAiModeLocked(payload.aiMode);
-    setViewedTrickIndex(null);
-    setViewedTrickStep(0);
-    setHistoryPlaying(false);
-    resetWinIntentPrompt();
-    resetVoidPrompt();
-    resetSuitCountPrompt();
-    setReveal({ Left: false, Across: false, Right: false, Me: true });
-    setIsResolving(false);
-    setAwaitContinue(payload.game.trick.length === 4 && !payload.game.handComplete);
+    const actions: ShareApplyActions = {
+      cancelResolveTimer,
+      setDealSeed,
+      setSeedInput,
+      setGame,
+      setBidState,
+      setTrump,
+      setAiModeLocked,
+      setViewedTrickIndex,
+      setViewedTrickStep,
+      setHistoryPlaying,
+      resetWinIntentPrompt,
+      resetVoidPrompt,
+      resetSuitCountPrompt,
+      setReveal,
+      setIsResolving,
+      setAwaitContinue,
+    };
+    applySharePayloadState(payload, actions);
   }
 
   async function copyShareLink() {
@@ -819,33 +828,7 @@ export default function App() {
       game,
       bidState,
     };
-    try {
-      const encoded = await encodeSharePayload(payload);
-      const url = `${window.location.origin}${window.location.pathname}#state=${encoded}`;
-      if (navigator.clipboard?.writeText) {
-        try {
-          await navigator.clipboard.writeText(url);
-          return;
-        } catch {
-          // Fallback to execCommand below.
-        }
-      }
-      const textarea = document.createElement("textarea");
-      textarea.value = url;
-      textarea.style.position = "fixed";
-      textarea.style.top = "-1000px";
-      textarea.style.left = "-1000px";
-      document.body.appendChild(textarea);
-      textarea.focus();
-      textarea.select();
-      const ok = document.execCommand("copy");
-      textarea.remove();
-      if (!ok) {
-        setShareError("Unable to copy share link");
-      }
-    } catch {
-      setShareError("Unable to build share link");
-    }
+    await copyShareLinkState(payload, (message) => setShareError(message));
   }
 
   function toggleLeadSelection(o: Opp) {
@@ -1502,8 +1485,8 @@ export default function App() {
     );
   }, [hands, trump]);
 
-  const buildSnapshotTextPayload = () =>
-    buildSnapshotText({
+  const snapshotTextPayload = () =>
+    buildSnapshotTextPayload({
       seed: dealSeed,
       trickNo: historyViewContext.display.trickNo,
       leader: historyViewContext.display.leader,
@@ -1610,7 +1593,7 @@ export default function App() {
         setIntentDetails([]);
         setPeekPrompt(null);
       }}
-      buildSnapshotText={buildSnapshotTextPayload}
+      buildSnapshotText={snapshotTextPayload}
       snapshotFileName={`trick-taking-trainer-${dealSeed}-trick-${trickNo}.txt`}
       onApplySnapshot={applySnapshot}
       seatLabels={seatLabels}
