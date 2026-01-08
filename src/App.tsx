@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { chooseCardToPlay } from "@/engine/ai/random";
 import { shouldRunAi } from "@/engine/ai/logic";
 import { canAdvanceTrick, canPlayCard } from "@/engine/flow";
@@ -51,15 +50,15 @@ import {
   type PlayT,
   type TrumpConfig,
 } from "@/engine/types";
-import { RefreshCw, Moon, Sun, Link, Settings, X } from "lucide-react";
 import { rankGlyph, suitGlyph } from "@/ui/cardUtils";
 import { SettingsCard } from "@/components/SettingsCard";
 import { TrickHistoryCard } from "@/components/TrickHistoryCard";
 import { TableCard } from "@/components/TableCard";
 import { HelpCard } from "@/components/HelpCard";
 import { DebugPanel } from "@/components/DebugPanel";
-import { SeedInput } from "@/components/SeedInput";
 import { PromptOverlays } from "@/components/PromptOverlays";
+import { HeaderBar } from "@/components/HeaderBar";
+import { SettingsPanel } from "@/components/SettingsPanel";
 import { buildSnapshotText, type SnapshotData } from "@/debug/snapshot";
 import { decodeSharePayload, encodeSharePayload, type SharePayload } from "@/debug/share";
 
@@ -1595,26 +1594,9 @@ export default function App() {
 
   const helpCard = <HelpCard />;
   const settingsPanel = (
-    <div
-      className={
-        "fixed right-0 top-0 z-40 h-full w-[90vw] max-w-[420px] border-l bg-background shadow-lg transition-transform duration-200 " +
-        (settingsOpen ? "translate-x-0" : "translate-x-full")
-      }
-    >
-      <div className="flex items-center justify-between border-b px-3 py-2">
-        <div className="text-sm font-semibold">Settings</div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={() => setSettingsOpen(false)}
-          aria-label="Close settings panel"
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-      <div className="h-full overflow-y-auto p-3">{settingsCard}</div>
-    </div>
+    <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)}>
+      {settingsCard}
+    </SettingsPanel>
   );
 
   const bidBreakdowns = useMemo(() => {
@@ -1753,67 +1735,22 @@ export default function App() {
   return (
     <div className="min-h-screen bg-background p-3 sm:p-6">
       <div className="mx-auto max-w-6xl space-y-4 sm:space-y-6">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex w-full items-center justify-between sm:w-auto sm:gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-lg leading-none text-black dark:text-white">♠</span>
-              <h1 className="text-xl font-semibold">Trick Taking Trainer</h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                aria-label="Toggle dark mode"
-                onClick={() => setDarkMode((v) => !v)}
-              >
-                {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/60 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-200 dark:ring-emerald-400/30"
-                aria-label={settingsOpen ? "Close settings panel" : "Open settings panel"}
-                onClick={() => setSettingsOpen((value) => !value)}
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          <div className="space-y-2 rounded-lg border bg-card/50 p-3 sm:ml-auto">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Deal</div>
-            <div className="flex flex-wrap items-start gap-2">
-              <Button className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={resetHand}>
-                Reset hand
-              </Button>
-              <Button className="gap-2 bg-emerald-600 text-white hover:bg-emerald-700" onClick={newSeed}>
-                <RefreshCw className="h-4 w-4" />
-                New hand
-              </Button>
-              <div className="flex flex-col">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">Seed</span>
-                  <SeedInput
-                    value={seedInput}
-                    seedHistory={seedHistory}
-                    onChange={setSeedInput}
-                    onApply={applySeedFromInput}
-                    onClearError={() => setSeedError(null)}
-                  />
-                  <Button type="button" variant="outline" size="sm" onClick={applySeedFromInput}>
-                    Apply
-                  </Button>
-                  <Button type="button" variant="outline" size="sm" onClick={copyShareLink} aria-label="Copy share link">
-                    <Link className="h-4 w-4" />
-                  </Button>
-                </div>
-                {seedError ? <div className="mt-1 text-xs text-destructive">{seedError}</div> : null}
-                {shareError ? <div className="mt-1 text-xs text-destructive">{shareError}</div> : null}
-              </div>
-            </div>
-          </div>
-        </header>
+        <HeaderBar
+          darkMode={darkMode}
+          onToggleDarkMode={() => setDarkMode((v) => !v)}
+          settingsOpen={settingsOpen}
+          onToggleSettings={() => setSettingsOpen((value) => !value)}
+          onResetHand={resetHand}
+          onNewHand={newSeed}
+          seedInput={seedInput}
+          seedHistory={seedHistory}
+          onSeedInputChange={setSeedInput}
+          onApplySeed={applySeedFromInput}
+          onClearSeedError={() => setSeedError(null)}
+          seedError={seedError}
+          shareError={shareError}
+          onCopyShareLink={copyShareLink}
+        />
 
         <div className="space-y-6">
           <div className="grid grid-cols-1 gap-6 min-[750px]:grid-cols-[minmax(0,1fr)_auto] min-[750px]:gap-1">
